@@ -1,5 +1,6 @@
 import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/screens/home/home_screen.dart';
+import 'package:camera_assistant/screens/settings/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -108,6 +109,128 @@ void main() {
     expect(find.text('Macro'), findsOneWidget);
     expect(find.text('Extension Tubes'), findsNothing);
     expect(find.text('Reverse Lens'), findsNothing);
+  });
+
+  testWidgets('organizer drag moves card out of folder', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(480, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    AppSettings? updated;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsScreen(
+            settings: const AppSettings(
+              homeToolOrder: ['folder:macro_group', 'exposure', 'dof'],
+              homeFolders: [
+                HomeFolder(
+                  id: 'macro_group',
+                  name: 'Macro',
+                  toolIds: ['extension_tubes', 'reverse_lens'],
+                ),
+              ],
+            ),
+            onSettingsChanged: (settings) => updated = settings,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Organize home cards'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Organize Home Cards'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Extension Tubes').last,
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Extension Tubes').last, findsOneWidget);
+
+    final source = find.text('Extension Tubes').last;
+    final target = find.byKey(const ValueKey('top-level-tool-exposure'));
+    final gesture = await tester.startGesture(tester.getCenter(source));
+    await tester.pump(const Duration(milliseconds: 600));
+    await gesture.moveTo(tester.getTopLeft(target) + const Offset(24, 12));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Extension Tubes'), findsOneWidget);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(updated, isNotNull);
+    expect(updated!.homeFolders.single.toolIds,
+        isNot(contains('extension_tubes')));
+    expect(updated!.homeToolOrder, contains('extension_tubes'));
+  });
+
+  testWidgets('organizer drag reorders cards inside folder', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(480, 1400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    AppSettings? updated;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SettingsScreen(
+            settings: const AppSettings(
+              homeToolOrder: ['folder:macro_group', 'exposure', 'dof'],
+              homeFolders: [
+                HomeFolder(
+                  id: 'macro_group',
+                  name: 'Macro',
+                  toolIds: ['extension_tubes', 'reverse_lens'],
+                ),
+              ],
+            ),
+            onSettingsChanged: (settings) => updated = settings,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Organize home cards'));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Reverse Lens').last,
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+
+    final reverseLensTile = find.byKey(
+      const ValueKey('nested-macro_group-reverse_lens'),
+    );
+    final target = find.byKey(
+      const ValueKey('folder-row-drop-macro_group-extension_tubes'),
+    );
+    final gesture =
+        await tester.startGesture(tester.getCenter(reverseLensTile));
+    await tester.pump(const Duration(milliseconds: 600));
+    await gesture.moveTo(tester.getTopLeft(target) + const Offset(24, 12));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(updated, isNotNull);
+    expect(
+      updated!.homeFolders.single.toolIds,
+      ['reverse_lens', 'extension_tubes'],
+    );
   });
 }
 

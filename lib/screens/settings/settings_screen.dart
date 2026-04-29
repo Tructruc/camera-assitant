@@ -133,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       showDragHandle: true,
       builder: (context) {
         return _HomeOrganizerSheet(
-          tools: _orderedHomeTools,
+          tools: _homeTools,
           initialOrder: _settings.homeToolOrder,
           initialFolders: _settings.homeFolders,
         );
@@ -357,8 +357,16 @@ class _HomeOrganizerSheet extends StatefulWidget {
 }
 
 class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
+  static const double _previewHysteresis = 18;
+
   late List<String> _topLevelOrder;
   late List<HomeFolder> _folders;
+  final Map<String, GlobalKey> _folderBodyKeys = {};
+  final Map<String, GlobalKey> _nestedRowKeys = {};
+  final Map<String, GlobalKey> _topLevelRowKeys = {};
+  final GlobalKey _topLevelListKey = GlobalKey();
+  int? _topLevelPreviewIndex;
+  final Map<String, int> _folderPreviewIndexes = {};
 
   Map<String, _HomeToolInfo> get _toolsById {
     return {for (final tool in widget.tools) tool.id: tool};
@@ -380,6 +388,10 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
   Set<String> get _folderedToolIds {
     return _folders.expand((folder) => folder.toolIds).toSet();
   }
+
+  bool _isFolderOrderKey(String value) => value.startsWith('folder:');
+
+  bool _isToolId(String value) => _toolsById.containsKey(value);
 
   List<String> get _visibleTopLevelOrder {
     final folderedToolIds = _folderedToolIds;
@@ -426,18 +438,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
     }).toList();
 
     _topLevelOrder = _visibleTopLevelOrder;
-  }
-
-  void _onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      final current = List<String>.from(_visibleTopLevelOrder);
-      if (newIndex > oldIndex) {
-        newIndex -= 1;
-      }
-      final item = current.removeAt(oldIndex);
-      current.insert(newIndex, item);
-      _topLevelOrder = current;
-    });
   }
 
   Future<void> _createFolder() async {
@@ -509,35 +509,693 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
     });
   }
 
-  Future<void> _editFolderCards(HomeFolder folder) async {
-    final toolIds = await showModalBottomSheet<List<String>>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) {
-        return _FolderToolPickerSheet(
-          folderName: folder.name,
-          tools: widget.tools,
-          selectedToolIds: folder.toolIds,
-          blockedToolIds: _folders
-              .where((item) => item.id != folder.id)
-              .expand((item) => item.toolIds)
-              .toSet(),
-        );
-      },
-    );
-
-    if (toolIds == null) {
+  void _insertTopLevelItem(int index, String itemId) {
+    if (!_isFolderOrderKey(itemId) && !_isToolId(itemId)) {
       return;
     }
 
     setState(() {
+      final current = List<String>.from(_visibleTopLevelOrder)
+        ..removeWhere((id) => id == itemId);
+      final boundedIndex = index.clamp(0, current.length);
+      current.insert(boundedIndex, itemId);
+      if (_isToolId(itemId)) {
+        _folders = [
+          for (final item in _folders)
+            item.copyWith(
+              toolIds: item.toolIds.where((id) => id != itemId).toList(),
+            ),
+        ];
+      }
+      _topLevelOrder = current;
+      _normalizeState();
+    });
+  }
+
+  GlobalKey _folderBodyKey(String folderId) {
+    return _folderBodyKeys.putIfAbsent(folderId, () => GlobalKey());
+  }
+
+  GlobalKey _topLevelRowKey(String itemId) {
+    return _topLevelRowKeys.putIfAbsent(itemId, () => GlobalKey());
+  }
+
+  GlobalKey _nestedRowKey(String folderId, String toolId) {
+    return _nestedRowKeys.putIfAbsent('$folderId:$toolId', () => GlobalKey());
+  }
+
+  bool _isPointInside(GlobalKey key, Offset globalOffset) {
+    final context = key.currentContext;
+    final box = context?.findRenderObject() as RenderBox?;
+    if (box == null) {
+      return false;
+    }
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    return rect.contains(globalOffset);
+  }
+
+  int _folderInsertIndexByOffset(String folderId, Offset globalOffset) {
+    final folder = _folders.firstWhere((item) => item.id == folderId);
+
+    for (var index = 0; index < folder.toolIds.length; index++) {
+      final box = _nestedRowKeys['$folderId:${folder.toolIds[index]}']
+          ?.currentContext
+          ?.findRenderObject() as RenderBox?;
+      if (box == null) {
+        continue;
+      }
+      final midpointY =
+          box.localToGlobal(Offset.zero).dy + (box.size.height / 2);
+      if (globalOffset.dy < midpointY) {
+        return index;
+      }
+    }
+
+    return folder.toolIds.length;
+  }
+
+  int _topLevelInsertIndexByOffset(Offset globalOffset) {
+    final order = _visibleTopLevelOrder;
+
+    for (var index = 0; index < order.length; index++) {
+      final box = _topLevelRowKeys[order[index]]
+          ?.currentContext
+          ?.findRenderObject() as RenderBox?;
+      if (box == null) {
+        continue;
+      }
+      final midpointY =
+          box.localToGlobal(Offset.zero).dy + (box.size.height / 2);
+      if (globalOffset.dy < midpointY) {
+        return index;
+      }
+    }
+
+    return order.length;
+  }
+
+  int _topLevelDropIndexForRow(String itemId, Offset globalOffset) {
+    final current = _visibleTopLevelOrder;
+    final rowIndex = current.indexOf(itemId);
+    if (rowIndex == -1) {
+      return current.length;
+    }
+
+    final box = _topLevelRowKeys[itemId]?.currentContext?.findRenderObject()
+        as RenderBox?;
+    if (box == null) {
+      return rowIndex;
+    }
+
+    final midpointY = box.localToGlobal(Offset.zero).dy + (box.size.height / 2);
+    final currentPreview = _topLevelPreviewIndex;
+    if (currentPreview == rowIndex &&
+        globalOffset.dy <= midpointY + _previewHysteresis) {
+      return rowIndex;
+    }
+    if (currentPreview == rowIndex + 1 &&
+        globalOffset.dy >= midpointY - _previewHysteresis) {
+      return rowIndex + 1;
+    }
+
+    return globalOffset.dy < midpointY ? rowIndex : rowIndex + 1;
+  }
+
+  int _folderDropIndexForRow(
+    String folderId,
+    String targetToolId,
+    Offset globalOffset,
+  ) {
+    final folder = _folders.firstWhere((item) => item.id == folderId);
+    final rowIndex = folder.toolIds.indexOf(targetToolId);
+    if (rowIndex == -1) {
+      return folder.toolIds.length;
+    }
+
+    final box = _nestedRowKeys['$folderId:$targetToolId']
+        ?.currentContext
+        ?.findRenderObject() as RenderBox?;
+    if (box == null) {
+      return rowIndex;
+    }
+
+    final midpointY = box.localToGlobal(Offset.zero).dy + (box.size.height / 2);
+    final currentPreview = _folderPreviewIndexes[folderId];
+    if (currentPreview == rowIndex &&
+        globalOffset.dy <= midpointY + _previewHysteresis) {
+      return rowIndex;
+    }
+    if (currentPreview == rowIndex + 1 &&
+        globalOffset.dy >= midpointY - _previewHysteresis) {
+      return rowIndex + 1;
+    }
+
+    return globalOffset.dy < midpointY ? rowIndex : rowIndex + 1;
+  }
+
+  void _clearDragPreviews() {
+    if (_topLevelPreviewIndex == null && _folderPreviewIndexes.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _topLevelPreviewIndex = null;
+      _folderPreviewIndexes.clear();
+    });
+  }
+
+  void _setTopLevelPreviewIndex(int? index) {
+    final normalizedIndex = index?.clamp(0, _visibleTopLevelOrder.length);
+    if (_topLevelPreviewIndex == normalizedIndex &&
+        _folderPreviewIndexes.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _topLevelPreviewIndex = normalizedIndex;
+      _folderPreviewIndexes.clear();
+    });
+  }
+
+  void _setFolderPreviewIndex(String folderId, int? index) {
+    final folder = _folders.firstWhere((item) => item.id == folderId);
+    final normalizedIndex = index?.clamp(0, folder.toolIds.length);
+    if (_topLevelPreviewIndex == null &&
+        _folderPreviewIndexes.length == (normalizedIndex == null ? 0 : 1) &&
+        _folderPreviewIndexes[folderId] == normalizedIndex) {
+      return;
+    }
+
+    setState(() {
+      _topLevelPreviewIndex = null;
+      _folderPreviewIndexes..clear();
+      if (normalizedIndex != null) {
+        _folderPreviewIndexes[folderId] = normalizedIndex;
+      }
+    });
+  }
+
+  void _handleToolDragEnd(String toolId, DraggableDetails details) {
+    if (details.wasAccepted) {
+      _clearDragPreviews();
+      return;
+    }
+    if (_isPointInside(_topLevelListKey, details.offset)) {
+      _insertTopLevelItem(_topLevelInsertIndexByOffset(details.offset), toolId);
+      _clearDragPreviews();
+      return;
+    }
+    for (final folder in _folders) {
+      if (_isPointInside(_folderBodyKey(folder.id), details.offset)) {
+        _insertToolAtFolder(
+          folder.id,
+          _folderInsertIndexByOffset(folder.id, details.offset),
+          toolId,
+        );
+        _clearDragPreviews();
+        return;
+      }
+    }
+
+    _clearDragPreviews();
+  }
+
+  void _handleTopLevelItemDragEnd(String itemId, DraggableDetails details) {
+    if (details.wasAccepted) {
+      _clearDragPreviews();
+      return;
+    }
+    if (_isPointInside(_topLevelListKey, details.offset)) {
+      _insertTopLevelItem(_topLevelInsertIndexByOffset(details.offset), itemId);
+      _clearDragPreviews();
+      return;
+    }
+
+    _clearDragPreviews();
+  }
+
+  void _insertToolAtFolder(String folderId, int index, String toolId) {
+    if (!_isToolId(toolId)) {
+      return;
+    }
+
+    setState(() {
+      _topLevelOrder = List<String>.from(_visibleTopLevelOrder)
+        ..removeWhere((id) => id == toolId);
       _folders = [
         for (final item in _folders)
-          if (item.id == folder.id) item.copyWith(toolIds: toolIds) else item,
+          item.copyWith(
+            toolIds: item.toolIds.where((id) => id != toolId).toList(),
+          ),
+      ];
+      _folders = [
+        for (final item in _folders)
+          if (item.id == folderId)
+            item.copyWith(
+              toolIds: [
+                ...item.toolIds.take(index.clamp(0, item.toolIds.length)),
+                toolId,
+                ...item.toolIds.skip(index.clamp(0, item.toolIds.length)),
+              ],
+            )
+          else
+            item,
       ];
       _normalizeState();
     });
+  }
+
+  Widget _buildNestedDraggableToolTile(
+    ThemeData theme,
+    String folderId,
+    _HomeToolInfo tool,
+  ) {
+    return Container(
+      key: _nestedRowKey(folderId, tool.id),
+      child: LongPressDraggable<String>(
+        key: ValueKey('nested-$folderId-${tool.id}'),
+        data: tool.id,
+        dragAnchorStrategy: pointerDragAnchorStrategy,
+        onDragEnd: (details) => _handleToolDragEnd(tool.id, details),
+        feedback: Material(
+          color: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: Card(
+              child: ListTile(
+                dense: true,
+                leading: Icon(tool.icon, size: 20),
+                title: Text(tool.title),
+                subtitle: Text(tool.subtitle),
+                trailing: const Icon(Icons.drag_handle, size: 18),
+              ),
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(
+          opacity: 0.35,
+          child: Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              dense: true,
+              leading: Icon(tool.icon, size: 20),
+              title: Text(tool.title),
+              subtitle: Text(tool.subtitle),
+              trailing: const Icon(Icons.drag_handle, size: 18),
+            ),
+          ),
+        ),
+        child: Card(
+          margin: EdgeInsets.zero,
+          elevation: 0,
+          color: theme.cardColor.withValues(alpha: 0.72),
+          child: ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 2,
+            ),
+            leading: Icon(tool.icon, size: 20),
+            title: Text(tool.title),
+            subtitle: Text(
+              tool.subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: const Icon(Icons.drag_handle, size: 18),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNestedToolDropWrapper(
+    ThemeData theme,
+    String folderId,
+    String targetToolId,
+    Widget child,
+  ) {
+    return DragTarget<String>(
+      key: ValueKey('folder-row-drop-$folderId-$targetToolId'),
+      onWillAcceptWithDetails: (details) => _isToolId(details.data),
+      onMove: (details) {
+        _setFolderPreviewIndex(
+          folderId,
+          _folderDropIndexForRow(folderId, targetToolId, details.offset),
+        );
+      },
+      onAcceptWithDetails: (details) {
+        _insertToolAtFolder(
+          folderId,
+          _folderDropIndexForRow(folderId, targetToolId, details.offset),
+          details.data,
+        );
+        _clearDragPreviews();
+      },
+      builder: (context, candidateData, rejectedData) {
+        final highlight = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          decoration: BoxDecoration(
+            color: highlight
+                ? theme.colorScheme.tertiaryContainer.withValues(alpha: 0.24)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color:
+                  highlight ? theme.colorScheme.tertiary : Colors.transparent,
+            ),
+          ),
+          child: child,
+        );
+      },
+    );
+  }
+
+  Widget _buildOrganizerToolRow(
+    ThemeData theme,
+    _HomeToolInfo tool,
+  ) {
+    return LongPressDraggable<String>(
+      key: ValueKey('top-level-tool-${tool.id}'),
+      data: tool.id,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      onDragEnd: (details) => _handleToolDragEnd(tool.id, details),
+      feedback: Material(
+        color: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: Card(
+            child: ListTile(
+              leading: Icon(tool.icon),
+              title: Text(tool.title),
+              subtitle: Text(tool.subtitle),
+              trailing: const Icon(Icons.drag_handle),
+            ),
+          ),
+        ),
+      ),
+      childWhenDragging: Opacity(
+        opacity: 0.4,
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            leading: Icon(tool.icon),
+            title: Text(tool.title),
+            subtitle: Text(tool.subtitle),
+            trailing: const Icon(Icons.drag_handle),
+          ),
+        ),
+      ),
+      child: Card(
+        margin: EdgeInsets.zero,
+        child: ListTile(
+          leading: Icon(tool.icon),
+          title: Text(tool.title),
+          subtitle: Text(tool.subtitle),
+          trailing: const Icon(Icons.drag_handle),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFolderHeader(
+    ThemeData theme,
+    HomeFolder folder,
+    int toolCount,
+  ) {
+    Widget headerContent({
+      required bool highlighted,
+      required bool dragged,
+    }) {
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        decoration: BoxDecoration(
+          color: highlighted
+              ? theme.colorScheme.tertiaryContainer.withValues(alpha: 0.35)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.folder_open_outlined),
+          title: Text(folder.name),
+          subtitle: Text(
+            toolCount == 0
+                ? 'Drop a card here'
+                : '$toolCount cards in this folder',
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: dragged ? null : () => _renameFolder(folder),
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Rename folder',
+              ),
+              IconButton(
+                onPressed: dragged ? null : () => _deleteFolder(folder),
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete folder',
+              ),
+              const Icon(Icons.drag_handle),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => _isToolId(details.data),
+      onMove: (_) => _setFolderPreviewIndex(folder.id, toolCount),
+      onAcceptWithDetails: (details) {
+        _insertToolAtFolder(folder.id, toolCount, details.data);
+        _clearDragPreviews();
+      },
+      builder: (context, candidateData, rejectedData) {
+        final highlight = candidateData.isNotEmpty;
+        return LongPressDraggable<String>(
+          data: folder.orderKey,
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          onDragEnd: (details) =>
+              _handleTopLevelItemDragEnd(folder.orderKey, details),
+          feedback: Material(
+            color: Colors.transparent,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: Card(
+                child: ListTile(
+                  leading: const Icon(Icons.folder_open_outlined),
+                  title: Text(folder.name),
+                  subtitle: Text(
+                    toolCount == 0 ? 'Empty folder' : '$toolCount cards',
+                  ),
+                  trailing: const Icon(Icons.drag_handle),
+                ),
+              ),
+            ),
+          ),
+          childWhenDragging: Opacity(
+            opacity: 0.4,
+            child: headerContent(
+              highlighted: highlight,
+              dragged: true,
+            ),
+          ),
+          child: headerContent(
+            highlighted: highlight,
+            dragged: false,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOrganizerFolderRow(
+    ThemeData theme,
+    HomeFolder folder,
+  ) {
+    final folderTools = folder.toolIds
+        .map((id) => _toolsById[id])
+        .whereType<_HomeToolInfo>()
+        .toList();
+
+    return Card(
+      key: ValueKey('top-level-folder-${folder.id}'),
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildFolderHeader(theme, folder, folderTools.length),
+            const SizedBox(height: 10),
+            AnimatedContainer(
+              key: ValueKey('folder-body-${folder.id}'),
+              duration: const Duration(milliseconds: 160),
+              width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 72),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLowest
+                    .withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.outlineVariant,
+                ),
+              ),
+              child: Container(
+                key: _folderBodyKey(folder.id),
+                child: DragTarget<String>(
+                  onWillAcceptWithDetails: (details) => _isToolId(details.data),
+                  onMove: (details) {
+                    _setFolderPreviewIndex(
+                      folder.id,
+                      _folderInsertIndexByOffset(folder.id, details.offset),
+                    );
+                  },
+                  onAcceptWithDetails: (details) {
+                    _insertToolAtFolder(
+                      folder.id,
+                      _folderInsertIndexByOffset(folder.id, details.offset),
+                      details.data,
+                    );
+                    _clearDragPreviews();
+                  },
+                  builder: (context, candidateData, rejectedData) {
+                    final highlight = candidateData.isNotEmpty;
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      decoration: BoxDecoration(
+                        color: highlight
+                            ? theme.colorScheme.tertiaryContainer
+                                .withValues(alpha: 0.20)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_folderPreviewIndexes[folder.id] == 0)
+                            _buildInsertionPreview(
+                              theme,
+                              key: ValueKey('folder-preview-${folder.id}-0'),
+                            ),
+                          if (folderTools.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                'Long-press a card and drop it here.',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ),
+                          for (var nestedIndex = 0;
+                              nestedIndex < folderTools.length;
+                              nestedIndex++) ...[
+                            if (nestedIndex > 0) const SizedBox(height: 8),
+                            _buildNestedToolDropWrapper(
+                              theme,
+                              folder.id,
+                              folderTools[nestedIndex].id,
+                              _buildNestedDraggableToolTile(
+                                theme,
+                                folder.id,
+                                folderTools[nestedIndex],
+                              ),
+                            ),
+                            if (_folderPreviewIndexes[folder.id] ==
+                                nestedIndex + 1)
+                              _buildInsertionPreview(
+                                theme,
+                                key: ValueKey(
+                                  'folder-preview-${folder.id}-${nestedIndex + 1}',
+                                ),
+                              ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopLevelItem(
+    ThemeData theme,
+    String itemId,
+  ) {
+    final child = _isFolderOrderKey(itemId)
+        ? _buildOrganizerFolderRow(
+            theme,
+            _folders.firstWhere((folder) => folder.orderKey == itemId),
+          )
+        : _buildOrganizerToolRow(theme, _toolsById[itemId]!);
+
+    final acceptsTools = !_isFolderOrderKey(itemId);
+
+    return Container(
+      key: _topLevelRowKey(itemId),
+      margin: const EdgeInsets.only(bottom: 10),
+      child: DragTarget<String>(
+        onWillAcceptWithDetails: (details) =>
+            _isFolderOrderKey(details.data) ||
+            (acceptsTools && _isToolId(details.data)),
+        onMove: (details) {
+          _setTopLevelPreviewIndex(
+            _topLevelDropIndexForRow(itemId, details.offset),
+          );
+        },
+        onAcceptWithDetails: (details) {
+          _insertTopLevelItem(
+            _topLevelDropIndexForRow(itemId, details.offset),
+            details.data,
+          );
+          _clearDragPreviews();
+        },
+        builder: (context, candidateData, rejectedData) {
+          final highlight = candidateData.isNotEmpty;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
+            decoration: BoxDecoration(
+              color: highlight
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.20)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color:
+                    highlight ? theme.colorScheme.primary : Colors.transparent,
+              ),
+            ),
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildInsertionPreview(
+    ThemeData theme, {
+    Key? key,
+  }) {
+    return AnimatedContainer(
+      key: key,
+      duration: const Duration(milliseconds: 140),
+      height: 18,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: theme.colorScheme.primary,
+          width: 1.5,
+        ),
+      ),
+    );
   }
 
   void _reset() {
@@ -569,7 +1227,7 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Reorder top-level cards and create folders for grouped tools.',
+                'Drag cards or folders to reorder them, and drop cards into or out of folders.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 14),
@@ -589,150 +1247,25 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
               ),
               const SizedBox(height: 12),
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Top Level',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                child: ListView(
+                  key: _topLevelListKey,
+                  children: [
+                    if (_topLevelPreviewIndex == 0)
+                      _buildInsertionPreview(
+                        theme,
+                        key: const ValueKey('top-level-preview-0'),
                       ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 320,
-                        child: ReorderableListView.builder(
-                          itemCount: visibleOrder.length,
-                          onReorder: _onReorder,
-                          buildDefaultDragHandles: false,
-                          itemBuilder: (context, index) {
-                            final id = visibleOrder[index];
-                            final isFolder = id.startsWith('folder:');
-                            if (isFolder) {
-                              final folder = _folders.firstWhere(
-                                (item) => item.orderKey == id,
-                              );
-                              return Card(
-                                key: ValueKey(id),
-                                margin: const EdgeInsets.only(bottom: 10),
-                                child: ListTile(
-                                  leading:
-                                      const Icon(Icons.folder_open_outlined),
-                                  title: Text(folder.name),
-                                  subtitle: Text(
-                                    folder.toolIds.isEmpty
-                                        ? 'No cards yet'
-                                        : '${folder.toolIds.length} cards',
-                                  ),
-                                  trailing: ReorderableDragStartListener(
-                                    index: index,
-                                    child: const Icon(Icons.drag_handle),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            final tool = _toolsById[id]!;
-                            return Card(
-                              key: ValueKey(id),
-                              margin: const EdgeInsets.only(bottom: 10),
-                              child: ListTile(
-                                leading: Icon(tool.icon),
-                                title: Text(tool.title),
-                                subtitle: Text(tool.subtitle),
-                                trailing: ReorderableDragStartListener(
-                                  index: index,
-                                  child: const Icon(Icons.drag_handle),
-                                ),
-                              ),
-                            );
-                          },
+                    for (var index = 0;
+                        index < visibleOrder.length;
+                        index++) ...[
+                      _buildTopLevelItem(theme, visibleOrder[index]),
+                      if (_topLevelPreviewIndex == index + 1)
+                        _buildInsertionPreview(
+                          theme,
+                          key: ValueKey('top-level-preview-${index + 1}'),
                         ),
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Folders',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_folders.isEmpty)
-                        Text(
-                          'No folders yet.',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ..._folders.map((folder) {
-                        final folderTools = folder.toolIds
-                            .map((id) => _toolsById[id])
-                            .whereType<_HomeToolInfo>()
-                            .toList();
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        folder.name,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _renameFolder(folder),
-                                      icon: const Icon(Icons.edit_outlined),
-                                      tooltip: 'Rename folder',
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _deleteFolder(folder),
-                                      icon: const Icon(Icons.delete_outline),
-                                      tooltip: 'Delete folder',
-                                    ),
-                                  ],
-                                ),
-                                if (folderTools.isEmpty)
-                                  Text(
-                                    'No cards assigned.',
-                                    style: theme.textTheme.bodyMedium,
-                                  )
-                                else
-                                  Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
-                                    children: folderTools
-                                        .map(
-                                          (tool) => Chip(
-                                            avatar: Icon(tool.icon, size: 18),
-                                            label: Text(tool.title),
-                                          ),
-                                        )
-                                        .toList(),
-                                  ),
-                                const SizedBox(height: 10),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: FilledButton.tonalIcon(
-                                    onPressed: () => _editFolderCards(folder),
-                                    icon:
-                                        const Icon(Icons.folder_copy_outlined),
-                                    label: const Text('Choose cards'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
                     ],
-                  ),
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -752,115 +1285,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
                           homeToolOrder: _visibleTopLevelOrder,
                           homeFolders: _folders,
                         ),
-                      ),
-                      child: const Text('Save'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FolderToolPickerSheet extends StatefulWidget {
-  const _FolderToolPickerSheet({
-    required this.folderName,
-    required this.tools,
-    required this.selectedToolIds,
-    required this.blockedToolIds,
-  });
-
-  final String folderName;
-  final List<_HomeToolInfo> tools;
-  final List<String> selectedToolIds;
-  final Set<String> blockedToolIds;
-
-  @override
-  State<_FolderToolPickerSheet> createState() => _FolderToolPickerSheetState();
-}
-
-class _FolderToolPickerSheetState extends State<_FolderToolPickerSheet> {
-  late Set<String> _selectedIds;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds = widget.selectedToolIds.toSet();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset),
-        child: SizedBox(
-          height: 560,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Cards in ${widget.folderName}',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'A card can only belong to one folder.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 14),
-              Expanded(
-                child: ListView(
-                  children: widget.tools.map((tool) {
-                    final blocked = widget.blockedToolIds.contains(tool.id);
-                    return CheckboxListTile(
-                      value: _selectedIds.contains(tool.id),
-                      title: Text(tool.title),
-                      subtitle: Text(
-                        blocked
-                            ? 'Already assigned to another folder'
-                            : tool.subtitle,
-                      ),
-                      secondary: Icon(tool.icon),
-                      controlAffinity: ListTileControlAffinity.leading,
-                      enabled: !blocked || _selectedIds.contains(tool.id),
-                      onChanged: (value) {
-                        setState(() {
-                          if (value ?? false) {
-                            _selectedIds.add(tool.id);
-                          } else {
-                            _selectedIds.remove(tool.id);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () => Navigator.of(context).pop(
-                        widget.tools
-                            .where((tool) => _selectedIds.contains(tool.id))
-                            .map((tool) => tool.id)
-                            .toList(growable: false),
                       ),
                       child: const Text('Save'),
                     ),

@@ -224,6 +224,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : width >= 560
                                       ? 2
                                       : 1;
+                              final childAspectRatio = columns == 1
+                                  ? 1.88
+                                  : columns == 2
+                                      ? 1.42
+                                      : 1.24;
 
                               return GridView.builder(
                                 padding: const EdgeInsets.fromLTRB(0, 8, 0, 20),
@@ -232,7 +237,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   crossAxisCount: columns,
                                   mainAxisSpacing: 14,
                                   crossAxisSpacing: 14,
-                                  childAspectRatio: columns == 1 ? 1.75 : 1.28,
+                                  childAspectRatio: childAspectRatio,
                                 ),
                                 itemCount: entries.length,
                                 itemBuilder: (context, index) {
@@ -372,28 +377,36 @@ class _FolderCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: scheme.surface.withValues(alpha: 0.78),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(Icons.folder_open_outlined, color: scheme.primary),
-              ),
-              const Spacer(),
-              Text(
-                folder.name,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                toolCount == 1 ? '1 card inside' : '$toolCount cards inside',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: scheme.surface.withValues(alpha: 0.78),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child:
+                        Icon(Icons.folder_open_outlined, color: scheme.primary),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    folder.name,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    toolCount == 1
+                        ? '1 card inside'
+                        : '$toolCount cards inside',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               Row(
@@ -587,28 +600,33 @@ class _ToolCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(tool.icon, color: scheme.onPrimaryContainer),
-              ),
-              const Spacer(),
-              Text(
-                tool.title,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                tool.subtitle,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: scheme.primaryContainer.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(tool.icon, color: scheme.onPrimaryContainer),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    tool.title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    tool.subtitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 14),
               Row(
