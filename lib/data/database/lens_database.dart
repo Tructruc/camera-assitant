@@ -189,6 +189,7 @@ class LensDatabase {
     }
 
     final mountIds = _decodeStringList(values['enabled_mount_ids']);
+    final sensorIds = _decodeStringList(values['enabled_sensor_ids']);
     final homeToolOrder = _decodeStringList(values['home_tool_order']);
     final homeFolders = _decodeHomeFolders(values['home_folders']);
     return AppSettings(
@@ -197,6 +198,8 @@ class LensDatabase {
       darkMode: values['dark_mode'] == 'true',
       enabledMountIds:
           mountIds.isEmpty ? AppSettings.defaultMountIds : mountIds,
+      enabledSensorIds:
+          sensorIds.isEmpty ? AppSettings.defaultSensorIds : sensorIds,
       homeToolOrder: homeToolOrder.isEmpty
           ? AppSettings.defaultHomeToolOrder
           : homeToolOrder,
@@ -211,6 +214,7 @@ class LensDatabase {
       'time_unit': settings.timeUnit,
       'dark_mode': settings.darkMode.toString(),
       'enabled_mount_ids': jsonEncode(settings.enabledMountIds),
+      'enabled_sensor_ids': jsonEncode(settings.enabledSensorIds),
       'home_tool_order': jsonEncode(settings.homeToolOrder),
       'home_folders': jsonEncode(
         settings.homeFolders.map((folder) => folder.toMap()).toList(),

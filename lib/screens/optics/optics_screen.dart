@@ -74,7 +74,9 @@ class _OpticsScreenState extends State<OpticsScreen> {
           child: IndexedStack(
             index: _tool.index,
             children: [
-              DofCalculatorScreen(),
+              const DofCalculatorScreen(
+                settings: AppSettings(),
+              ),
               MacroCalculatorScreen(
                 settings: const AppSettings(),
               ),

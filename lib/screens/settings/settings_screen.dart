@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/domain/models/mount_preset.dart';
+import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/screens/lenses/lens_manager_screen.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 
@@ -33,6 +34,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: 'DOF',
       subtitle: 'Check depth of field and focus range.',
       icon: Icons.filter_center_focus,
+    ),
+    _HomeToolInfo(
+      id: 'focus_stacking',
+      title: 'Focus Stacking',
+      subtitle: 'Plan focus positions and frame count for a stack.',
+      icon: Icons.layers_outlined,
     ),
     _HomeToolInfo(
       id: 'extension_tubes',
@@ -70,26 +77,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       .where((mount) => _settings.enabledMountIds.contains(mount.id))
       .toList();
 
-  List<_HomeToolInfo> get _orderedHomeTools {
-    final toolsById = {for (final tool in _homeTools) tool.id: tool};
-    final ordered = <_HomeToolInfo>[];
-    final seen = <String>{};
-
-    for (final id in _settings.homeToolOrder) {
-      final tool = toolsById[id];
-      if (tool != null && seen.add(id)) {
-        ordered.add(tool);
-      }
-    }
-
-    for (final tool in _homeTools) {
-      if (seen.add(tool.id)) {
-        ordered.add(tool);
-      }
-    }
-
-    return ordered;
-  }
+  List<SensorPreset> get _selectedSensors =>
+      resolveEnabledSensorPresets(_settings.enabledSensorIds);
 
   int get _folderedToolCount => _settings.homeFolders.fold(
         0,
@@ -124,6 +113,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
 
     _updateSettings(_settings.copyWith(enabledMountIds: selected));
+  }
+
+  Future<void> _editSensors() async {
+    final selected = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        return _SensorSelectorSheet(
+          initialSelectedIds: _settings.enabledSensorIds,
+        );
+      },
+    );
+
+    if (selected == null) {
+      return;
+    }
+
+    _updateSettings(_settings.copyWith(enabledSensorIds: selected));
   }
 
   Future<void> _editHomeOrganization() async {
@@ -259,6 +267,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 8),
               Text(
                 'These mounts will be available in the reverse lens tool.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          SectionCard(
+            title: 'Sensor Formats',
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _selectedSensors
+                    .map(
+                      (sensor) => Chip(
+                        label: Text(sensor.label),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${_selectedSensors.length} formats selected',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: _editSensors,
+                    icon: const Icon(Icons.photo_camera_back_outlined),
+                    label: const Text('Edit formats'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'These formats will be available in DOF, macro, and focus stacking. If only one is enabled, the selector stays hidden.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -688,7 +733,7 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
 
     setState(() {
       _topLevelPreviewIndex = null;
-      _folderPreviewIndexes..clear();
+      _folderPreviewIndexes.clear();
       if (normalizedIndex != null) {
         _folderPreviewIndexes[folderId] = normalizedIndex;
       }
@@ -1544,6 +1589,110 @@ class _MountSelectorSheetState extends State<_MountSelectorSheet> {
                         ),
                       ),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context)
+                        .pop(_selectedIds.toList(growable: false)),
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SensorSelectorSheet extends StatefulWidget {
+  const _SensorSelectorSheet({required this.initialSelectedIds});
+
+  final List<String> initialSelectedIds;
+
+  @override
+  State<_SensorSelectorSheet> createState() => _SensorSelectorSheetState();
+}
+
+class _SensorSelectorSheetState extends State<_SensorSelectorSheet> {
+  late Set<String> _selectedIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIds = widget.initialSelectedIds.toSet();
+    if (_selectedIds.isEmpty) {
+      _selectedIds = AppSettings.defaultSensorIds.toSet();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  '${_selectedIds.length} selected',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedIds = AppSettings.defaultSensorIds.toSet();
+                    });
+                  },
+                  child: const Text('Reset'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: sensorPresets
+                      .map(
+                        (sensor) => CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          value: _selectedIds.contains(sensor.id),
+                          title: Text(sensor.label),
+                          subtitle: Text(
+                            'Circle of confusion: ${sensor.cocMm.toStringAsFixed(3)} mm',
+                          ),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: (value) {
+                            setState(() {
+                              if (value ?? false) {
+                                _selectedIds.add(sensor.id);
+                                return;
+                              }
+                              if (_selectedIds.length > 1) {
+                                _selectedIds.remove(sensor.id);
+                              }
+                            });
+                          },
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             ),

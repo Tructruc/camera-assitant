@@ -4,6 +4,7 @@ import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/mount_preset.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
+import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
@@ -55,6 +56,9 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   String? _dualError;
   DualLensMacroResult? _dualResult;
 
+  List<SensorPreset> get _availableSensors =>
+      resolveEnabledSensorPresets(widget.settings.enabledSensorIds);
+
   bool get _showExtensionTool =>
       widget.initialMode == MacroToolMode.extensionTubes;
 
@@ -63,7 +67,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedSensor = sensorPresets.first;
+    _selectedSensor = _availableSensors.first;
     _loadLenses();
   }
 
@@ -307,18 +311,108 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
 
   String _formatFactor(double value) => '${value.toStringAsFixed(2)}x';
 
+  double _suggestMacroSubjectDepth(double thicknessM) {
+    if (!thicknessM.isFinite || thicknessM <= 0) {
+      return 0.005;
+    }
+    return (thicknessM * 5).clamp(0.001, 0.05).toDouble();
+  }
+
+  void _openExtensionFocusStacker() {
+    final result = _extensionResult;
+    if (result == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FocusStackingPlannerScreen(
+          settings: widget.settings,
+          initialPreset: FocusStackingPreset.extension(
+            method: FocusStackingMethod.moveCamera,
+            lensId: _selectedLensId,
+            sensorCocMm: _selectedSensor.cocMm,
+            focalMm: parseDouble(_extensionFocalMm.text),
+            aperture: parseDouble(_extensionAperture.text),
+            minimumFocusDistanceM: parseDouble(_extensionMinFocusM.text),
+            extensionLengthMm: parseDouble(_extensionTubeMm.text),
+            subjectDepthM: _suggestMacroSubjectDepth(
+                result.focusPlaneThicknessAtClosestFocusM),
+            overlapPercent: 30,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openReverseFocusStacker() {
+    final result = _reverseResult;
+    if (result == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FocusStackingPlannerScreen(
+          settings: widget.settings,
+          initialPreset: FocusStackingPreset.reverse(
+            method: FocusStackingMethod.moveCamera,
+            sensorCocMm: _selectedSensor.cocMm,
+            focalMm: parseDouble(_reverseFocalMm.text),
+            aperture: parseDouble(_reverseAperture.text),
+            mountId: _selectedMountId,
+            extraExtensionMm: parseDouble(_reverseExtraExtensionMm.text),
+            subjectDepthM:
+                _suggestMacroSubjectDepth(result.focusPlaneThicknessM),
+            overlapPercent: 30,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openDualFocusStacker() {
+    final result = _dualResult;
+    if (result == null) {
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FocusStackingPlannerScreen(
+          settings: widget.settings,
+          initialPreset: FocusStackingPreset.dual(
+            method: FocusStackingMethod.moveCamera,
+            sensorCocMm: _selectedSensor.cocMm,
+            takingLensFocalMm: parseDouble(_dualTakingFocalMm.text),
+            aperture: parseDouble(_dualTakingAperture.text),
+            frontLensFocalMm: parseDouble(_dualFrontFocalMm.text),
+            subjectDepthM:
+                _suggestMacroSubjectDepth(result.focusPlaneThicknessM),
+            overlapPercent: 30,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSensorSelector() {
+    if (_availableSensors.length <= 1) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: DropdownButtonFormField<SensorPreset>(
         initialValue: _selectedSensor,
-        decoration:
-            const InputDecoration(labelText: 'Sensor / circle of confusion'),
-        items: sensorPresets
+        decoration: const InputDecoration(
+          labelText: 'Sensor format / circle of confusion',
+        ),
+        items: _availableSensors
             .map(
               (sensor) => DropdownMenuItem<SensorPreset>(
                 value: sensor,
-                child: Text(sensor.name),
+                child: Text(sensor.displayName),
               ),
             )
             .toList(),
@@ -578,6 +672,15 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  onPressed: _openExtensionFocusStacker,
+                  icon: const Icon(Icons.layers_outlined),
+                  label: const Text('Open in Focus Stacking'),
+                ),
+              ),
+              const SizedBox(height: 12),
               Text(
                 'These values are estimates and may vary from real-world results.',
                 style: Theme.of(context).textTheme.bodySmall,
@@ -717,6 +820,15 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                 ],
               ),
               const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  onPressed: _openReverseFocusStacker,
+                  icon: const Icon(Icons.layers_outlined),
+                  label: const Text('Open in Focus Stacking'),
+                ),
+              ),
+              const SizedBox(height: 12),
               Text(
                 'Focus distance is an estimate and may differ from your real setup.',
                 style: Theme.of(context).textTheme.bodySmall,
@@ -824,6 +936,15 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  onPressed: _openDualFocusStacker,
+                  icon: const Icon(Icons.layers_outlined),
+                  label: const Text('Open in Focus Stacking'),
+                ),
               ),
               const SizedBox(height: 12),
               Text(

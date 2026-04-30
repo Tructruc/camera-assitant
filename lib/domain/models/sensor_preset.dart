@@ -1,13 +1,49 @@
 class SensorPreset {
-  const SensorPreset(this.name, this.cocMm);
-  final String name;
+  const SensorPreset({
+    required this.id,
+    required this.label,
+    required this.cocMm,
+  });
+
+  final String id;
+  final String label;
   final double cocMm;
+
+  String get displayName => '$label (CoC ${cocMm.toStringAsFixed(3)} mm)';
 }
 
 const sensorPresets = [
-  SensorPreset('Full Frame (CoC 0.030 mm)', 0.030),
-  SensorPreset('APS-C Canon (CoC 0.019 mm)', 0.019),
-  SensorPreset('APS-C Nikon/Sony (CoC 0.020 mm)', 0.020),
-  SensorPreset('Micro Four Thirds (CoC 0.015 mm)', 0.015),
-  SensorPreset('1-inch (CoC 0.011 mm)', 0.011),
+  SensorPreset(
+    id: 'full_frame',
+    label: 'Full Frame',
+    cocMm: 0.030,
+  ),
+  SensorPreset(
+    id: 'aps_c_canon',
+    label: 'APS-C Canon',
+    cocMm: 0.019,
+  ),
+  SensorPreset(
+    id: 'aps_c_nikon_sony',
+    label: 'APS-C Nikon/Sony',
+    cocMm: 0.020,
+  ),
+  SensorPreset(
+    id: 'micro_four_thirds',
+    label: 'Micro Four Thirds',
+    cocMm: 0.015,
+  ),
+  SensorPreset(
+    id: 'one_inch',
+    label: '1-inch',
+    cocMm: 0.011,
+  ),
 ];
+
+List<SensorPreset> resolveEnabledSensorPresets(Iterable<String> enabledIds) {
+  final enabled = enabledIds.toSet();
+  final filtered = sensorPresets
+      .where((preset) => enabled.isEmpty || enabled.contains(preset.id))
+      .toList(growable: false);
+  return filtered.isEmpty ? sensorPresets : filtered;
+}

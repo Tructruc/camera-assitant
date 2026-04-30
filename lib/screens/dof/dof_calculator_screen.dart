@@ -2,15 +2,22 @@ import 'dart:math' as math;
 
 import 'package:camera_assistant/data/database/lens_database.dart';
 import 'package:camera_assistant/domain/calculators/dof_calculator.dart';
+import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
+import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 import 'package:flutter/material.dart';
 
 class DofCalculatorScreen extends StatefulWidget {
-  const DofCalculatorScreen({super.key});
+  const DofCalculatorScreen({
+    super.key,
+    this.settings = const AppSettings(),
+  });
+
+  final AppSettings settings;
 
   @override
   State<DofCalculatorScreen> createState() => _DofCalculatorScreenState();
@@ -31,6 +38,9 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
   String? _errorMessage;
   _DofResult? _result;
 
+  List<SensorPreset> get _availableSensors =>
+      resolveEnabledSensorPresets(widget.settings.enabledSensorIds);
+
   Lens? get _selectedLens {
     if (_selectedLensId == null) {
       return null;
@@ -46,7 +56,7 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedSensor = sensorPresets.first;
+    _selectedSensor = _availableSensors.first;
     _focalMm.addListener(_onInputChanged);
     _aperture.addListener(_onInputChanged);
     _subjectDistanceM.addListener(_onInputChanged);
@@ -217,6 +227,35 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
     });
   }
 
+  void _openFocusStackingPlanner() {
+    final result = _result;
+    if (result == null) {
+      return;
+    }
+
+    final farDistanceM = result.farLimitM ??
+        (result.subjectDistanceM +
+            (result.subjectDistanceM - result.nearLimitM));
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FocusStackingPlannerScreen(
+          settings: widget.settings,
+          initialPreset: FocusStackingPreset.standard(
+            method: FocusStackingMethod.refocusLens,
+            lensId: _selectedLensId,
+            sensorCocMm: _selectedSensor.cocMm,
+            focalMm: parseDouble(_focalMm.text),
+            aperture: parseDouble(_aperture.text),
+            nearDistanceM: result.nearLimitM,
+            farDistanceM: farDistanceM,
+            overlapPercent: 30,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lens = _selectedLens;
@@ -297,20 +336,30 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
           SectionCard(
             title: 'Inputs',
             children: [
-              DropdownButtonFormField<SensorPreset>(
-                initialValue: _selectedSensor,
-                items: sensorPresets
-                    .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
-                    .toList(),
-                onChanged: (v) {
-                  if (v == null) {
-                    return;
-                  }
-                  setState(() => _selectedSensor = v);
-                  _calculate(live: true);
-                },
-              ),
-              const SizedBox(height: 10),
+              if (_availableSensors.length > 1) ...[
+                DropdownButtonFormField<SensorPreset>(
+                  initialValue: _selectedSensor,
+                  decoration: const InputDecoration(
+                    labelText: 'Sensor format / circle of confusion',
+                  ),
+                  items: _availableSensors
+                      .map(
+                        (sensor) => DropdownMenuItem<SensorPreset>(
+                          value: sensor,
+                          child: Text(sensor.displayName),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() => _selectedSensor = value);
+                    _calculate(live: true);
+                  },
+                ),
+                const SizedBox(height: 10),
+              ],
               if (lens == null) ...[
                 NumField(
                     controller: _focalMm, label: 'Focal length', suffix: 'mm'),
@@ -414,6 +463,15 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
                           : formatLengthMeters(_result!.totalDofM!),
                     ),
                   ],
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.tonalIcon(
+                    onPressed: _openFocusStackingPlanner,
+                    icon: const Icon(Icons.layers_outlined),
+                    label: const Text('Open in Focus Stacking'),
+                  ),
                 ),
               ],
             ],

@@ -1,8 +1,16 @@
 class AppSettings {
   static const defaultMountIds = ['canon_ef', 'sony_e', 'm42'];
+  static const defaultSensorIds = [
+    'full_frame',
+    'aps_c_canon',
+    'aps_c_nikon_sony',
+    'micro_four_thirds',
+    'one_inch',
+  ];
   static const defaultHomeToolOrder = [
     'exposure',
     'dof',
+    'focus_stacking',
     'extension_tubes',
     'reverse_lens',
     'dual_lens_macro',
@@ -14,6 +22,7 @@ class AppSettings {
   final String timeUnit;
   final bool darkMode;
   final List<String> enabledMountIds;
+  final List<String> enabledSensorIds;
   final List<String> homeToolOrder;
   final List<HomeFolder> homeFolders;
 
@@ -22,6 +31,7 @@ class AppSettings {
     this.timeUnit = '24h',
     this.darkMode = false,
     this.enabledMountIds = defaultMountIds,
+    this.enabledSensorIds = defaultSensorIds,
     this.homeToolOrder = defaultHomeToolOrder,
     this.homeFolders = const [],
   });
@@ -31,6 +41,7 @@ class AppSettings {
     String? timeUnit,
     bool? darkMode,
     List<String>? enabledMountIds,
+    List<String>? enabledSensorIds,
     List<String>? homeToolOrder,
     List<HomeFolder>? homeFolders,
   }) {
@@ -39,6 +50,7 @@ class AppSettings {
       timeUnit: timeUnit ?? this.timeUnit,
       darkMode: darkMode ?? this.darkMode,
       enabledMountIds: enabledMountIds ?? this.enabledMountIds,
+      enabledSensorIds: enabledSensorIds ?? this.enabledSensorIds,
       homeToolOrder: homeToolOrder ?? this.homeToolOrder,
       homeFolders: homeFolders ?? this.homeFolders,
     );

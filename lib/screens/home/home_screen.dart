@@ -1,6 +1,7 @@
 import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/screens/dof/dof_calculator_screen.dart';
 import 'package:camera_assistant/screens/exposure/exposure_calculator_screen.dart';
+import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/screens/long_exposure/long_exposure_screen.dart';
 import 'package:camera_assistant/screens/macro/macro_calculator_screen.dart';
 import 'package:camera_assistant/screens/settings/settings_screen.dart';
@@ -35,7 +36,14 @@ class _HomeScreenState extends State<HomeScreen> {
           title: 'DOF',
           subtitle: 'Check depth of field and focus range.',
           icon: Icons.filter_center_focus,
-          builder: () => const DofCalculatorScreen(),
+          builder: () => DofCalculatorScreen(settings: widget.settings),
+        ),
+        _ToolItem(
+          id: 'focus_stacking',
+          title: 'Focus Stacking',
+          subtitle: 'Plan focus positions and frame count for a stack.',
+          icon: Icons.layers_outlined,
+          builder: () => FocusStackingPlannerScreen(settings: widget.settings),
         ),
         _ToolItem(
           id: 'extension_tubes',
