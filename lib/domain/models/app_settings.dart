@@ -16,6 +16,7 @@ class AppSettings {
     'reverse_lens',
     'dual_lens_macro',
     'sun_planner',
+    'astro_shutter',
     'long_exposure',
   ];
 

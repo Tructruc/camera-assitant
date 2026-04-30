@@ -72,6 +72,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       icon: Icons.wb_sunny_outlined,
     ),
     _HomeToolInfo(
+      id: 'astro_shutter',
+      title: 'Astro Max Shutter',
+      subtitle: 'Estimate the longest shutter before stars trail.',
+      icon: Icons.nights_stay_outlined,
+    ),
+    _HomeToolInfo(
       id: 'long_exposure',
       title: 'Long Exposure',
       subtitle: 'Convert ND filters and estimate motion blur.',

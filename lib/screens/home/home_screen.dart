@@ -1,4 +1,5 @@
 import 'package:camera_assistant/domain/models/app_settings.dart';
+import 'package:camera_assistant/screens/astro/astro_calculator_screen.dart';
 import 'package:camera_assistant/screens/dof/dof_calculator_screen.dart';
 import 'package:camera_assistant/screens/exposure/exposure_calculator_screen.dart';
 import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
@@ -86,6 +87,13 @@ class _HomeScreenState extends State<HomeScreen> {
           subtitle: 'Plan sunrise, sunset, and golden hour.',
           icon: Icons.wb_sunny_outlined,
           builder: () => SunPlannerScreen(settings: widget.settings),
+        ),
+        _ToolItem(
+          id: 'astro_shutter',
+          title: 'Astro Max Shutter',
+          subtitle: 'Estimate the longest shutter before stars trail.',
+          icon: Icons.nights_stay_outlined,
+          builder: () => AstroCalculatorScreen(settings: widget.settings),
         ),
         _ToolItem(
           id: 'long_exposure',
