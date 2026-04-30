@@ -213,7 +213,7 @@ class Lens {
     final variable = ((map['variable_aperture'] as num?) ?? 0) == 1;
 
     return Lens(
-      id: map['id'] as int,
+      id: map['id'] as int?,
       name: map['name'] as String,
       brand: map['brand'] as String?,
       model: map['model'] as String?,

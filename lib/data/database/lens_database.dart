@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:camera_assistant/data/database/lens_library_transfer.dart';
 import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:path/path.dart' as p;
@@ -142,6 +143,33 @@ class LensDatabase {
   Future<void> deleteLens(int id) async {
     final db = await database;
     await db.delete('lenses', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<String> exportLensLibrary() async {
+    final lenses = await getLenses();
+    return LensLibraryTransfer.encode(lenses);
+  }
+
+  Future<int> importLensLibrary(
+    String raw, {
+    bool replaceExisting = true,
+  }) async {
+    final lenses = LensLibraryTransfer.decode(raw);
+    final db = await database;
+
+    await db.transaction((txn) async {
+      if (replaceExisting) {
+        await txn.delete('lenses');
+      }
+
+      final batch = txn.batch();
+      for (final lens in lenses) {
+        batch.insert('lenses', lens.toMap()..remove('id'));
+      }
+      await batch.commit(noResult: true);
+    });
+
+    return lenses.length;
   }
 
   Future<AppSettings> getAppSettings() async {

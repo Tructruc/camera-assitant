@@ -1,8 +1,10 @@
+import 'package:camera_assistant/data/database/lens_library_transfer.dart';
 import 'package:camera_assistant/data/database/lens_database.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class LensManagerScreen extends StatefulWidget {
   const LensManagerScreen({super.key});
@@ -15,6 +17,7 @@ class _LensManagerScreenState extends State<LensManagerScreen> {
   final _db = LensDatabase.instance;
   List<Lens> _lenses = const [];
   bool _loading = true;
+  bool _transferring = false;
 
   @override
   void initState() {
@@ -87,8 +90,130 @@ class _LensManagerScreenState extends State<LensManagerScreen> {
     await _reload();
   }
 
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _exportLensLibrary() async {
+    setState(() => _transferring = true);
+
+    try {
+      final backupJson = await _db.exportLensLibrary();
+      await Clipboard.setData(ClipboardData(text: backupJson));
+      if (!mounted) {
+        return;
+      }
+
+      await showDialog<void>(
+        context: context,
+        builder: (context) => _LensExportDialog(
+          lensCount: _lenses.length,
+          backupJson: backupJson,
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+      final noun = _lenses.length == 1 ? 'lens' : 'lenses';
+      _showMessage(
+          'Copied ${_lenses.length} $noun backup JSON to the clipboard.');
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Could not export the lens library.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _transferring = false);
+      }
+    }
+  }
+
+  Future<void> _importLensLibrary() async {
+    final request = await showDialog<_LensImportRequest>(
+      context: context,
+      builder: (context) => const _LensImportDialog(),
+    );
+
+    if (!mounted || request == null) {
+      return;
+    }
+
+    late final List<Lens> importedLenses;
+    try {
+      importedLenses = LensLibraryTransfer.decode(request.rawJson);
+    } on FormatException catch (error) {
+      _showMessage(error.message.toString());
+      return;
+    } catch (_) {
+      _showMessage('Could not read that lens backup JSON.');
+      return;
+    }
+
+    if (request.replaceExisting && _lenses.isNotEmpty) {
+      final confirmed = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Replace lens library'),
+              content: Text(
+                'This will delete ${_lenses.length} saved lenses and import '
+                '${importedLenses.length} lenses from the backup.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Replace'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (!confirmed || !mounted) {
+        return;
+      }
+    }
+
+    setState(() => _transferring = true);
+
+    try {
+      final importedCount = await _db.importLensLibrary(
+        request.rawJson,
+        replaceExisting: request.replaceExisting,
+      );
+      await _reload();
+      if (!mounted) {
+        return;
+      }
+
+      final noun = importedCount == 1 ? 'lens' : 'lenses';
+      final verb = request.replaceExisting ? 'Imported' : 'Added';
+      _showMessage('$verb $importedCount $noun.');
+    } on FormatException catch (error) {
+      if (mounted) {
+        _showMessage(error.message.toString());
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('Could not import the lens library.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _transferring = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final busy = _loading || _transferring;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Lens Manager')),
       body: SafeArea(
@@ -101,13 +226,35 @@ class _LensManagerScreenState extends State<LensManagerScreen> {
                 subtitle:
                     'Save your lenses so calculators can fill in values for you.',
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      onPressed: _createLens,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Lens'),
-                    ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: busy ? null : _createLens,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Lens'),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: busy ? null : _exportLensLibrary,
+                        icon: const Icon(Icons.upload_file_outlined),
+                        label: const Text('Export JSON'),
+                      ),
+                      FilledButton.tonalIcon(
+                        onPressed: busy ? null : _importLensLibrary,
+                        icon: const Icon(Icons.download_outlined),
+                        label: const Text('Import JSON'),
+                      ),
+                    ],
+                  ),
+                  if (_transferring) ...[
+                    const SizedBox(height: 10),
+                    const LinearProgressIndicator(),
+                  ],
+                  const SizedBox(height: 10),
+                  Text(
+                    'Back up the full lens library as JSON or restore it from a backup.',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 10),
                   if (_loading)
@@ -137,6 +284,184 @@ class _LensManagerScreenState extends State<LensManagerScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LensExportDialog extends StatelessWidget {
+  const _LensExportDialog({
+    required this.lensCount,
+    required this.backupJson,
+  });
+
+  final int lensCount;
+  final String backupJson;
+
+  @override
+  Widget build(BuildContext context) {
+    final noun = lensCount == 1 ? 'lens' : 'lenses';
+    final textTheme = Theme.of(context).textTheme;
+
+    return AlertDialog(
+      title: const Text('Lens Backup Ready'),
+      content: SizedBox(
+        width: 640,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Copied $lensCount $noun to the clipboard.'),
+            const SizedBox(height: 8),
+            Text(
+              'Save this JSON somewhere safe so you can restore the library later.',
+              style: textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  backupJson,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+}
+
+class _LensImportRequest {
+  const _LensImportRequest({
+    required this.rawJson,
+    required this.replaceExisting,
+  });
+
+  final String rawJson;
+  final bool replaceExisting;
+}
+
+class _LensImportDialog extends StatefulWidget {
+  const _LensImportDialog();
+
+  @override
+  State<_LensImportDialog> createState() => _LensImportDialogState();
+}
+
+class _LensImportDialogState extends State<_LensImportDialog> {
+  late final TextEditingController _jsonController;
+  bool _replaceExisting = true;
+  bool _pasting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _jsonController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _jsonController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pasteClipboard() async {
+    setState(() => _pasting = true);
+
+    try {
+      final data = await Clipboard.getData('text/plain');
+      final text = data?.text?.trim();
+      if (!mounted || text == null || text.isEmpty) {
+        return;
+      }
+      _jsonController.text = text;
+    } finally {
+      if (mounted) {
+        setState(() => _pasting = false);
+      }
+    }
+  }
+
+  void _submit() {
+    final rawJson = _jsonController.text.trim();
+    if (rawJson.isEmpty) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      _LensImportRequest(
+        rawJson: rawJson,
+        replaceExisting: _replaceExisting,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Import Lens Backup'),
+      content: SizedBox(
+        width: 640,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Paste the JSON exported from Camera Assistant.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _jsonController,
+              minLines: 12,
+              maxLines: 16,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                hintText: '{\n  "lenses": []\n}',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _pasting ? null : _pasteClipboard,
+                  icon: const Icon(Icons.content_paste_go_outlined),
+                  label: const Text('Paste clipboard'),
+                ),
+              ],
+            ),
+            CheckboxListTile(
+              value: _replaceExisting,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Replace current lens library'),
+              subtitle: const Text('Turn this off to append imported lenses.'),
+              onChanged: (value) {
+                setState(() => _replaceExisting = value ?? true);
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _jsonController.text.trim().isEmpty ? null : _submit,
+          child: const Text('Import'),
+        ),
+      ],
     );
   }
 }
