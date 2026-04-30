@@ -4,6 +4,7 @@ import 'package:camera_assistant/screens/exposure/exposure_calculator_screen.dar
 import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/screens/long_exposure/long_exposure_screen.dart';
 import 'package:camera_assistant/screens/macro/macro_calculator_screen.dart';
+import 'package:camera_assistant/screens/panorama/panorama_planner_screen.dart';
 import 'package:camera_assistant/screens/settings/settings_screen.dart';
 import 'package:camera_assistant/screens/sun_planner/sun_planner_screen.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +45,13 @@ class _HomeScreenState extends State<HomeScreen> {
           subtitle: 'Plan focus positions and frame count for a stack.',
           icon: Icons.layers_outlined,
           builder: () => FocusStackingPlannerScreen(settings: widget.settings),
+        ),
+        _ToolItem(
+          id: 'panorama_planner',
+          title: 'Panorama Planner',
+          subtitle: 'Plan frames and overlap for a panorama.',
+          icon: Icons.crop_landscape,
+          builder: () => PanoramaPlannerScreen(settings: widget.settings),
         ),
         _ToolItem(
           id: 'extension_tubes',

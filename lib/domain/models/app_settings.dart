@@ -11,6 +11,7 @@ class AppSettings {
     'exposure',
     'dof',
     'focus_stacking',
+    'panorama_planner',
     'extension_tubes',
     'reverse_lens',
     'dual_lens_macro',

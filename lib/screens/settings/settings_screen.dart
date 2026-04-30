@@ -42,6 +42,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       icon: Icons.layers_outlined,
     ),
     _HomeToolInfo(
+      id: 'panorama_planner',
+      title: 'Panorama Planner',
+      subtitle: 'Plan frames and overlap for a panorama.',
+      icon: Icons.crop_landscape,
+    ),
+    _HomeToolInfo(
       id: 'extension_tubes',
       title: 'Extension Tubes',
       subtitle: 'See close-focus range and magnification.',
