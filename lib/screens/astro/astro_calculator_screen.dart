@@ -4,6 +4,7 @@ import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
+import 'package:camera_assistant/shared/widgets/info_metric_tile.dart';
 import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
@@ -347,63 +348,28 @@ class _AstroCalculatorScreenState extends State<AstroCalculatorScreen> {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'Max shutter',
                       value:
                           formatFractionalSeconds(_result!.maxShutterSeconds),
+                      helpText:
+                          'Estimated longest exposure before star trailing becomes obvious under the selected rule.',
                     ),
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'FF equivalent',
                       value: _formatMm(_result!.equivalentFocalLengthMm),
+                      helpText:
+                          'The full-frame equivalent focal length after crop factor is applied.',
                     ),
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'Crop factor',
                       value: '${_result!.cropFactor.toStringAsFixed(2)}x',
+                      helpText:
+                          'How much smaller this sensor is relative to full frame when using diagonal crop.',
                     ),
                   ],
                 ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      width: 164,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ],
       ),

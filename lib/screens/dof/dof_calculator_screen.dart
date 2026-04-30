@@ -7,6 +7,7 @@ import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
+import 'package:camera_assistant/shared/widgets/info_help_button.dart';
 import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
@@ -384,9 +385,12 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
                     controller: _focalMm, label: 'Focal length', suffix: 'mm'),
                 NumField(controller: _aperture, label: 'Aperture', suffix: 'f'),
                 NumField(
-                    controller: _subjectDistanceM,
-                    label: 'Subject distance',
-                    suffix: 'm'),
+                  controller: _subjectDistanceM,
+                  label: 'Subject distance',
+                  suffix: 'm',
+                  helpText:
+                      'Distance from the camera to the plane you want in focus.',
+                ),
               ] else ...[
                 if (lens.isZoom)
                   LensValueSlider(
@@ -459,27 +463,36 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
                     _MetricPill(
                       label: 'Hyperfocal',
                       value: '${_result!.hyperfocalM.toStringAsFixed(2)} m',
+                      helpText:
+                          'The focus distance where everything from about half that distance to infinity appears acceptably sharp.',
                     ),
                     _MetricPill(
                       label: 'Start',
                       value: '${_result!.nearLimitM.toStringAsFixed(2)} m',
+                      helpText:
+                          'The nearest distance that still falls inside the calculated depth of field.',
                     ),
                     _MetricPill(
                       label: 'Set',
                       value:
                           '${_result!.subjectDistanceM.toStringAsFixed(2)} m',
+                      helpText: 'The distance you set as the focus target.',
                     ),
                     _MetricPill(
                       label: 'Far',
                       value: _result!.farLimitM == null
                           ? 'Infinity'
                           : '${_result!.farLimitM!.toStringAsFixed(2)} m',
+                      helpText:
+                          'The farthest distance that still falls inside the calculated depth of field.',
                     ),
                     _MetricPill(
                       label: 'Focus plane thickness',
                       value: _result!.totalDofM == null
                           ? 'Infinity'
                           : formatLengthMeters(_result!.totalDofM!),
+                      helpText:
+                          'The total subject-side depth that appears acceptably sharp at the chosen settings.',
                     ),
                   ],
                 ),
@@ -813,10 +826,15 @@ class _RulerMarker extends StatelessWidget {
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill({required this.label, required this.value});
+  const _MetricPill({
+    required this.label,
+    required this.value,
+    this.helpText,
+  });
 
   final String label;
   final String value;
+  final String? helpText;
 
   @override
   Widget build(BuildContext context) {
@@ -828,26 +846,41 @@ class _MetricPill extends StatelessWidget {
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: RichText(
-        text: TextSpan(
-          style: theme.textTheme.labelMedium,
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                color: scheme.onSurfaceVariant,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: RichText(
+              text: TextSpan(
+                style: theme.textTheme.labelMedium,
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
             ),
-            TextSpan(
-              text: value,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-              ),
+          ),
+          if (helpText != null) ...[
+            const SizedBox(width: 6),
+            InfoHelpButton(
+              title: label,
+              message: helpText!,
+              tooltip: label,
             ),
           ],
-        ),
+        ],
       ),
     );
   }

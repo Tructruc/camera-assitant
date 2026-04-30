@@ -117,6 +117,8 @@ class _ExposureCalculatorScreenState extends State<ExposureCalculatorScreen> {
                 label: 'Shutter',
                 suffix: 'sec',
                 allowFractions: true,
+                helpText:
+                    'Exposure time. You can enter values like 1/60 or 0.5.',
               ),
             ],
           ),
@@ -154,6 +156,8 @@ class _ExposureCalculatorScreenState extends State<ExposureCalculatorScreen> {
                 label: 'Shutter',
                 suffix: 'sec',
                 allowFractions: true,
+                helpText:
+                    'Exposure time. You can enter values like 1/125 or 2.',
               ),
               FilledButton(
                   onPressed: _calculate, child: const Text('Calculate')),

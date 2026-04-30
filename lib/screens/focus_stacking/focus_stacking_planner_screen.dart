@@ -6,6 +6,7 @@ import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/mount_preset.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
+import 'package:camera_assistant/shared/widgets/info_metric_tile.dart';
 import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
@@ -1094,6 +1095,8 @@ class _FocusStackingPlannerScreenState
           controller: _overlapPercent,
           label: 'Overlap',
           suffix: '%',
+          helpText:
+              'How much one frame should overlap the next. Higher overlap is safer but increases frame count.',
         ),
         FilledButton(
           onPressed: _calculate,
@@ -1161,11 +1164,15 @@ class _FocusStackingPlannerScreenState
           controller: _standardNearDistanceM,
           label: 'Nearest subject point',
           suffix: 'm',
+          helpText:
+              'The closest part of the subject that needs to be covered by the stack.',
         ),
         NumField(
           controller: _standardFarDistanceM,
           label: 'Farthest subject point',
           suffix: 'm',
+          helpText:
+              'The farthest part of the subject that needs to be covered by the stack.',
         ),
       ],
     );
@@ -1229,28 +1236,38 @@ class _FocusStackingPlannerScreenState
           controller: _extensionMinFocusM,
           label: 'Lens minimum focus distance',
           suffix: 'm',
+          helpText:
+              'The closest focus distance of the lens by itself, before adding extension tubes.',
         ),
         NumField(
           controller: _extensionTubeMm,
           label: 'Total extension tube length',
           suffix: 'mm',
+          helpText:
+              'The combined extension of all tubes between camera and lens.',
         ),
         if (_method == FocusStackingMethod.refocusLens) ...[
           NumField(
             controller: _extensionNearDistanceM,
             label: 'Nearest subject point',
             suffix: 'm',
+            helpText:
+                'The closest part of the subject that needs to be covered by the stack.',
           ),
           NumField(
             controller: _extensionFarDistanceM,
             label: 'Farthest subject point',
             suffix: 'm',
+            helpText:
+                'The farthest part of the subject that needs to be covered by the stack.',
           ),
         ] else
           NumField(
             controller: _extensionSubjectDepthM,
             label: 'Subject depth to cover',
             suffix: 'm',
+            helpText:
+                'Total front-to-back subject thickness you want the rail move to cover.',
           ),
       ],
     );
@@ -1292,11 +1309,15 @@ class _FocusStackingPlannerScreenState
           controller: _reverseExtraExtensionMm,
           label: 'Extra extension',
           suffix: 'mm',
+          helpText:
+              'Additional spacing beyond the mount register distance, such as adapter or spacer thickness.',
         ),
         NumField(
           controller: _reverseSubjectDepthM,
           label: 'Subject depth to cover',
           suffix: 'm',
+          helpText:
+              'Total front-to-back subject thickness you want the rail move to cover.',
         ),
       ],
     );
@@ -1324,6 +1345,8 @@ class _FocusStackingPlannerScreenState
           controller: _dualSubjectDepthM,
           label: 'Subject depth to cover',
           suffix: 'm',
+          helpText:
+              'Total front-to-back subject thickness you want the rail move to cover.',
         ),
       ],
     );
@@ -1334,28 +1357,35 @@ class _FocusStackingPlannerScreenState
       spacing: 10,
       runSpacing: 10,
       children: [
-        _MetricTile(label: 'Frames', value: '${result.frameCount}'),
-        _MetricTile(
+        InfoMetricTile(label: 'Frames', value: '${result.frameCount}'),
+        InfoMetricTile(
           label: 'First focus',
           value: _formatDistance(result.firstFocusDistanceM!),
+          helpText: 'The first focus distance in the planned sequence.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Last focus',
           value: _formatDistance(result.lastFocusDistanceM!),
+          helpText: 'The last focus distance in the planned sequence.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Average step',
           value: result.averageFocusStepM == null
               ? 'n/a'
               : _formatDistance(result.averageFocusStepM!),
+          helpText:
+              'Average change in focus distance between consecutive frames.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Subject depth',
           value: _formatDistance(result.targetDepthM),
+          helpText: 'The total subject range the plan is trying to cover.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Overlap',
           value: '${(result.overlapRatio * 100).toStringAsFixed(0)}%',
+          helpText:
+              'How much neighboring frames overlap in coverage. More overlap is safer but slower.',
         ),
       ],
     );
@@ -1366,26 +1396,36 @@ class _FocusStackingPlannerScreenState
       spacing: 10,
       runSpacing: 10,
       children: [
-        _MetricTile(label: 'Frames', value: '${result.frameCount}'),
-        _MetricTile(
+        InfoMetricTile(label: 'Frames', value: '${result.frameCount}'),
+        InfoMetricTile(
           label: 'Magnification',
           value: '${result.planningMagnification.toStringAsFixed(2)}x',
+          helpText:
+              'The magnification used to estimate focus plane thickness and rail step.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Focus plane',
           value: _formatDistance(result.focusPlaneThicknessM),
+          helpText:
+              'Estimated subject-side thickness covered in one frame at the planning magnification.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Rail step',
           value: _formatDistance(result.recommendedRailStepM),
+          helpText:
+              'Recommended camera or rail movement between frames after the chosen overlap is applied.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Subject depth',
           value: _formatDistance(result.subjectDepthM),
+          helpText:
+              'The total subject depth the rail move is planned to cover.',
         ),
-        _MetricTile(
+        InfoMetricTile(
           label: 'Overlap',
           value: '${(result.overlapRatio * 100).toStringAsFixed(0)}%',
+          helpText:
+              'How much neighboring frames overlap in coverage. More overlap is safer but slower.',
         ),
       ],
     );
@@ -1511,47 +1551,6 @@ class _FocusStackingPlannerScreenState
             FocusStackingSetupMode.dualLens => _buildDualInputs(),
           },
           _buildOutput(),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      width: 164,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
         ],
       ),
     );

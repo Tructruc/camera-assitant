@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:camera_assistant/shared/widgets/info_help_button.dart';
 
 class NumField extends StatelessWidget {
   const NumField({
@@ -7,12 +8,16 @@ class NumField extends StatelessWidget {
     required this.label,
     this.suffix,
     this.allowFractions = false,
+    this.helpText,
+    this.helpTitle,
   });
 
   final TextEditingController controller;
   final String label;
   final String? suffix;
   final bool allowFractions;
+  final String? helpText;
+  final String? helpTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +34,13 @@ class NumField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           suffixText: suffix,
+          suffixIcon: helpText == null
+              ? null
+              : InfoHelpButton(
+                  title: helpTitle ?? label,
+                  message: helpText!,
+                  tooltip: label,
+                ),
           suffixStyle: theme.textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),

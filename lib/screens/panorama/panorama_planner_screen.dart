@@ -5,6 +5,7 @@ import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
+import 'package:camera_assistant/shared/widgets/info_metric_tile.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 import 'package:flutter/material.dart';
 
@@ -295,16 +296,22 @@ class _PanoramaPlannerScreenState extends State<PanoramaPlannerScreen> {
                 controller: _targetHorizontalFovDeg,
                 label: 'Horizontal coverage',
                 suffix: 'deg',
+                helpText:
+                    'How much final stitched width you want to cover, in degrees across the scene.',
               ),
               NumField(
                 controller: _targetVerticalFovDeg,
                 label: 'Vertical coverage',
                 suffix: 'deg',
+                helpText:
+                    'How much final stitched height you want to cover, in degrees across the scene.',
               ),
               NumField(
                 controller: _overlapPercent,
                 label: 'Overlap',
                 suffix: '%',
+                helpText:
+                    'Shared area between neighboring frames. More overlap is safer but increases shot count.',
               ),
               FilledButton(
                 onPressed: _calculate,
@@ -330,74 +337,39 @@ class _PanoramaPlannerScreenState extends State<PanoramaPlannerScreen> {
                   spacing: 10,
                   runSpacing: 10,
                   children: [
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'Per-frame coverage',
                       value:
                           '${_formatAngle(_result!.frameHorizontalFovDeg)} x ${_formatAngle(_result!.frameVerticalFovDeg)}',
+                      helpText:
+                          'How much scene one frame covers at the chosen focal length and orientation.',
                     ),
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'Advance',
                       value:
                           '${_formatAngle(_result!.horizontalAdvanceDeg)} x ${_formatAngle(_result!.verticalAdvanceDeg)}',
+                      helpText:
+                          'How far you can move between shots after overlap is accounted for.',
                     ),
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'Frames',
                       value:
                           '${_result!.horizontalFrames} x ${_result!.verticalFrames}',
                     ),
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'Total shots',
                       value: '${_result!.totalFrames}',
                     ),
-                    _MetricTile(
+                    InfoMetricTile(
                       label: 'Stitched coverage',
                       value:
                           '${_formatAngle(_result!.stitchedHorizontalFovDeg)} x ${_formatAngle(_result!.stitchedVerticalFovDeg)}',
+                      helpText:
+                          'Estimated final coverage of the planned grid once the overlapping frames are stitched.',
                     ),
                   ],
                 ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      width: 164,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
           ),
         ],
       ),

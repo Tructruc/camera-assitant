@@ -6,6 +6,7 @@ import 'package:camera_assistant/domain/models/mount_preset.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
+import 'package:camera_assistant/shared/widgets/info_metric_tile.dart';
 import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
@@ -824,11 +825,15 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               controller: _extensionMinFocusM,
               label: 'Lens minimum focus distance',
               suffix: 'm',
+              helpText:
+                  'The closest focus distance of the lens by itself, before adding extension tubes.',
             ),
             NumField(
               controller: _extensionTubeMm,
               label: 'Total extension tube length',
               suffix: 'mm',
+              helpText:
+                  'The combined extension of all tubes between camera and lens.',
             ),
             FilledButton(
               onPressed: _calculateExtension,
@@ -854,55 +859,67 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Native close focus',
                     value:
                         '${_formatMagnification(_extensionResult!.nativeMaximumMagnification)} | ${_formatRatio(_extensionResult!.nativeMaximumMagnification)}',
+                    helpText:
+                        'The lens maximum magnification without any extension tubes attached.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Tube gain',
                     value: _formatMagnification(
                         _extensionResult!.addedMagnification),
+                    helpText:
+                        'The extra magnification added by the extension tubes alone.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Magnification range',
                     value:
                         '${_formatMagnification(_extensionResult!.minimumMagnification)} to ${_formatMagnification(_extensionResult!.maximumMagnification)}',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Macro ratio range',
                     value:
                         '${_formatRatio(_extensionResult!.minimumMagnification)} to ${_formatRatio(_extensionResult!.maximumMagnification)}',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Closest focus',
                     value: _formatDistance(
                         _extensionResult!.closestFocusDistanceM),
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Farthest focus',
                     value: _formatDistance(
                         _extensionResult!.farthestFocusDistanceM),
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Effective aperture',
                     value:
                         'f/${_extensionResult!.effectiveApertureAtFarthestFocus.toStringAsFixed(1)} to f/${_extensionResult!.effectiveApertureAtClosestFocus.toStringAsFixed(1)}',
+                    helpText:
+                        'The effective f-number at the subject, including magnification. It is darker than the marked lens aperture.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Light loss',
                     value:
                         '${_formatStops(_extensionResult!.lightLossStopsAtFarthestFocus)} to ${_formatStops(_extensionResult!.lightLossStopsAtClosestFocus)}',
+                    helpText:
+                        'Exposure loss caused by working at higher magnification.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Exposure factor',
                     value:
                         '${_formatFactor(_extensionResult!.exposureFactorAtFarthestFocus)} to ${_formatFactor(_extensionResult!.exposureFactorAtClosestFocus)}',
+                    helpText:
+                        'Exposure multiplier needed to compensate for the light loss at macro magnification.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Focus plane thickness',
                     value:
                         '${_formatThickness(_extensionResult!.focusPlaneThicknessAtFarthestFocusM)} to ${_formatThickness(_extensionResult!.focusPlaneThicknessAtClosestFocusM)}',
+                    helpText:
+                        'Estimated subject-side thickness that appears sharp at the current settings.',
                   ),
                 ],
               ),
@@ -1009,6 +1026,8 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               controller: _reverseExtraExtensionMm,
               label: 'Extra extension',
               suffix: 'mm',
+              helpText:
+                  'Additional spacing beyond the mount register distance, such as adapter or spacer thickness.',
             ),
             if (_selectedMountId != null)
               Padding(
@@ -1045,46 +1064,60 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Magnification',
                     value:
                         '${_formatMagnification(_reverseResult!.magnification)} | ${_formatRatio(_reverseResult!.magnification)}',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Effective aperture',
                     value:
                         'f/${_reverseResult!.effectiveAperture.toStringAsFixed(1)}',
+                    helpText:
+                        'The effective f-number at the subject, including magnification. It is darker than the marked lens aperture.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Light loss',
                     value: _formatStops(_reverseResult!.lightLossStops),
+                    helpText:
+                        'Exposure loss caused by working at higher magnification.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Exposure factor',
                     value: _formatFactor(_reverseResult!.exposureFactor),
+                    helpText:
+                        'Exposure multiplier needed to compensate for the light loss at macro magnification.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Total extension',
                     value:
                         '${(_selectedMount!.registerDistanceMm + (parseDouble(_reverseExtraExtensionMm.text) ?? 0)).toStringAsFixed(1)} mm',
+                    helpText:
+                        'Mount register distance plus any extra spacer thickness used in the reversed setup.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Subject distance',
                     value: _formatDistance(
                       _reverseResult!.subjectDistanceFromLensPlaneM,
                     ),
+                    helpText:
+                        'Approximate distance from the front lens plane to the subject.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Sensor-to-subject',
                     value: _formatDistance(
                       _reverseResult!.subjectDistanceFromSensorPlaneM,
                     ),
+                    helpText:
+                        'Approximate distance from the sensor plane to the subject.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Focus plane thickness',
                     value: _formatThickness(
                       _reverseResult!.focusPlaneThicknessM,
                     ),
+                    helpText:
+                        'Estimated subject-side thickness that appears sharp at the current settings.',
                   ),
                 ],
               ),
@@ -1228,35 +1261,45 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Magnification',
                     value:
                         '${_formatMagnification(_dualResult!.magnification)} | ${_formatRatio(_dualResult!.magnification)}',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Effective aperture',
                     value:
                         'f/${_dualResult!.effectiveAperture.toStringAsFixed(1)}',
+                    helpText:
+                        'The effective f-number at the subject, including magnification. It is darker than the marked lens aperture.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Light loss',
                     value: _formatStops(_dualResult!.lightLossStops),
+                    helpText:
+                        'Exposure loss caused by working at higher magnification.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Exposure factor',
                     value: _formatFactor(_dualResult!.exposureFactor),
+                    helpText:
+                        'Exposure multiplier needed to compensate for the light loss at macro magnification.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Approx. working distance',
                     value: _formatDistance(
                       _dualResult!.workingDistanceFromFrontLensM,
                     ),
+                    helpText:
+                        'Approximate distance from the front reversed lens to the subject.',
                   ),
-                  _MetricTile(
+                  InfoMetricTile(
                     label: 'Focus plane thickness',
                     value: _formatThickness(
                       _dualResult!.focusPlaneThicknessM,
                     ),
+                    helpText:
+                        'Estimated subject-side thickness that appears sharp at the current settings.',
                   ),
                 ],
               ),
@@ -1290,47 +1333,6 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
           : _showDualLensTool
               ? _buildDualLensTool(context)
               : _buildReverseTool(context),
-    );
-  }
-}
-
-class _MetricTile extends StatelessWidget {
-  const _MetricTile({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Container(
-      width: 172,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

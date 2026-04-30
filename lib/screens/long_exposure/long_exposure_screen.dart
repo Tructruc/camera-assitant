@@ -111,10 +111,23 @@ class _LongExposureScreenState extends State<LongExposureScreen> {
                 label: 'Base shutter',
                 suffix: 'sec',
                 allowFractions: true,
+                helpText:
+                    'The shutter speed before adding the ND filter. You can enter values like 1/60.',
               ),
               NumField(
-                  controller: _ndStops, label: 'ND stops', suffix: 'stops'),
-              NumField(controller: _ndFactor, label: 'ND factor', suffix: 'x'),
+                controller: _ndStops,
+                label: 'ND stops',
+                suffix: 'stops',
+                helpText:
+                    'Optical density in stops. Each stop doubles exposure time.',
+              ),
+              NumField(
+                controller: _ndFactor,
+                label: 'ND factor',
+                suffix: 'x',
+                helpText:
+                    'Transmission reduction as a multiplication factor, such as 64x or 1000x.',
+              ),
               FilledButton(onPressed: _calcNd, child: const Text('Convert')),
               const SizedBox(height: 8),
               Text(_resultNd),
@@ -137,9 +150,12 @@ class _LongExposureScreenState extends State<LongExposureScreen> {
                   suffix: 'm'),
               NumField(controller: _focal, label: 'Focal length', suffix: 'mm'),
               NumField(
-                  controller: _pixelPitchUm,
-                  label: 'Pixel pitch (optional)',
-                  suffix: 'um'),
+                controller: _pixelPitchUm,
+                label: 'Pixel pitch (optional)',
+                suffix: 'μm',
+                helpText:
+                    'Sensor pixel size. Add it if you want the streak estimate in pixels instead of only millimeters on sensor.',
+              ),
               FilledButton(
                   onPressed: _calcMotion, child: const Text('Estimate Motion')),
               const SizedBox(height: 8),
