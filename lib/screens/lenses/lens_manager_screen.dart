@@ -224,8 +224,6 @@ class _LensManagerScreenState extends State<LensManagerScreen> {
             children: [
               SectionCard(
                 title: 'Lens Library',
-                subtitle:
-                    'Save your lenses so calculators can fill in values for you.',
                 children: [
                   Wrap(
                     spacing: 8,
@@ -252,11 +250,6 @@ class _LensManagerScreenState extends State<LensManagerScreen> {
                     const SizedBox(height: 10),
                     const LinearProgressIndicator(),
                   ],
-                  const SizedBox(height: 10),
-                  Text(
-                    'Back up the full lens library as JSON or restore it from a backup.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
                   const SizedBox(height: 10),
                   if (_loading)
                     const Padding(
@@ -312,11 +305,6 @@ class _LensExportDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Copied $lensCount $noun to the clipboard.'),
-            const SizedBox(height: 8),
-            Text(
-              'Save this JSON somewhere safe so you can restore the library later.',
-              style: textTheme.bodySmall,
-            ),
             const SizedBox(height: 12),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 320),
@@ -898,7 +886,7 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Capture the lens in sections instead of squeezing everything into one small dialog.',
+                      'Lens profile',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color:
                             scheme.onPrimaryContainer.withValues(alpha: 0.86),
@@ -938,8 +926,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
             ),
             SectionCard(
               title: 'Identity',
-              subtitle:
-                  'Naming, brand, model, and mount information stay readable here.',
               children: [
                 TextField(
                   controller: _name,
@@ -985,13 +971,9 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
             ),
             SectionCard(
               title: 'Optics',
-              subtitle:
-                  'Core focal, aperture, and focus data used by the calculators.',
               children: [
                 _ModePanel(
                   title: 'Lens layout',
-                  subtitle:
-                      'Choose the focal range style and aperture behavior first.',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1009,7 +991,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
                       SwitchListTile.adaptive(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Variable aperture lens'),
-                        subtitle: const Text('Example: f/3.5-5.6'),
                         value: _variableAperture,
                         onChanged: (value) =>
                             setState(() => _variableAperture = value),
@@ -1062,9 +1043,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
                       const TextInputType.numberWithOptions(decimal: true),
                   decoration: InputDecoration(
                     labelText: 'Min aperture at tele focal',
-                    helperText: _variableAperture
-                        ? null
-                        : 'Matches the wide value for constant-aperture lenses.',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1103,8 +1081,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
             ),
             SectionCard(
               title: 'Handling & Build',
-              subtitle:
-                  'Mechanical behavior and physical dimensions for real-world use.',
               children: [
                 DropdownButtonFormField<LensFocusType>(
                   initialValue: _focusType,
@@ -1166,8 +1142,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
             ),
             SectionCard(
               title: 'Ownership',
-              subtitle:
-                  'Track status, condition, and purchase details without mixing them into optics.',
               children: [
                 DropdownButtonFormField<LensOwnershipStatus>(
                   initialValue: _ownershipStatus,
@@ -1231,8 +1205,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
             ),
             SectionCard(
               title: 'Notes',
-              subtitle:
-                  'For quirks, adapter details, or anything not worth a dedicated field.',
               children: [
                 TextField(
                   controller: _notes,
@@ -1302,12 +1274,10 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
 class _ModePanel extends StatelessWidget {
   const _ModePanel({
     required this.title,
-    required this.subtitle,
     required this.child,
   });
 
   final String title;
-  final String subtitle;
   final Widget child;
 
   @override
@@ -1330,13 +1300,6 @@ class _ModePanel extends StatelessWidget {
             title,
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),

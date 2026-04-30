@@ -24,7 +24,7 @@ class _ExposureCalculatorScreenState extends State<ExposureCalculatorScreen> {
   final _aperture2 = TextEditingController(text: '4');
   final _shutter2 = TextEditingController(text: '1/100');
 
-  String _result = 'Your result will appear here.';
+  String _result = 'No result';
 
   @override
   void dispose() {

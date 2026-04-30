@@ -32,7 +32,6 @@ class NumField extends StatelessWidget {
           suffixStyle: theme.textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),
-          helperText: allowFractions ? 'You can enter values like 1/100' : null,
         ),
       ),
     );

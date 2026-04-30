@@ -176,7 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: const Text('Organize home cards'),
                 subtitle: Text(
                   _settings.homeFolders.isEmpty
-                      ? 'Reorder cards or place them into folders.'
+                      ? 'Reorder cards'
                       : '${_settings.homeFolders.length} folders, $_folderedToolCount cards in folders',
                 ),
                 trailing: const Icon(Icons.chevron_right),
@@ -264,11 +264,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'These mounts will be available in the reverse lens tool.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
             ],
           ),
           SectionCard(
@@ -301,11 +296,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'These formats will be available in DOF, macro, and focus stacking. If only one is enabled, the selector stays hidden.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
             ],
           ),
           SectionCard(
@@ -314,7 +304,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Dark mode'),
-                subtitle: const Text('Use a darker look throughout the app'),
                 value: _settings.darkMode,
                 onChanged: (value) {
                   _updateSettings(_settings.copyWith(darkMode: value));
@@ -329,8 +318,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.camera_outlined),
                 title: const Text('Edit saved lenses'),
-                subtitle:
-                    const Text('Add or update lenses for the calculators'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
                   Navigator.of(context).push(
@@ -348,11 +335,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Camera Assistant v0.1.0',
                 style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tools for exposure, focus, sun planning, and macro shooting.',
-                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
@@ -831,7 +813,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
                 dense: true,
                 leading: Icon(tool.icon, size: 20),
                 title: Text(tool.title),
-                subtitle: Text(tool.subtitle),
                 trailing: const Icon(Icons.drag_handle, size: 18),
               ),
             ),
@@ -845,7 +826,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
               dense: true,
               leading: Icon(tool.icon, size: 20),
               title: Text(tool.title),
-              subtitle: Text(tool.subtitle),
               trailing: const Icon(Icons.drag_handle, size: 18),
             ),
           ),
@@ -862,11 +842,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
             ),
             leading: Icon(tool.icon, size: 20),
             title: Text(tool.title),
-            subtitle: Text(
-              tool.subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
             trailing: const Icon(Icons.drag_handle, size: 18),
           ),
         ),
@@ -934,7 +909,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
             child: ListTile(
               leading: Icon(tool.icon),
               title: Text(tool.title),
-              subtitle: Text(tool.subtitle),
               trailing: const Icon(Icons.drag_handle),
             ),
           ),
@@ -947,7 +921,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
           child: ListTile(
             leading: Icon(tool.icon),
             title: Text(tool.title),
-            subtitle: Text(tool.subtitle),
             trailing: const Icon(Icons.drag_handle),
           ),
         ),
@@ -957,7 +930,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
         child: ListTile(
           leading: Icon(tool.icon),
           title: Text(tool.title),
-          subtitle: Text(tool.subtitle),
           trailing: const Icon(Icons.drag_handle),
         ),
       ),
@@ -1269,11 +1241,6 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
                 style: theme.textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Drag cards or folders to reorder them, and drop cards into or out of folders.',
-                style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 14),
               Row(

@@ -27,7 +27,7 @@ class _SunPlannerScreenState extends State<SunPlannerScreen> {
 
   DateTime _date = DateTime.now();
   TimeOfDay _time = TimeOfDay.now();
-  String _result = 'Sun details will appear here.';
+  String _result = 'No result';
   SolarPosition? _solarPosition;
 
   DateTime get _activeDateTime => DateTime(
@@ -247,7 +247,6 @@ class _SunPlannerScreenState extends State<SunPlannerScreen> {
         children: [
           SectionCard(
             title: 'Position & Time',
-            subtitle: 'Tap the map or enter coordinates to update the plan.',
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(14),
@@ -350,7 +349,7 @@ class _SunPlannerScreenState extends State<SunPlannerScreen> {
             title: 'Sun Position',
             children: [
               if (_solarPosition == null)
-                const Text('Enter a valid location to see the sun position.')
+                const Text('No position')
               else
                 _SunPositionView(position: _solarPosition!),
             ],

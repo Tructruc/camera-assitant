@@ -232,39 +232,39 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : width >= 560
                                       ? 2
                                       : 1;
-                              final childAspectRatio = columns == 1
-                                  ? 1.88
-                                  : columns == 2
-                                      ? 1.42
-                                      : 1.24;
+                              final cardWidth = columns == 1
+                                  ? width
+                                  : (width - ((columns - 1) * 14)) / columns;
 
-                              return GridView.builder(
+                              return SingleChildScrollView(
                                 padding: const EdgeInsets.fromLTRB(0, 8, 0, 20),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: columns,
-                                  mainAxisSpacing: 14,
-                                  crossAxisSpacing: 14,
-                                  childAspectRatio: childAspectRatio,
+                                child: Wrap(
+                                  spacing: 14,
+                                  runSpacing: 14,
+                                  children: [
+                                    for (final entry in entries)
+                                      SizedBox(
+                                        width: cardWidth,
+                                        child: entry.tool != null
+                                            ? _ToolCard(
+                                                tool: entry.tool!,
+                                                onTap: () => _openTool(
+                                                  context,
+                                                  entry.tool!,
+                                                ),
+                                              )
+                                            : _FolderCard(
+                                                folder: entry.folder!,
+                                                toolCount: entry
+                                                    .folder!.toolIds.length,
+                                                onTap: () => _openFolder(
+                                                  context,
+                                                  entry.folder!,
+                                                ),
+                                              ),
+                                      ),
+                                  ],
                                 ),
-                                itemCount: entries.length,
-                                itemBuilder: (context, index) {
-                                  final entry = entries[index];
-                                  if (entry.tool != null) {
-                                    final tool = entry.tool!;
-                                    return _ToolCard(
-                                      tool: tool,
-                                      onTap: () => _openTool(context, tool),
-                                    );
-                                  }
-
-                                  return _FolderCard(
-                                    folder: entry.folder!,
-                                    toolCount: entry.folder!.toolIds.length,
-                                    onTap: () =>
-                                        _openFolder(context, entry.folder!),
-                                  );
-                                },
                               );
                             },
                           ),
@@ -371,7 +371,7 @@ class _FolderCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -385,54 +385,40 @@ class _FolderCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: scheme.surface.withValues(alpha: 0.78),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child:
-                        Icon(Icons.folder_open_outlined, color: scheme.primary),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    folder.name,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                    child: Icon(
+                      Icons.folder_open_outlined,
+                      color: scheme.primary,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    toolCount == 1
-                        ? '1 card inside'
-                        : '$toolCount cards inside',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      folder.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Text(
-                    'Open folder',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: scheme.primary,
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                toolCount == 1 ? '1 card' : '$toolCount cards',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -471,11 +457,6 @@ class _FolderSheet extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                     ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Choose a card from this folder.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
               const SizedBox(height: 14),
               Expanded(
                 child: ListView.separated(
@@ -488,7 +469,6 @@ class _FolderSheet extends StatelessWidget {
                       child: ListTile(
                         leading: Icon(tool.icon),
                         title: Text(tool.title),
-                        subtitle: Text(tool.subtitle),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => onOpenTool(tool),
                       ),
@@ -557,12 +537,6 @@ class _TopHeader extends StatelessWidget {
                       color: scheme.onPrimaryContainer,
                     ),
                   ),
-                  Text(
-                    'Choose a tool to get started.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onPrimaryContainer.withValues(alpha: 0.78),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -594,7 +568,7 @@ class _ToolCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -608,49 +582,28 @@ class _ToolCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
                       color: scheme.primaryContainer.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(tool.icon, color: scheme.onPrimaryContainer),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    tool.title,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      tool.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    tool.subtitle,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Text(
-                    'Open',
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: scheme.primary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 18,
-                    color: scheme.primary,
                   ),
                 ],
               ),

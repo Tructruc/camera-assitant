@@ -22,8 +22,8 @@ class _LongExposureScreenState extends State<LongExposureScreen> {
   final _focal = TextEditingController(text: '50');
   final _pixelPitchUm = TextEditingController(text: '4.3');
 
-  String _resultNd = 'Your converted time will appear here.';
-  String _resultMotion = 'Your motion estimate will appear here.';
+  String _resultNd = 'No result';
+  String _resultMotion = 'No result';
 
   @override
   void dispose() {

@@ -6,6 +6,7 @@ import 'package:camera_assistant/domain/models/mount_preset.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
+import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 import 'package:flutter/material.dart';
@@ -103,6 +104,42 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
     return null;
   }
 
+  Lens? get _selectedLens {
+    if (_selectedLensId == null) {
+      return null;
+    }
+    for (final lens in _lenses) {
+      if (lens.id == _selectedLensId) {
+        return lens;
+      }
+    }
+    return null;
+  }
+
+  Lens? get _selectedDualTakingLens {
+    if (_selectedDualTakingLensId == null) {
+      return null;
+    }
+    for (final lens in _lenses) {
+      if (lens.id == _selectedDualTakingLensId) {
+        return lens;
+      }
+    }
+    return null;
+  }
+
+  Lens? get _selectedDualFrontLens {
+    if (_selectedDualFrontLensId == null) {
+      return null;
+    }
+    for (final lens in _lenses) {
+      if (lens.id == _selectedDualFrontLensId) {
+        return lens;
+      }
+    }
+    return null;
+  }
+
   Future<void> _loadLenses() async {
     final lenses = await _db.getLenses();
     if (!mounted) {
@@ -119,6 +156,22 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
       if (mounts.isNotEmpty &&
           !mounts.any((mount) => mount.id == _selectedMountId)) {
         _selectedMountId = mounts.first.id;
+      }
+    });
+  }
+
+  void _clearSelectedLens() {
+    setState(() {
+      _selectedLensId = null;
+    });
+  }
+
+  void _clearSelectedDualLens({required bool frontLens}) {
+    setState(() {
+      if (frontLens) {
+        _selectedDualFrontLensId = null;
+      } else {
+        _selectedDualTakingLensId = null;
       }
     });
   }
@@ -146,6 +199,38 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
     _calculateExtension();
   }
 
+  void _updateExtensionLensFocal(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = value.clamp(lens.minFocalLengthMm, lens.maxFocalLengthMm);
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final currentAperture = parseDouble(_extensionAperture.text) ?? minAtFocal;
+
+    setState(() {
+      _extensionFocalMm.text =
+          focal.toStringAsFixed(focal.truncateToDouble() == focal ? 0 : 1);
+      if (currentAperture < minAtFocal) {
+        _extensionAperture.text = minAtFocal.toStringAsFixed(1);
+      }
+    });
+  }
+
+  void _updateExtensionLensAperture(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = parseDouble(_extensionFocalMm.text) ?? lens.minFocalLengthMm;
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final aperture = value.clamp(minAtFocal, lens.maxAperture);
+
+    setState(() {
+      _extensionAperture.text = aperture.toStringAsFixed(1);
+    });
+  }
+
   void _applyLensToReverse(Lens lens) {
     final focal = lens.minFocalLengthMm;
     final aperture = lens.minApertureAtFocal(focal);
@@ -163,6 +248,38 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
     _calculateReverse();
   }
 
+  void _updateReverseLensFocal(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = value.clamp(lens.minFocalLengthMm, lens.maxFocalLengthMm);
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final currentAperture = parseDouble(_reverseAperture.text) ?? minAtFocal;
+
+    setState(() {
+      _reverseFocalMm.text =
+          focal.toStringAsFixed(focal.truncateToDouble() == focal ? 0 : 1);
+      if (currentAperture < minAtFocal) {
+        _reverseAperture.text = minAtFocal.toStringAsFixed(1);
+      }
+    });
+  }
+
+  void _updateReverseLensAperture(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = parseDouble(_reverseFocalMm.text) ?? lens.minFocalLengthMm;
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final aperture = value.clamp(minAtFocal, lens.maxAperture);
+
+    setState(() {
+      _reverseAperture.text = aperture.toStringAsFixed(1);
+    });
+  }
+
   void _applyLensToDualTaking(Lens lens) {
     final focal = lens.maxFocalLengthMm;
     final aperture = lens.minApertureAtFocal(focal);
@@ -175,6 +292,38 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
     _calculateDualLens();
   }
 
+  void _updateDualTakingLensFocal(double value) {
+    final lens = _selectedDualTakingLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = value.clamp(lens.minFocalLengthMm, lens.maxFocalLengthMm);
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final currentAperture = parseDouble(_dualTakingAperture.text) ?? minAtFocal;
+
+    setState(() {
+      _dualTakingFocalMm.text =
+          focal.toStringAsFixed(focal.truncateToDouble() == focal ? 0 : 1);
+      if (currentAperture < minAtFocal) {
+        _dualTakingAperture.text = minAtFocal.toStringAsFixed(1);
+      }
+    });
+  }
+
+  void _updateDualTakingLensAperture(double value) {
+    final lens = _selectedDualTakingLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = parseDouble(_dualTakingFocalMm.text) ?? lens.maxFocalLengthMm;
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final aperture = value.clamp(minAtFocal, lens.maxAperture);
+
+    setState(() {
+      _dualTakingAperture.text = aperture.toStringAsFixed(1);
+    });
+  }
+
   void _applyLensToDualFront(Lens lens) {
     final focal = lens.minFocalLengthMm;
     setState(() {
@@ -183,6 +332,19 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
           focal.toStringAsFixed(focal.truncateToDouble() == focal ? 0 : 1);
     });
     _calculateDualLens();
+  }
+
+  void _updateDualFrontLensFocal(double value) {
+    final lens = _selectedDualFrontLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = value.clamp(lens.minFocalLengthMm, lens.maxFocalLengthMm);
+
+    setState(() {
+      _dualFrontFocalMm.text =
+          focal.toStringAsFixed(focal.truncateToDouble() == focal ? 0 : 1);
+    });
   }
 
   void _calculateExtension() {
@@ -441,7 +603,6 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   Widget _buildLensPicker(
     BuildContext context, {
     required String hint,
-    required String helper,
   }) {
     return Column(
       children: [
@@ -486,19 +647,34 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
         ),
         const SizedBox(height: 10),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                _lenses.isEmpty
-                    ? 'No saved lenses yet. Enter values manually or add one in Settings.'
-                    : helper,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: _loadLenses,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+            if (_lenses.isEmpty)
+              Expanded(
+                child: Text(
+                  'No saved lenses yet.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              )
+            else
+              const Spacer(),
+            if (_lenses.isEmpty) const SizedBox(width: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: _loadLenses,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+                if (_selectedLensId != null)
+                  TextButton.icon(
+                    onPressed: _clearSelectedLens,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Enter manually'),
+                  ),
+              ],
             ),
           ],
         ),
@@ -510,8 +686,8 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   Widget _buildDualLensPicker(
     BuildContext context, {
     required int? selectedLensId,
+    required bool isFrontLens,
     required String hint,
-    required String helper,
     required ValueChanged<Lens> onSelected,
   }) {
     return Column(
@@ -545,19 +721,35 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
         ),
         const SizedBox(height: 10),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                _lenses.isEmpty
-                    ? 'No saved lenses yet. Enter values manually or add one in Settings.'
-                    : helper,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: _loadLenses,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
+            if (_lenses.isEmpty)
+              Expanded(
+                child: Text(
+                  'No saved lenses yet.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              )
+            else
+              const Spacer(),
+            if (_lenses.isEmpty) const SizedBox(width: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                TextButton.icon(
+                  onPressed: _loadLenses,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+                if (selectedLensId != null)
+                  TextButton.icon(
+                    onPressed: () =>
+                        _clearSelectedDualLens(frontLens: isFrontLens),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Enter manually'),
+                  ),
+              ],
             ),
           ],
         ),
@@ -567,29 +759,67 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   }
 
   Widget _buildExtensionTool(BuildContext context) {
+    final lens = _selectedLens;
+    final focalValue =
+        parseDouble(_extensionFocalMm.text) ?? (lens?.minFocalLengthMm ?? 50);
+    final minApertureAtFocal = lens?.minApertureAtFocal(focalValue) ?? 1.0;
+    final apertureValue =
+        parseDouble(_extensionAperture.text) ?? (lens?.minApertureWide ?? 2.8);
+
     return Column(
       children: [
         SectionCard(
-          title: 'Extension Tubes',
-          subtitle:
-              'Estimate close-focus range and magnification with extension tubes.',
+          title: 'Inputs',
           children: [
             _buildLensPicker(
               context,
-              hint: 'Start from a saved lens',
-              helper: 'A saved lens can fill these values for you.',
+              hint: 'Use a saved lens',
             ),
             _buildSensorSelector(),
-            NumField(
-              controller: _extensionFocalMm,
-              label: 'Focal length',
-              suffix: 'mm',
-            ),
-            NumField(
-              controller: _extensionAperture,
-              label: 'Aperture',
-              suffix: 'f',
-            ),
+            if (lens == null) ...[
+              NumField(
+                controller: _extensionFocalMm,
+                label: 'Focal length',
+                suffix: 'mm',
+              ),
+              NumField(
+                controller: _extensionAperture,
+                label: 'Aperture',
+                suffix: 'f',
+              ),
+            ] else ...[
+              if (lens.isZoom)
+                LensValueSlider(
+                  label: 'Focal length',
+                  minLabel: '${lens.minFocalLengthMm.toStringAsFixed(0)}mm',
+                  maxLabel: '${lens.maxFocalLengthMm.toStringAsFixed(0)}mm',
+                  min: lens.minFocalLengthMm,
+                  max: lens.maxFocalLengthMm,
+                  value: focalValue.clamp(
+                    lens.minFocalLengthMm,
+                    lens.maxFocalLengthMm,
+                  ),
+                  controller: _extensionFocalMm,
+                  suffix: 'mm',
+                  onChanged: _updateExtensionLensFocal,
+                ),
+              LensValueSlider(
+                label: lens.variableAperture
+                    ? 'Aperture (changes with zoom)'
+                    : 'Aperture',
+                minLabel: 'f/${minApertureAtFocal.toStringAsFixed(1)}',
+                maxLabel: 'f/${lens.maxAperture.toStringAsFixed(1)}',
+                min: minApertureAtFocal,
+                max: lens.maxAperture,
+                value: apertureValue.clamp(
+                  minApertureAtFocal,
+                  lens.maxAperture,
+                ),
+                controller: _extensionAperture,
+                suffix: 'f',
+                onChanged: _updateExtensionLensAperture,
+              ),
+            ],
             NumField(
               controller: _extensionMinFocusM,
               label: 'Lens minimum focus distance',
@@ -616,7 +846,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               )
             else if (_extensionResult == null)
               Text(
-                'Tap calculate to see focus range, magnification, and light loss.',
+                'No result',
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else ...[
@@ -685,11 +915,6 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                   label: const Text('Open in Focus Stacking'),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                'These values are estimates and may vary from real-world results.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
             ],
           ],
         ),
@@ -698,16 +923,21 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   }
 
   Widget _buildReverseTool(BuildContext context) {
+    final lens = _selectedLens;
+    final focalValue =
+        parseDouble(_reverseFocalMm.text) ?? (lens?.minFocalLengthMm ?? 28);
+    final minApertureAtFocal = lens?.minApertureAtFocal(focalValue) ?? 1.0;
+    final apertureValue =
+        parseDouble(_reverseAperture.text) ?? (lens?.minApertureWide ?? 2.8);
+
     return Column(
       children: [
         SectionCard(
-          title: 'Reverse Lens',
-          subtitle: 'Estimate magnification for a reversed lens setup.',
+          title: 'Inputs',
           children: [
             _buildLensPicker(
               context,
-              hint: 'Start from a saved lens',
-              helper: 'A saved lens can fill focal length and aperture.',
+              hint: 'Use a saved lens',
             ),
             _buildSensorSelector(),
             DropdownButtonFormField<String>(
@@ -731,16 +961,50 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               },
             ),
             const SizedBox(height: 12),
-            NumField(
-              controller: _reverseFocalMm,
-              label: 'Reversed lens focal length',
-              suffix: 'mm',
-            ),
-            NumField(
-              controller: _reverseAperture,
-              label: 'Aperture',
-              suffix: 'f',
-            ),
+            if (lens == null) ...[
+              NumField(
+                controller: _reverseFocalMm,
+                label: 'Reversed lens focal length',
+                suffix: 'mm',
+              ),
+              NumField(
+                controller: _reverseAperture,
+                label: 'Aperture',
+                suffix: 'f',
+              ),
+            ] else ...[
+              if (lens.isZoom)
+                LensValueSlider(
+                  label: 'Reversed lens focal length',
+                  minLabel: '${lens.minFocalLengthMm.toStringAsFixed(0)}mm',
+                  maxLabel: '${lens.maxFocalLengthMm.toStringAsFixed(0)}mm',
+                  min: lens.minFocalLengthMm,
+                  max: lens.maxFocalLengthMm,
+                  value: focalValue.clamp(
+                    lens.minFocalLengthMm,
+                    lens.maxFocalLengthMm,
+                  ),
+                  controller: _reverseFocalMm,
+                  suffix: 'mm',
+                  onChanged: _updateReverseLensFocal,
+                ),
+              LensValueSlider(
+                label: lens.variableAperture
+                    ? 'Aperture (changes with zoom)'
+                    : 'Aperture',
+                minLabel: 'f/${minApertureAtFocal.toStringAsFixed(1)}',
+                maxLabel: 'f/${lens.maxAperture.toStringAsFixed(1)}',
+                min: minApertureAtFocal,
+                max: lens.maxAperture,
+                value: apertureValue.clamp(
+                  minApertureAtFocal,
+                  lens.maxAperture,
+                ),
+                controller: _reverseAperture,
+                suffix: 'f',
+                onChanged: _updateReverseLensAperture,
+              ),
+            ],
             NumField(
               controller: _reverseExtraExtensionMm,
               label: 'Extra extension',
@@ -773,7 +1037,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               )
             else if (_reverseResult == null)
               Text(
-                'Tap calculate to see magnification, light loss, and focus distance.',
+                'No result',
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else ...[
@@ -833,11 +1097,6 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                   label: const Text('Open in Focus Stacking'),
                 ),
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Focus distance is an estimate and may differ from your real setup.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
             ],
           ],
         ),
@@ -846,46 +1105,105 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   }
 
   Widget _buildDualLensTool(BuildContext context) {
+    final takingLens = _selectedDualTakingLens;
+    final takingFocalValue = parseDouble(_dualTakingFocalMm.text) ??
+        (takingLens?.maxFocalLengthMm ?? 100);
+    final takingMinApertureAtFocal =
+        takingLens?.minApertureAtFocal(takingFocalValue) ?? 1.0;
+    final takingApertureValue = parseDouble(_dualTakingAperture.text) ??
+        (takingLens?.minApertureWide ?? 5.6);
+    final frontLens = _selectedDualFrontLens;
+    final frontFocalValue = parseDouble(_dualFrontFocalMm.text) ??
+        (frontLens?.minFocalLengthMm ?? 50);
+
     return Column(
       children: [
         SectionCard(
-          title: 'Dual Lens Macro',
-          subtitle:
-              'Estimate a stacked-lens setup with a taking lens focused at infinity and a reversed front lens.',
+          title: 'Inputs',
           children: [
             _buildDualLensPicker(
               context,
               selectedLensId: _selectedDualTakingLensId,
+              isFrontLens: false,
               hint: 'Pick the taking lens',
-              helper:
-                  'Using a saved lens here fills the taking-lens focal length and aperture.',
               onSelected: _applyLensToDualTaking,
             ),
-            NumField(
-              controller: _dualTakingFocalMm,
-              label: 'Taking lens focal length',
-              suffix: 'mm',
-            ),
-            NumField(
-              controller: _dualTakingAperture,
-              label: 'Taking lens aperture',
-              suffix: 'f',
-            ),
+            if (takingLens == null) ...[
+              NumField(
+                controller: _dualTakingFocalMm,
+                label: 'Taking lens focal length',
+                suffix: 'mm',
+              ),
+              NumField(
+                controller: _dualTakingAperture,
+                label: 'Taking lens aperture',
+                suffix: 'f',
+              ),
+            ] else ...[
+              if (takingLens.isZoom)
+                LensValueSlider(
+                  label: 'Taking lens focal length',
+                  minLabel:
+                      '${takingLens.minFocalLengthMm.toStringAsFixed(0)}mm',
+                  maxLabel:
+                      '${takingLens.maxFocalLengthMm.toStringAsFixed(0)}mm',
+                  min: takingLens.minFocalLengthMm,
+                  max: takingLens.maxFocalLengthMm,
+                  value: takingFocalValue.clamp(
+                    takingLens.minFocalLengthMm,
+                    takingLens.maxFocalLengthMm,
+                  ),
+                  controller: _dualTakingFocalMm,
+                  suffix: 'mm',
+                  onChanged: _updateDualTakingLensFocal,
+                ),
+              LensValueSlider(
+                label: takingLens.variableAperture
+                    ? 'Taking lens aperture (changes with zoom)'
+                    : 'Taking lens aperture',
+                minLabel: 'f/${takingMinApertureAtFocal.toStringAsFixed(1)}',
+                maxLabel: 'f/${takingLens.maxAperture.toStringAsFixed(1)}',
+                min: takingMinApertureAtFocal,
+                max: takingLens.maxAperture,
+                value: takingApertureValue.clamp(
+                  takingMinApertureAtFocal,
+                  takingLens.maxAperture,
+                ),
+                controller: _dualTakingAperture,
+                suffix: 'f',
+                onChanged: _updateDualTakingLensAperture,
+              ),
+            ],
             _buildSensorSelector(),
             const SizedBox(height: 8),
             _buildDualLensPicker(
               context,
               selectedLensId: _selectedDualFrontLensId,
+              isFrontLens: true,
               hint: 'Pick the reversed front lens',
-              helper:
-                  'Using a saved lens here fills the reversed front-lens focal length.',
               onSelected: _applyLensToDualFront,
             ),
-            NumField(
-              controller: _dualFrontFocalMm,
-              label: 'Reversed front-lens focal length',
-              suffix: 'mm',
-            ),
+            if (frontLens == null)
+              NumField(
+                controller: _dualFrontFocalMm,
+                label: 'Reversed front-lens focal length',
+                suffix: 'mm',
+              )
+            else if (frontLens.isZoom)
+              LensValueSlider(
+                label: 'Reversed front-lens focal length',
+                minLabel: '${frontLens.minFocalLengthMm.toStringAsFixed(0)}mm',
+                maxLabel: '${frontLens.maxFocalLengthMm.toStringAsFixed(0)}mm',
+                min: frontLens.minFocalLengthMm,
+                max: frontLens.maxFocalLengthMm,
+                value: frontFocalValue.clamp(
+                  frontLens.minFocalLengthMm,
+                  frontLens.maxFocalLengthMm,
+                ),
+                controller: _dualFrontFocalMm,
+                suffix: 'mm',
+                onChanged: _updateDualFrontLensFocal,
+              ),
             FilledButton(
               onPressed: _calculateDualLens,
               child: const Text('Calculate Dual Lens Macro'),
@@ -902,7 +1220,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               )
             else if (_dualResult == null)
               Text(
-                'Tap calculate to see magnification, effective aperture, and working distance.',
+                'No result',
                 style: Theme.of(context).textTheme.bodyMedium,
               )
             else ...[

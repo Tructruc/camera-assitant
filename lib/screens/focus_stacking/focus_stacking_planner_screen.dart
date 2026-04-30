@@ -6,6 +6,7 @@ import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/mount_preset.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
+import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 import 'package:flutter/material.dart';
@@ -393,6 +394,18 @@ class _FocusStackingPlannerScreenState
     }
   }
 
+  void _clearSelectedLens() {
+    setState(() {
+      _selectedLensId = null;
+      _errorMessage = null;
+      _standardResult = null;
+      _macroResult = null;
+      _macroResultLabel = null;
+      _macroContextLabel = null;
+      _macroCoverageLabel = null;
+    });
+  }
+
   void _applyLensToCurrentMode(Lens lens) {
     switch (_mode) {
       case FocusStackingSetupMode.standard:
@@ -437,6 +450,68 @@ class _FocusStackingPlannerScreenState
         });
         return;
     }
+  }
+
+  void _updateStandardLensFocal(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = value.clamp(lens.minFocalLengthMm, lens.maxFocalLengthMm);
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final currentAperture = parseDouble(_standardAperture.text) ?? minAtFocal;
+
+    setState(() {
+      _standardFocalMm.text = _formatInput(focal);
+      if (currentAperture < minAtFocal) {
+        _standardAperture.text = minAtFocal.toStringAsFixed(1);
+      }
+    });
+  }
+
+  void _updateStandardLensAperture(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = parseDouble(_standardFocalMm.text) ?? lens.minFocalLengthMm;
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final aperture = value.clamp(minAtFocal, lens.maxAperture);
+
+    setState(() {
+      _standardAperture.text = aperture.toStringAsFixed(1);
+    });
+  }
+
+  void _updateExtensionLensFocal(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = value.clamp(lens.minFocalLengthMm, lens.maxFocalLengthMm);
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final currentAperture = parseDouble(_extensionAperture.text) ?? minAtFocal;
+
+    setState(() {
+      _extensionFocalMm.text = _formatInput(focal);
+      if (currentAperture < minAtFocal) {
+        _extensionAperture.text = minAtFocal.toStringAsFixed(1);
+      }
+    });
+  }
+
+  void _updateExtensionLensAperture(double value) {
+    final lens = _selectedLens;
+    if (lens == null) {
+      return;
+    }
+    final focal = parseDouble(_extensionFocalMm.text) ?? lens.minFocalLengthMm;
+    final minAtFocal = lens.minApertureAtFocal(focal);
+    final aperture = value.clamp(minAtFocal, lens.maxAperture);
+
+    setState(() {
+      _extensionAperture.text = aperture.toStringAsFixed(1);
+    });
   }
 
   void _setError(String message) {
@@ -880,7 +955,6 @@ class _FocusStackingPlannerScreenState
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.straighten),
             title: Text('Move Camera / Rail'),
-            subtitle: Text('This setup is planned as a rail-only stack.'),
           ),
         ],
       );
@@ -920,16 +994,15 @@ class _FocusStackingPlannerScreenState
     );
   }
 
-  Widget _buildLensPicker({required String subtitle}) {
+  Widget _buildLensPicker() {
     return SectionCard(
       title: 'Lens',
-      subtitle: subtitle,
       children: [
         DropdownButtonFormField<int>(
           key: ValueKey('$_mode-$_selectedLensId'),
           initialValue: _selectedLensId,
           isExpanded: true,
-          hint: const Text('Select a saved lens'),
+          hint: const Text('Use a saved lens'),
           items: _lenses
               .map(
                 (lens) => DropdownMenuItem<int>(
@@ -967,10 +1040,22 @@ class _FocusStackingPlannerScreenState
         const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: _loadLenses,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Refresh lenses'),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton.icon(
+                onPressed: _loadLenses,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh lenses'),
+              ),
+              if (_selectedLensId != null)
+                TextButton.icon(
+                  onPressed: _clearSelectedLens,
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Enter manually'),
+                ),
+            ],
           ),
         ),
       ],
@@ -1019,18 +1104,59 @@ class _FocusStackingPlannerScreenState
   }
 
   Widget _buildStandardInputs() {
+    final lens = _selectedLens;
+    final focalValue =
+        parseDouble(_standardFocalMm.text) ?? (lens?.minFocalLengthMm ?? 100);
+    final minApertureAtFocal = lens?.minApertureAtFocal(focalValue) ?? 1.0;
+    final apertureValue =
+        parseDouble(_standardAperture.text) ?? (lens?.minApertureWide ?? 5.6);
+
     return _buildSharedInputs(
       children: [
-        NumField(
-          controller: _standardFocalMm,
-          label: 'Focal length',
-          suffix: 'mm',
-        ),
-        NumField(
-          controller: _standardAperture,
-          label: 'Aperture',
-          suffix: 'f',
-        ),
+        if (lens == null) ...[
+          NumField(
+            controller: _standardFocalMm,
+            label: 'Focal length',
+            suffix: 'mm',
+          ),
+          NumField(
+            controller: _standardAperture,
+            label: 'Aperture',
+            suffix: 'f',
+          ),
+        ] else ...[
+          if (lens.isZoom)
+            LensValueSlider(
+              label: 'Focal length',
+              minLabel: '${lens.minFocalLengthMm.toStringAsFixed(0)}mm',
+              maxLabel: '${lens.maxFocalLengthMm.toStringAsFixed(0)}mm',
+              min: lens.minFocalLengthMm,
+              max: lens.maxFocalLengthMm,
+              value: focalValue.clamp(
+                lens.minFocalLengthMm,
+                lens.maxFocalLengthMm,
+              ),
+              controller: _standardFocalMm,
+              suffix: 'mm',
+              onChanged: _updateStandardLensFocal,
+            ),
+          LensValueSlider(
+            label: lens.variableAperture
+                ? 'Aperture (changes with zoom)'
+                : 'Aperture',
+            minLabel: 'f/${minApertureAtFocal.toStringAsFixed(1)}',
+            maxLabel: 'f/${lens.maxAperture.toStringAsFixed(1)}',
+            min: minApertureAtFocal,
+            max: lens.maxAperture,
+            value: apertureValue.clamp(
+              minApertureAtFocal,
+              lens.maxAperture,
+            ),
+            controller: _standardAperture,
+            suffix: 'f',
+            onChanged: _updateStandardLensAperture,
+          ),
+        ],
         NumField(
           controller: _standardNearDistanceM,
           label: 'Nearest subject point',
@@ -1046,18 +1172,59 @@ class _FocusStackingPlannerScreenState
   }
 
   Widget _buildExtensionInputs() {
+    final lens = _selectedLens;
+    final focalValue =
+        parseDouble(_extensionFocalMm.text) ?? (lens?.minFocalLengthMm ?? 50);
+    final minApertureAtFocal = lens?.minApertureAtFocal(focalValue) ?? 1.0;
+    final apertureValue =
+        parseDouble(_extensionAperture.text) ?? (lens?.minApertureWide ?? 2.8);
+
     return _buildSharedInputs(
       children: [
-        NumField(
-          controller: _extensionFocalMm,
-          label: 'Focal length',
-          suffix: 'mm',
-        ),
-        NumField(
-          controller: _extensionAperture,
-          label: 'Aperture',
-          suffix: 'f',
-        ),
+        if (lens == null) ...[
+          NumField(
+            controller: _extensionFocalMm,
+            label: 'Focal length',
+            suffix: 'mm',
+          ),
+          NumField(
+            controller: _extensionAperture,
+            label: 'Aperture',
+            suffix: 'f',
+          ),
+        ] else ...[
+          if (lens.isZoom)
+            LensValueSlider(
+              label: 'Focal length',
+              minLabel: '${lens.minFocalLengthMm.toStringAsFixed(0)}mm',
+              maxLabel: '${lens.maxFocalLengthMm.toStringAsFixed(0)}mm',
+              min: lens.minFocalLengthMm,
+              max: lens.maxFocalLengthMm,
+              value: focalValue.clamp(
+                lens.minFocalLengthMm,
+                lens.maxFocalLengthMm,
+              ),
+              controller: _extensionFocalMm,
+              suffix: 'mm',
+              onChanged: _updateExtensionLensFocal,
+            ),
+          LensValueSlider(
+            label: lens.variableAperture
+                ? 'Aperture (changes with zoom)'
+                : 'Aperture',
+            minLabel: 'f/${minApertureAtFocal.toStringAsFixed(1)}',
+            maxLabel: 'f/${lens.maxAperture.toStringAsFixed(1)}',
+            min: minApertureAtFocal,
+            max: lens.maxAperture,
+            value: apertureValue.clamp(
+              minApertureAtFocal,
+              lens.maxAperture,
+            ),
+            controller: _extensionAperture,
+            suffix: 'f',
+            onChanged: _updateExtensionLensAperture,
+          ),
+        ],
         NumField(
           controller: _extensionMinFocusM,
           label: 'Lens minimum focus distance',
@@ -1336,11 +1503,7 @@ class _FocusStackingPlannerScreenState
           _buildMethodSelector(),
           if (_mode == FocusStackingSetupMode.standard ||
               _mode == FocusStackingSetupMode.extensionTubes)
-            _buildLensPicker(
-              subtitle: _mode == FocusStackingSetupMode.standard
-                  ? 'Pick a saved lens to fill focal length and aperture.'
-                  : 'Pick a saved lens to fill focal length, aperture, and minimum focus distance.',
-            ),
+            _buildLensPicker(),
           switch (_mode) {
             FocusStackingSetupMode.standard => _buildStandardInputs(),
             FocusStackingSetupMode.extensionTubes => _buildExtensionInputs(),

@@ -7,6 +7,7 @@ import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
+import 'package:camera_assistant/shared/widgets/lens_value_slider.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 import 'package:flutter/material.dart';
@@ -91,6 +92,13 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
         _selectedLensId = null;
       }
     });
+  }
+
+  void _clearSelectedLens() {
+    setState(() {
+      _selectedLensId = null;
+    });
+    _calculate(live: true);
   }
 
   void _applyLens(Lens lens) {
@@ -280,13 +288,12 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
         children: [
           SectionCard(
             title: 'Lens',
-            subtitle: 'Pick a saved lens to fill in the controls.',
             children: [
               DropdownButtonFormField<int>(
                 key: ValueKey(_selectedLensId),
                 initialValue: _selectedLensId,
                 isExpanded: true,
-                hint: const Text('Select a saved lens'),
+                hint: const Text('Use a saved lens'),
                 items: _lenses
                     .map(
                       (lens) => DropdownMenuItem<int>(
@@ -325,10 +332,22 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
               const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: _loadLenses,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh lenses'),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    TextButton.icon(
+                      onPressed: _loadLenses,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Refresh lenses'),
+                    ),
+                    if (_selectedLensId != null)
+                      TextButton.icon(
+                        onPressed: _clearSelectedLens,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Enter manually'),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -369,20 +388,20 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
                     label: 'Subject distance',
                     suffix: 'm'),
               ] else ...[
-                _IntegratedControl(
-                  label: 'Focal length',
-                  minLabel: '${lens.minFocalLengthMm.toStringAsFixed(0)}mm',
-                  maxLabel: '${lens.maxFocalLengthMm.toStringAsFixed(0)}mm',
-                  min: lens.minFocalLengthMm,
-                  max: lens.maxFocalLengthMm,
-                  value: focalValue.clamp(
-                      lens.minFocalLengthMm, lens.maxFocalLengthMm),
-                  enabled: lens.isZoom,
-                  controller: _focalMm,
-                  suffix: 'mm',
-                  onChanged: _updateLensFocal,
-                ),
-                _IntegratedControl(
+                if (lens.isZoom)
+                  LensValueSlider(
+                    label: 'Focal length',
+                    minLabel: '${lens.minFocalLengthMm.toStringAsFixed(0)}mm',
+                    maxLabel: '${lens.maxFocalLengthMm.toStringAsFixed(0)}mm',
+                    min: lens.minFocalLengthMm,
+                    max: lens.maxFocalLengthMm,
+                    value: focalValue.clamp(
+                        lens.minFocalLengthMm, lens.maxFocalLengthMm),
+                    controller: _focalMm,
+                    suffix: 'mm',
+                    onChanged: _updateLensFocal,
+                  ),
+                LensValueSlider(
                   label: lens.variableAperture
                       ? 'Aperture (changes with zoom)'
                       : 'Aperture',
@@ -474,92 +493,6 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
                   ),
                 ),
               ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _IntegratedControl extends StatelessWidget {
-  const _IntegratedControl({
-    required this.label,
-    required this.minLabel,
-    required this.maxLabel,
-    required this.min,
-    required this.max,
-    required this.value,
-    required this.controller,
-    required this.onChanged,
-    this.suffix = '',
-    this.enabled = true,
-  });
-
-  final String label;
-  final String minLabel;
-  final String maxLabel;
-  final double min;
-  final double max;
-  final double value;
-  final TextEditingController controller;
-  final bool enabled;
-  final String suffix;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withValues(alpha: 0.35),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child:
-                    Text(label, style: Theme.of(context).textTheme.labelLarge),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 90,
-                child: TextField(
-                  controller: controller,
-                  enabled: enabled,
-                  textAlign: TextAlign.right,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    suffixText: suffix,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Slider(
-            value: value,
-            min: min,
-            max: max,
-            divisions: 180,
-            onChanged: enabled ? onChanged : null,
-          ),
-          Row(
-            children: [
-              Text(minLabel, style: Theme.of(context).textTheme.bodySmall),
-              const Spacer(),
-              Text(maxLabel, style: Theme.of(context).textTheme.bodySmall),
             ],
           ),
         ],
