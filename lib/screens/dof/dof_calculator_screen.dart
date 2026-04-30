@@ -23,13 +23,6 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
   final _aperture = TextEditingController(text: '2.8');
   final _subjectDistanceM = TextEditingController(text: '3');
 
-  final _sensors = const [
-    SensorPreset('Full Frame (CoC 0.030 mm)', 0.030),
-    SensorPreset('APS-C Canon (CoC 0.019 mm)', 0.019),
-    SensorPreset('APS-C Nikon/Sony (CoC 0.020 mm)', 0.020),
-    SensorPreset('Micro Four Thirds (CoC 0.015 mm)', 0.015),
-    SensorPreset('1-inch (CoC 0.011 mm)', 0.011),
-  ];
   late SensorPreset _selectedSensor;
 
   List<Lens> _lenses = const [];
@@ -53,7 +46,7 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedSensor = _sensors.first;
+    _selectedSensor = sensorPresets.first;
     _focalMm.addListener(_onInputChanged);
     _aperture.addListener(_onInputChanged);
     _subjectDistanceM.addListener(_onInputChanged);
@@ -306,7 +299,7 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
             children: [
               DropdownButtonFormField<SensorPreset>(
                 initialValue: _selectedSensor,
-                items: _sensors
+                items: sensorPresets
                     .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
                     .toList(),
                 onChanged: (v) {
@@ -415,10 +408,10 @@ class _DofCalculatorScreenState extends State<DofCalculatorScreen> {
                           : '${_result!.farLimitM!.toStringAsFixed(2)} m',
                     ),
                     _MetricPill(
-                      label: 'Total DOF',
+                      label: 'Focus plane thickness',
                       value: _result!.totalDofM == null
                           ? 'Infinity'
-                          : '${_result!.totalDofM!.toStringAsFixed(2)} m',
+                          : formatLengthMeters(_result!.totalDofM!),
                     ),
                   ],
                 ),

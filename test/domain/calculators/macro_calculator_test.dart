@@ -17,6 +17,7 @@ void main() {
       final result = MacroCalculator.calculateExtensionTube(
         focalLengthMm: 50,
         aperture: 2.8,
+        cocM: 0.00003,
         minimumFocusDistanceM: 0.45,
         extensionLengthMm: 25,
       );
@@ -28,12 +29,21 @@ void main() {
       expect(result.farthestFocusDistanceM, closeTo(0.2250, 0.0001));
       expect(result.effectiveApertureAtClosestFocus, closeTo(4.6085, 0.0002));
       expect(result.lightLossStopsAtClosestFocus, closeTo(1.4377, 0.0003));
+      expect(
+        result.focusPlaneThicknessAtFarthestFocusM,
+        closeTo(0.001008, 0.0000001),
+      );
+      expect(
+        result.focusPlaneThicknessAtClosestFocusM,
+        closeTo(0.0006628, 0.0000002),
+      );
     });
 
     test('calculates reverse lens magnification and exposure factor', () {
       final result = MacroCalculator.calculateReverseLens(
         focalLengthMm: 28,
         aperture: 2.8,
+        cocM: 0.00003,
         extensionBehindLensMm: 44,
       );
 
@@ -43,12 +53,14 @@ void main() {
       expect(result.exposureFactor, closeTo(6.6122, 0.0002));
       expect(result.subjectDistanceFromLensPlaneM, closeTo(0.0458, 0.0002));
       expect(result.subjectDistanceFromSensorPlaneM, closeTo(0.1178, 0.0002));
+      expect(result.focusPlaneThicknessM, closeTo(0.00017494, 0.0000001));
     });
 
     test('calculates dual lens macro magnification and working distance', () {
       final result = MacroCalculator.calculateDualLensMacro(
         takingLensFocalLengthMm: 100,
         takingLensAperture: 5.6,
+        cocM: 0.00003,
         frontLensFocalLengthMm: 50,
       );
 
@@ -57,6 +69,7 @@ void main() {
       expect(result.lightLossStops, closeTo(3.1699, 0.0001));
       expect(result.exposureFactor, closeTo(9.0, 0.0001));
       expect(result.workingDistanceFromFrontLensM, closeTo(0.05, 0.0001));
+      expect(result.focusPlaneThicknessM, closeTo(0.000252, 0.0000001));
     });
   });
 }

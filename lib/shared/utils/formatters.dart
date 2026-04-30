@@ -83,3 +83,17 @@ double? parseDouble(String text) {
 
   return double.tryParse(cleaned);
 }
+
+String formatLengthMeters(double meters) {
+  final absolute = meters.abs();
+  if (absolute >= 1) {
+    return '${meters.toStringAsFixed(2)} m';
+  }
+  if (absolute >= 0.01) {
+    return '${(meters * 100).toStringAsFixed(1)} cm';
+  }
+  if (absolute >= 0.001) {
+    return '${(meters * 1000).toStringAsFixed(2)} mm';
+  }
+  return '${(meters * 1000000).toStringAsFixed(0)} μm';
+}

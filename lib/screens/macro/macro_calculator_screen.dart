@@ -3,6 +3,7 @@ import 'package:camera_assistant/domain/calculators/macro_calculator.dart';
 import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
 import 'package:camera_assistant/domain/models/mount_preset.dart';
+import 'package:camera_assistant/domain/models/sensor_preset.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
 import 'package:camera_assistant/shared/widgets/num_field.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
@@ -44,6 +45,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   int? _selectedDualTakingLensId;
   int? _selectedDualFrontLensId;
   String? _selectedMountId;
+  late SensorPreset _selectedSensor;
 
   String? _extensionError;
   ExtensionTubeResult? _extensionResult;
@@ -61,6 +63,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   @override
   void initState() {
     super.initState();
+    _selectedSensor = sensorPresets.first;
     _loadLenses();
   }
 
@@ -200,6 +203,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
       _extensionResult = MacroCalculator.calculateExtensionTube(
         focalLengthMm: focal,
         aperture: aperture,
+        cocM: _selectedSensor.cocMm / 1000,
         minimumFocusDistanceM: minFocusDistance,
         extensionLengthMm: tubeLength,
       );
@@ -234,6 +238,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
       _reverseResult = MacroCalculator.calculateReverseLens(
         focalLengthMm: focal,
         aperture: aperture,
+        cocM: _selectedSensor.cocMm / 1000,
         extensionBehindLensMm: totalExtension,
       );
     });
@@ -263,6 +268,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
       _dualResult = MacroCalculator.calculateDualLensMacro(
         takingLensFocalLengthMm: takingFocal,
         takingLensAperture: takingAperture,
+        cocM: _selectedSensor.cocMm / 1000,
         frontLensFocalLengthMm: frontFocal,
       );
     });
@@ -290,9 +296,48 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
     return '${valueM.toStringAsFixed(2)} m';
   }
 
+  String _formatThickness(double valueM) {
+    if (!valueM.isFinite) {
+      return 'Infinity';
+    }
+    return formatLengthMeters(valueM);
+  }
+
   String _formatStops(double value) => '+${value.toStringAsFixed(2)} stops';
 
   String _formatFactor(double value) => '${value.toStringAsFixed(2)}x';
+
+  Widget _buildSensorSelector() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownButtonFormField<SensorPreset>(
+        initialValue: _selectedSensor,
+        decoration:
+            const InputDecoration(labelText: 'Sensor / circle of confusion'),
+        items: sensorPresets
+            .map(
+              (sensor) => DropdownMenuItem<SensorPreset>(
+                value: sensor,
+                child: Text(sensor.name),
+              ),
+            )
+            .toList(),
+        onChanged: (value) {
+          if (value == null) {
+            return;
+          }
+          setState(() => _selectedSensor = value);
+          if (_showExtensionTool) {
+            _calculateExtension();
+          } else if (_showDualLensTool) {
+            _calculateDualLens();
+          } else {
+            _calculateReverse();
+          }
+        },
+      ),
+    );
+  }
 
   Widget _buildLensPicker(
     BuildContext context, {
@@ -435,6 +480,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               hint: 'Start from a saved lens',
               helper: 'A saved lens can fill these values for you.',
             ),
+            _buildSensorSelector(),
             NumField(
               controller: _extensionFocalMm,
               label: 'Focal length',
@@ -524,6 +570,11 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                     value:
                         '${_formatFactor(_extensionResult!.exposureFactorAtFarthestFocus)} to ${_formatFactor(_extensionResult!.exposureFactorAtClosestFocus)}',
                   ),
+                  _MetricTile(
+                    label: 'Focus plane thickness',
+                    value:
+                        '${_formatThickness(_extensionResult!.focusPlaneThicknessAtFarthestFocusM)} to ${_formatThickness(_extensionResult!.focusPlaneThicknessAtClosestFocusM)}',
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -550,6 +601,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               hint: 'Start from a saved lens',
               helper: 'A saved lens can fill focal length and aperture.',
             ),
+            _buildSensorSelector(),
             DropdownButtonFormField<String>(
               initialValue: _selectedMountId,
               isExpanded: true,
@@ -656,6 +708,12 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                       _reverseResult!.subjectDistanceFromSensorPlaneM,
                     ),
                   ),
+                  _MetricTile(
+                    label: 'Focus plane thickness',
+                    value: _formatThickness(
+                      _reverseResult!.focusPlaneThicknessM,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -696,6 +754,7 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
               label: 'Taking lens aperture',
               suffix: 'f',
             ),
+            _buildSensorSelector(),
             const SizedBox(height: 8),
             _buildDualLensPicker(
               context,
@@ -756,6 +815,12 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
                     label: 'Approx. working distance',
                     value: _formatDistance(
                       _dualResult!.workingDistanceFromFrontLensM,
+                    ),
+                  ),
+                  _MetricTile(
+                    label: 'Focus plane thickness',
+                    value: _formatThickness(
+                      _dualResult!.focusPlaneThicknessM,
                     ),
                   ),
                 ],

@@ -36,4 +36,17 @@ class DOFCalculator {
     }
     return farLimitM - nearLimitM;
   }
+
+  // Approximate subject-side depth at macro distances.
+  static double? computeFocusPlaneThicknessFromMagnification(
+    double aperture,
+    double cocM,
+    double magnification,
+  ) {
+    if (aperture <= 0 || cocM <= 0 || magnification <= 0) {
+      return null;
+    }
+    return (2 * aperture * cocM * (1 + magnification)) /
+        (magnification * magnification);
+  }
 }

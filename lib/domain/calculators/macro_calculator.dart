@@ -1,3 +1,5 @@
+import 'package:camera_assistant/domain/calculators/dof_calculator.dart';
+
 import 'dart:math' as math;
 
 class ExtensionTubeResult {
@@ -14,6 +16,8 @@ class ExtensionTubeResult {
     required this.lightLossStopsAtClosestFocus,
     required this.exposureFactorAtFarthestFocus,
     required this.exposureFactorAtClosestFocus,
+    required this.focusPlaneThicknessAtFarthestFocusM,
+    required this.focusPlaneThicknessAtClosestFocusM,
   });
 
   final double nativeMaximumMagnification;
@@ -28,6 +32,8 @@ class ExtensionTubeResult {
   final double lightLossStopsAtClosestFocus;
   final double exposureFactorAtFarthestFocus;
   final double exposureFactorAtClosestFocus;
+  final double focusPlaneThicknessAtFarthestFocusM;
+  final double focusPlaneThicknessAtClosestFocusM;
 }
 
 class ReverseLensResult {
@@ -38,6 +44,7 @@ class ReverseLensResult {
     required this.exposureFactor,
     required this.subjectDistanceFromLensPlaneM,
     required this.subjectDistanceFromSensorPlaneM,
+    required this.focusPlaneThicknessM,
   });
 
   final double magnification;
@@ -46,6 +53,7 @@ class ReverseLensResult {
   final double exposureFactor;
   final double subjectDistanceFromLensPlaneM;
   final double subjectDistanceFromSensorPlaneM;
+  final double focusPlaneThicknessM;
 }
 
 class DualLensMacroResult {
@@ -55,6 +63,7 @@ class DualLensMacroResult {
     required this.lightLossStops,
     required this.exposureFactor,
     required this.workingDistanceFromFrontLensM,
+    required this.focusPlaneThicknessM,
   });
 
   final double magnification;
@@ -62,12 +71,14 @@ class DualLensMacroResult {
   final double lightLossStops;
   final double exposureFactor;
   final double workingDistanceFromFrontLensM;
+  final double focusPlaneThicknessM;
 }
 
 class MacroCalculator {
   static ExtensionTubeResult calculateExtensionTube({
     required double focalLengthMm,
     required double aperture,
+    required double cocM,
     required double minimumFocusDistanceM,
     required double extensionLengthMm,
   }) {
@@ -108,12 +119,27 @@ class MacroCalculator {
       lightLossStopsAtClosestFocus: lightLossStops(maximumMagnification),
       exposureFactorAtFarthestFocus: exposureFactor(minimumMagnification),
       exposureFactorAtClosestFocus: exposureFactor(maximumMagnification),
+      focusPlaneThicknessAtFarthestFocusM:
+          DOFCalculator.computeFocusPlaneThicknessFromMagnification(
+                aperture,
+                cocM,
+                minimumMagnification,
+              ) ??
+              double.infinity,
+      focusPlaneThicknessAtClosestFocusM:
+          DOFCalculator.computeFocusPlaneThicknessFromMagnification(
+                aperture,
+                cocM,
+                maximumMagnification,
+              ) ??
+              double.infinity,
     );
   }
 
   static ReverseLensResult calculateReverseLens({
     required double focalLengthMm,
     required double aperture,
+    required double cocM,
     required double extensionBehindLensMm,
   }) {
     final magnification = extensionBehindLensMm / focalLengthMm;
@@ -136,12 +162,20 @@ class MacroCalculator {
             magnification: magnification,
           ) /
           1000,
+      focusPlaneThicknessM:
+          DOFCalculator.computeFocusPlaneThicknessFromMagnification(
+                aperture,
+                cocM,
+                magnification,
+              ) ??
+              double.infinity,
     );
   }
 
   static DualLensMacroResult calculateDualLensMacro({
     required double takingLensFocalLengthMm,
     required double takingLensAperture,
+    required double cocM,
     required double frontLensFocalLengthMm,
   }) {
     final magnification = takingLensFocalLengthMm / frontLensFocalLengthMm;
@@ -155,6 +189,13 @@ class MacroCalculator {
       lightLossStops: lightLossStops(magnification),
       exposureFactor: exposureFactor(magnification),
       workingDistanceFromFrontLensM: frontLensFocalLengthMm / 1000,
+      focusPlaneThicknessM:
+          DOFCalculator.computeFocusPlaneThicknessFromMagnification(
+                takingLensAperture,
+                cocM,
+                magnification,
+              ) ??
+              double.infinity,
     );
   }
 
