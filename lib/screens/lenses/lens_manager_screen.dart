@@ -1,6 +1,7 @@
 import 'package:camera_assistant/data/database/lens_library_transfer.dart';
 import 'package:camera_assistant/data/database/lens_database.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
+import 'package:camera_assistant/domain/models/mount_preset.dart';
 import 'package:camera_assistant/shared/utils/formatters.dart';
 import 'package:camera_assistant/shared/widgets/section_card.dart';
 import 'package:flutter/material.dart';
@@ -573,7 +574,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
   late final TextEditingController _brand;
   late final TextEditingController _model;
   late final TextEditingController _serialNumber;
-  late final TextEditingController _mount;
   late final TextEditingController _singleFocal;
   late final TextEditingController _zoomMinFocal;
   late final TextEditingController _zoomMaxFocal;
@@ -595,8 +595,30 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
   late LensFocusType _focusType;
   late LensStabilization _stabilization;
   late LensOwnershipStatus _ownershipStatus;
+  late String? _selectedMount;
   LensCondition? _condition;
   String? _error;
+
+  List<String> get _mountOptions {
+    final options =
+        mountPresets.map((mount) => mount.name).toList(growable: false);
+    final currentMount = _selectedMount?.trim();
+    if (currentMount != null &&
+        currentMount.isNotEmpty &&
+        !options.contains(currentMount)) {
+      return [currentMount, ...options];
+    }
+    return options;
+  }
+
+  String _mountDisplayLabel(String mount) {
+    for (final preset in mountPresets) {
+      if (preset.name == mount) {
+        return preset.label;
+      }
+    }
+    return mount;
+  }
 
   @override
   void initState() {
@@ -607,12 +629,12 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
     _focusType = initial?.focusType ?? LensFocusType.manual;
     _stabilization = initial?.stabilization ?? LensStabilization.none;
     _ownershipStatus = initial?.ownershipStatus ?? LensOwnershipStatus.owned;
+    _selectedMount = _resolveInitialMount(initial?.mount);
     _condition = initial?.condition;
     _name = TextEditingController(text: initial?.name ?? '');
     _brand = TextEditingController(text: initial?.brand ?? '');
     _model = TextEditingController(text: initial?.model ?? '');
     _serialNumber = TextEditingController(text: initial?.serialNumber ?? '');
-    _mount = TextEditingController(text: initial?.mount ?? '');
     _singleFocal = TextEditingController(
       text: (initial?.minFocalLengthMm ?? 50).toStringAsFixed(0),
     );
@@ -675,7 +697,6 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
     _brand.dispose();
     _model.dispose();
     _serialNumber.dispose();
-    _mount.dispose();
     _singleFocal.dispose();
     _zoomMinFocal.dispose();
     _zoomMaxFocal.dispose();
@@ -692,6 +713,15 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
     _purchasePrice.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  String? _resolveInitialMount(String? mount) {
+    final preset = resolveMountPreset(mount);
+    if (preset != null) {
+      return preset.name;
+    }
+    final cleaned = mount?.trim();
+    return cleaned == null || cleaned.isEmpty ? null : cleaned;
   }
 
   Future<void> _pickPurchaseDate() async {
@@ -718,7 +748,8 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
     final brand = _cleanOptionalText(_brand.text);
     final model = _cleanOptionalText(_model.text);
     final serialNumber = _cleanOptionalText(_serialNumber.text);
-    final mount = _cleanOptionalText(_mount.text);
+    final mount =
+        _selectedMount?.trim().isEmpty ?? true ? null : _selectedMount!.trim();
     final wideMin = parseDouble(_minApertureWide.text);
     final teleMin = parseDouble(_minApertureTele.text);
     final maxA = parseDouble(_maxAperture.text);
@@ -830,6 +861,8 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final mountLabel =
+        _selectedMount?.trim().isEmpty ?? true ? null : _selectedMount!.trim();
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.initial == null ? 'Add Lens' : 'Edit Lens'),
@@ -892,10 +925,10 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
                           icon: Icons.sync_alt_outlined,
                           label: _ownershipStatus.label,
                         ),
-                        if (_mount.text.trim().isNotEmpty)
+                        if (mountLabel != null)
                           _EditorChip(
                             icon: Icons.link_outlined,
-                            label: _mount.text.trim(),
+                            label: mountLabel,
                           ),
                       ],
                     ),
@@ -924,10 +957,24 @@ class _LensEditorScreenState extends State<_LensEditorScreen> {
                   decoration: const InputDecoration(labelText: 'Model'),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _mount,
+                DropdownButtonFormField<String?>(
+                  initialValue: _selectedMount,
                   decoration: const InputDecoration(labelText: 'Mount'),
-                  onChanged: (_) => setState(() {}),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('Not set'),
+                    ),
+                    ..._mountOptions.map(
+                      (mount) => DropdownMenuItem<String?>(
+                        value: mount,
+                        child: Text(_mountDisplayLabel(mount)),
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedMount = value);
+                  },
                 ),
                 const SizedBox(height: 12),
                 TextField(

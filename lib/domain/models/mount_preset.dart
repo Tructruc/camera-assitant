@@ -142,3 +142,20 @@ const mountPresets = [
     isVintage: true,
   ),
 ];
+
+MountPreset? resolveMountPreset(String? rawMount) {
+  final cleaned = rawMount?.trim();
+  if (cleaned == null || cleaned.isEmpty) {
+    return null;
+  }
+
+  for (final preset in mountPresets) {
+    if (preset.id == cleaned ||
+        preset.name == cleaned ||
+        preset.label == cleaned) {
+      return preset;
+    }
+  }
+
+  return null;
+}

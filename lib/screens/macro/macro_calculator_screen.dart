@@ -149,8 +149,13 @@ class _MacroCalculatorScreenState extends State<MacroCalculatorScreen> {
   void _applyLensToReverse(Lens lens) {
     final focal = lens.minFocalLengthMm;
     final aperture = lens.minApertureAtFocal(focal);
+    final mountPreset = resolveMountPreset(lens.mount);
     setState(() {
       _selectedLensId = lens.id;
+      if (mountPreset != null &&
+          _availableMounts.any((mount) => mount.id == mountPreset.id)) {
+        _selectedMountId = mountPreset.id;
+      }
       _reverseFocalMm.text =
           focal.toStringAsFixed(focal.truncateToDouble() == focal ? 0 : 1);
       _reverseAperture.text = aperture.toStringAsFixed(1);

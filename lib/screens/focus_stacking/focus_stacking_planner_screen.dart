@@ -417,8 +417,12 @@ class _FocusStackingPlannerScreenState
       case FocusStackingSetupMode.reverseLens:
         final focal = lens.minFocalLengthMm;
         final aperture = lens.minApertureAtFocal(focal);
+        final mountPreset = resolveMountPreset(lens.mount);
         setState(() {
           _selectedLensId = lens.id;
+          if (mountPreset != null) {
+            _selectedMountId = mountPreset.id;
+          }
           _reverseFocalMm.text = _formatInput(focal);
           _reverseAperture.text = aperture.toStringAsFixed(1);
         });
