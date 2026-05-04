@@ -90,8 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _ToolItem(
           id: 'astro_shutter',
-          title: 'Astro Max Shutter',
-          subtitle: 'Estimate the longest shutter before stars trail.',
+          title: 'Astro Tools',
+          subtitle: 'Simulate Moon/Sun framing and check star-trailing limits.',
           icon: Icons.nights_stay_outlined,
           builder: () => AstroCalculatorScreen(settings: widget.settings),
         ),

@@ -73,8 +73,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ),
     _HomeToolInfo(
       id: 'astro_shutter',
-      title: 'Astro Max Shutter',
-      subtitle: 'Estimate the longest shutter before stars trail.',
+      title: 'Astro Tools',
+      subtitle: 'Simulate Moon/Sun framing and check star-trailing limits.',
       icon: Icons.nights_stay_outlined,
     ),
     _HomeToolInfo(
