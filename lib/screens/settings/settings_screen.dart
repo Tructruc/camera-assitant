@@ -1,3 +1,5 @@
+import 'package:camera_assistant/app/tools/tool_catalog.dart';
+import 'package:camera_assistant/app/tools/tool_definition.dart';
 import 'package:flutter/material.dart';
 import 'package:camera_assistant/domain/models/app_settings.dart';
 import 'package:camera_assistant/domain/models/mount_preset.dart';
@@ -21,69 +23,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late AppSettings _settings;
-
-  static const _homeTools = [
-    _HomeToolInfo(
-      id: 'exposure',
-      title: 'Exposure',
-      subtitle: 'Match one exposure to another.',
-      icon: Icons.exposure,
-    ),
-    _HomeToolInfo(
-      id: 'dof',
-      title: 'DOF',
-      subtitle: 'Check depth of field and focus range.',
-      icon: Icons.filter_center_focus,
-    ),
-    _HomeToolInfo(
-      id: 'focus_stacking',
-      title: 'Focus Stacking',
-      subtitle: 'Plan focus positions and frame count for a stack.',
-      icon: Icons.layers_outlined,
-    ),
-    _HomeToolInfo(
-      id: 'panorama_planner',
-      title: 'Panorama Planner',
-      subtitle: 'Plan frames and overlap for a panorama.',
-      icon: Icons.crop_landscape,
-    ),
-    _HomeToolInfo(
-      id: 'extension_tubes',
-      title: 'Extension Tubes',
-      subtitle: 'See close-focus range and magnification.',
-      icon: Icons.add_circle_outline,
-    ),
-    _HomeToolInfo(
-      id: 'reverse_lens',
-      title: 'Reverse Lens',
-      subtitle: 'Estimate magnification and focus distance.',
-      icon: Icons.sync_alt,
-    ),
-    _HomeToolInfo(
-      id: 'dual_lens_macro',
-      title: 'Dual Lens Macro',
-      subtitle: 'Estimate stacked-lens magnification and exposure loss.',
-      icon: Icons.join_inner,
-    ),
-    _HomeToolInfo(
-      id: 'sun_planner',
-      title: 'Sun Planner',
-      subtitle: 'Plan sunrise, sunset, and golden hour.',
-      icon: Icons.wb_sunny_outlined,
-    ),
-    _HomeToolInfo(
-      id: 'astro_shutter',
-      title: 'Astro Tools',
-      subtitle: 'Simulate Moon/Sun framing and check star-trailing limits.',
-      icon: Icons.nights_stay_outlined,
-    ),
-    _HomeToolInfo(
-      id: 'long_exposure',
-      title: 'Long Exposure',
-      subtitle: 'Convert ND filters and estimate motion blur.',
-      icon: Icons.shutter_speed,
-    ),
-  ];
 
   List<MountPreset> get _selectedMounts => mountPresets
       .where((mount) => _settings.enabledMountIds.contains(mount.id))
@@ -153,7 +92,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       showDragHandle: true,
       builder: (context) {
         return _HomeOrganizerSheet(
-          tools: _homeTools,
+          tools: ToolCatalog.tools,
           initialOrder: _settings.homeToolOrder,
           initialFolders: _settings.homeFolders,
         );
@@ -356,20 +295,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class _HomeToolInfo {
-  const _HomeToolInfo({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
-
-  final String id;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-}
-
 class _HomeOrganizationResult {
   const _HomeOrganizationResult({
     required this.homeToolOrder,
@@ -387,7 +312,7 @@ class _HomeOrganizerSheet extends StatefulWidget {
     required this.initialFolders,
   });
 
-  final List<_HomeToolInfo> tools;
+  final List<ToolDefinition> tools;
   final List<String> initialOrder;
   final List<HomeFolder> initialFolders;
 
@@ -407,7 +332,7 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
   int? _topLevelPreviewIndex;
   final Map<String, int> _folderPreviewIndexes = {};
 
-  Map<String, _HomeToolInfo> get _toolsById {
+  Map<String, ToolDefinition> get _toolsById {
     return {for (final tool in widget.tools) tool.id: tool};
   }
 
@@ -807,7 +732,7 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
   Widget _buildNestedDraggableToolTile(
     ThemeData theme,
     String folderId,
-    _HomeToolInfo tool,
+    ToolDefinition tool,
   ) {
     return Container(
       key: _nestedRowKey(folderId, tool.id),
@@ -906,7 +831,7 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
 
   Widget _buildOrganizerToolRow(
     ThemeData theme,
-    _HomeToolInfo tool,
+    ToolDefinition tool,
   ) {
     return LongPressDraggable<String>(
       key: ValueKey('top-level-tool-${tool.id}'),
@@ -1046,7 +971,7 @@ class _HomeOrganizerSheetState extends State<_HomeOrganizerSheet> {
   ) {
     final folderTools = folder.toolIds
         .map((id) => _toolsById[id])
-        .whereType<_HomeToolInfo>()
+        .whereType<ToolDefinition>()
         .toList();
 
     return Card(

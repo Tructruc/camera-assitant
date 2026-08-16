@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:camera_assistant/data/lenses/lens_mapper.dart';
 import 'package:camera_assistant/domain/models/lens.dart';
 
 class LensLibraryTransfer {
@@ -15,7 +16,7 @@ class LensLibraryTransfer {
       'exported_at': (exportedAt ?? DateTime.now()).toUtc().toIso8601String(),
       'lens_count': lenses.length,
       'lenses': lenses
-          .map((lens) => lens.toMap()
+          .map((lens) => LensMapper.toRow(lens)
             ..remove('id')
             ..remove('default_focal_mm'))
           .toList(growable: false),
@@ -68,6 +69,6 @@ class LensLibraryTransfer {
       'default_focal_mm',
       () => map['min_focal_mm'] ?? map['max_focal_mm'],
     );
-    return Lens.fromMap(map);
+    return LensMapper.fromRow(map);
   }
 }

@@ -1,3 +1,4 @@
+import 'package:camera_assistant/app/app_dependencies.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
@@ -17,5 +18,9 @@ Future<void> main() async {
     databaseFactory = databaseFactorySqflitePlugin;
   }
 
-  runApp(const CameraAssistantApp());
+  runApp(
+    CameraAssistantApp(
+      dependencies: AppDependencies.sqlite(),
+    ),
+  );
 }

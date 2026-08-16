@@ -1,13 +1,7 @@
+import 'package:camera_assistant/app/routes.dart';
+import 'package:camera_assistant/app/tools/tool_catalog.dart';
+import 'package:camera_assistant/app/tools/tool_definition.dart';
 import 'package:camera_assistant/domain/models/app_settings.dart';
-import 'package:camera_assistant/screens/astro/astro_calculator_screen.dart';
-import 'package:camera_assistant/screens/dof/dof_calculator_screen.dart';
-import 'package:camera_assistant/screens/exposure/exposure_calculator_screen.dart';
-import 'package:camera_assistant/screens/focus_stacking/focus_stacking_planner_screen.dart';
-import 'package:camera_assistant/screens/long_exposure/long_exposure_screen.dart';
-import 'package:camera_assistant/screens/macro/macro_calculator_screen.dart';
-import 'package:camera_assistant/screens/panorama/panorama_planner_screen.dart';
-import 'package:camera_assistant/screens/settings/settings_screen.dart';
-import 'package:camera_assistant/screens/sun_planner/sun_planner_screen.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -25,105 +19,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<_ToolItem> get _allTools => [
-        _ToolItem(
-          id: 'exposure',
-          title: 'Exposure',
-          subtitle: 'Match one exposure to another.',
-          icon: Icons.exposure,
-          builder: () => const ExposureCalculatorScreen(),
-        ),
-        _ToolItem(
-          id: 'dof',
-          title: 'DOF',
-          subtitle: 'Check depth of field and focus range.',
-          icon: Icons.filter_center_focus,
-          builder: () => DofCalculatorScreen(settings: widget.settings),
-        ),
-        _ToolItem(
-          id: 'focus_stacking',
-          title: 'Focus Stacking',
-          subtitle: 'Plan focus positions and frame count for a stack.',
-          icon: Icons.layers_outlined,
-          builder: () => FocusStackingPlannerScreen(settings: widget.settings),
-        ),
-        _ToolItem(
-          id: 'panorama_planner',
-          title: 'Panorama Planner',
-          subtitle: 'Plan frames and overlap for a panorama.',
-          icon: Icons.crop_landscape,
-          builder: () => PanoramaPlannerScreen(settings: widget.settings),
-        ),
-        _ToolItem(
-          id: 'extension_tubes',
-          title: 'Extension Tubes',
-          subtitle: 'See close-focus range and magnification.',
-          icon: Icons.add_circle_outline,
-          builder: () => MacroCalculatorScreen(settings: widget.settings),
-        ),
-        _ToolItem(
-          id: 'reverse_lens',
-          title: 'Reverse Lens',
-          subtitle: 'Estimate magnification and focus distance.',
-          icon: Icons.sync_alt,
-          builder: () => MacroCalculatorScreen(
-            settings: widget.settings,
-            initialMode: MacroToolMode.reverseLens,
-          ),
-        ),
-        _ToolItem(
-          id: 'dual_lens_macro',
-          title: 'Dual Lens Macro',
-          subtitle: 'Estimate stacked-lens magnification and exposure loss.',
-          icon: Icons.join_inner,
-          builder: () => MacroCalculatorScreen(
-            settings: widget.settings,
-            initialMode: MacroToolMode.dualLens,
-          ),
-        ),
-        _ToolItem(
-          id: 'sun_planner',
-          title: 'Sun Planner',
-          subtitle: 'Plan sunrise, sunset, and golden hour.',
-          icon: Icons.wb_sunny_outlined,
-          builder: () => SunPlannerScreen(settings: widget.settings),
-        ),
-        _ToolItem(
-          id: 'astro_shutter',
-          title: 'Astro Tools',
-          subtitle: 'Simulate Moon/Sun framing and check star-trailing limits.',
-          icon: Icons.nights_stay_outlined,
-          builder: () => AstroCalculatorScreen(settings: widget.settings),
-        ),
-        _ToolItem(
-          id: 'long_exposure',
-          title: 'Long Exposure',
-          subtitle: 'Convert ND filters and estimate motion blur.',
-          icon: Icons.shutter_speed,
-          builder: () => const LongExposureScreen(),
-        ),
-      ];
+  List<ToolDefinition> get _allTools => ToolCatalog.tools;
 
-  void _openTool(BuildContext context, _ToolItem tool) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _ToolScaffold(title: tool.title, child: tool.builder()),
-      ),
-    );
+  void _openTool(BuildContext context, ToolDefinition tool) {
+    Navigator.of(context).pushNamed(AppRoutes.tool(tool.id));
   }
 
   void _openSettings(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => _ToolScaffold(
-          title: 'Settings',
-          child: SettingsScreen(
-            settings: widget.settings,
-            onSettingsChanged: widget.onSettingsChanged,
-          ),
-        ),
-      ),
-    );
+    Navigator.of(context).pushNamed(AppRoutes.settings);
   }
 
   List<_HomeEntry> get _orderedEntries {
@@ -167,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final toolsById = {for (final tool in _allTools) tool.id: tool};
     final tools = folder.toolIds
         .map((id) => toolsById[id])
-        .whereType<_ToolItem>()
+        .whereType<ToolDefinition>()
         .toList(growable: false);
     if (tools.isEmpty) {
       return;
@@ -298,24 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _ToolItem {
-  const _ToolItem({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.builder,
-  });
-
-  final String id;
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Widget Function() builder;
-}
-
 class _HomeEntry {
-  const _HomeEntry.tool(_ToolItem value)
+  const _HomeEntry.tool(ToolDefinition value)
       : tool = value,
         folder = null;
 
@@ -323,47 +210,8 @@ class _HomeEntry {
       : tool = null,
         folder = value;
 
-  final _ToolItem? tool;
+  final ToolDefinition? tool;
   final HomeFolder? folder;
-}
-
-class _ToolScaffold extends StatelessWidget {
-  const _ToolScaffold({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              scheme.surface,
-              scheme.surfaceContainerLowest,
-              scheme.surface,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760),
-              child: child,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _FolderCard extends StatelessWidget {
@@ -452,8 +300,8 @@ class _FolderSheet extends StatelessWidget {
   });
 
   final String title;
-  final List<_ToolItem> tools;
-  final ValueChanged<_ToolItem> onOpenTool;
+  final List<ToolDefinition> tools;
+  final ValueChanged<ToolDefinition> onOpenTool;
 
   @override
   Widget build(BuildContext context) {
@@ -571,7 +419,7 @@ class _TopHeader extends StatelessWidget {
 class _ToolCard extends StatelessWidget {
   const _ToolCard({required this.tool, required this.onTap});
 
-  final _ToolItem tool;
+  final ToolDefinition tool;
   final VoidCallback onTap;
 
   @override
