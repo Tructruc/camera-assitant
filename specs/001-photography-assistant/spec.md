@@ -194,42 +194,49 @@ equipment, and verify that the saved snapshot and checklist remain complete and 
 
 ### Functional Requirements
 
+Requirements marked **Post-v1 roadmap** define the intended product direction but are explicitly outside
+the current implementation plan and first-release acceptance gate. They require their own specification or
+an approved plan amendment before implementation.
+
 - **FR-001**: The product MUST provide a browsable, searchable, and favoritable catalog of calculators and
   planners grouped by photographic purpose.
 - **FR-002**: Every calculator MUST accept manual inputs, label units, validate its domain, show applied
   assumptions, and explain its result and limitations.
-- **FR-003**: The product MUST provide depth-of-field and hyperfocal, exposure comparison, long-exposure and
-  neutral-density, focus-stacking, field-of-view, diffraction, flash-exposure, and timelapse tools.
-- **FR-004**: The product MUST provide extension-tube, reversed-lens, and dual-lens macro tools that expose
+- **FR-003**: The first release MUST provide depth-of-field and hyperfocal, exposure comparison, and
+  long-exposure and neutral-density tools.
+- **FR-004**: **Post-v1 roadmap**: The product MUST provide extension-tube, reversed-lens, and dual-lens macro tools that expose
   magnification and related optical or exposure effects supported by each model.
-- **FR-005**: The product MUST provide astrophotography shutter guidance with selectable supported rules,
+- **FR-005**: **Post-v1 roadmap**: The product MUST provide astrophotography shutter guidance with selectable supported rules,
   camera/lens inputs, tolerance explanation, and star-trail planning.
-- **FR-006**: The product MUST provide panorama planning for horizontal, vertical, and multi-row capture,
+- **FR-006**: **Post-v1 roadmap**: The product MUST provide panorama planning for horizontal, vertical, and multi-row capture,
   including overlap, orientation, frame count, movement increments, and resulting coverage.
-- **FR-007**: Users MUST be able to maintain an offline inventory of camera bodies, lenses, converters,
-  extension tubes, and filters, including custom equipment and user-overridden parameters.
+- **FR-007**: First-release users MUST be able to maintain an offline inventory of camera bodies, lenses,
+  and neutral-density filters, including custom equipment and user-overridden parameters. Converters,
+  extension tubes, and other equipment types are post-v1 roadmap scope.
 - **FR-008**: Compatible tools MUST accept inventory selections, visibly identify all applied equipment
   values and sources, and permit per-calculation overrides without silently modifying inventory.
-- **FR-009**: The product MUST provide location- and time-based positions, paths, rise/set/transit events,
+- **FR-009**: **Post-v1 roadmap**: The product MUST provide location- and time-based positions, paths, rise/set/transit events,
   and visibility for the Sun, Moon, Milky Way, planets, and a maintained catalog of notable deep-sky
   targets suitable for photographic planning.
-- **FR-010**: Users MUST be able to search a date range for Sun or Moon alignment with a specified bearing,
+- **FR-010**: **Post-v1 roadmap**: Users MUST be able to search a date range for Sun or Moon alignment with a specified bearing,
   target position, angular tolerance, observer elevation, and target elevation.
-- **FR-011**: Celestial and alignment planners MUST provide map, compass, timeline, and numeric views; where
+- **FR-011**: **Post-v1 roadmap**: Celestial and alignment planners MUST provide map, compass, timeline, and numeric views; where
   supported and permitted, an AR view MUST overlay the same plan on the live camera view.
-- **FR-012**: AR and compass views MUST display calibration and accuracy state and MUST not conceal planning
+- **FR-012**: **Post-v1 roadmap**: AR and compass views MUST display calibration and accuracy state and MUST not conceal planning
   functions when hardware or permissions are unavailable.
-- **FR-013**: Planning results MUST identify location, local time, time zone, north reference, elevation,
+- **FR-013**: **Post-v1 roadmap**: Planning results MUST identify location, local time, time zone, north reference, elevation,
   refraction or horizon assumptions, source freshness, and expected accuracy where relevant.
-- **FR-014**: Users MUST be able to save plans and calculation snapshots with inputs, outputs, equipment,
-  assumptions, time/location context, notes, and a field checklist.
-- **FR-015**: Calculators, inventory, saved snapshots, and locally computable astronomical planning MUST
-  remain usable without an active network connection.
-- **FR-016**: Location, orientation, inventory, plans, and usage data MUST remain on the user's device by
-  default, with explicit consent required before any transmission or sharing.
-- **FR-017**: The product MUST request location, camera, and sensor permissions only when a user starts a
+- **FR-014**: First-release users MUST be able to save calculation snapshots with inputs, outputs,
+  equipment, assumptions, notes, and display context. Saved location plans and field checklists are
+  post-v1 roadmap scope.
+- **FR-015**: First-release calculators, inventory, preferences, and saved calculation snapshots MUST remain
+  usable without an active network connection. Later planning modules inherit the same requirement.
+- **FR-016**: First-release inventory, preferences, calculation snapshots, and usage data MUST remain on the
+  user's device. Future location, orientation, and plan data inherit the same default, with explicit consent
+  required before any transmission or sharing.
+- **FR-017**: **Post-v1 roadmap**: The product MUST request location, camera, and sensor permissions only when a user starts a
   function that requires them and MUST explain the available fallback when access is denied.
-- **FR-018**: Sun-related views MUST display solar observation safety guidance before users rely on optical
+- **FR-018**: **Post-v1 roadmap**: Sun-related views MUST display solar observation safety guidance before users rely on optical
   alignment, and all estimates MUST be clearly distinguished from guarantees.
 - **FR-019**: Core workflows MUST support screen readers, scalable text, sufficient contrast, large touch
   targets, non-color-only meaning, and a low-light viewing mode.
@@ -272,11 +279,11 @@ equipment, and verify that the saved snapshot and checklist remain complete and 
   calculator result on their first attempt in under 60 seconds.
 - **SC-003**: At least 90% of representative photographers can create equipment and reuse it in a compatible
   tool in under two minutes without re-entering shared parameters.
-- **SC-004**: For authoritative astronomical fixtures, displayed event times and sky positions remain
+- **SC-004**: **Post-v1 roadmap**: For authoritative astronomical fixtures, displayed event times and sky positions remain
   within the accuracy tolerance declared by the product for 100% of supported locations and date ranges.
 - **SC-005**: Users can access every calculator, their equipment inventory, and all previously saved plans
   after a cold start with network access disabled.
-- **SC-006**: Every AR-assisted workflow has a functionally equivalent non-AR planning path and can be
+- **SC-006**: **Post-v1 roadmap**: Every AR-assisted workflow has a functionally equivalent non-AR planning path and can be
   completed when camera, orientation, or precise-location permission is denied.
 - **SC-007**: All critical user journeys pass automated acceptance checks on every supported platform class,
   with no unresolved critical or high-severity accessibility defects at release.

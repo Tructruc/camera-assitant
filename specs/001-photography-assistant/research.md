@@ -62,6 +62,14 @@ manual input. Direct override avoids pretending one circle-of-confusion conventi
 **Alternatives considered**: Manufacturer-specific depth tables are incomplete and hard to license;
 diffraction-aware or pupil-magnification models can be later opt-in calculation variants.
 
+**Reference basis**: Carl Zeiss Camera Lens Division's technical treatment documents circle-of-confusion
+criteria and the dependence of perceived depth of field on viewing conditions. Published Zeiss depth-of-
+field tables provide independent numeric fixtures. The implementation task MUST record the exact formula,
+fixture source, input convention, and tolerance beside every fixture.
+
+**References**: [Zeiss: Depth of Field and Bokeh](https://lenspire.zeiss.com/photo/app/uploads/2018/04/Article-Bokeh-2010-EN.pdf),
+[Zeiss depth-of-field tables](https://www.zeiss.com/content/dam/consumer-products/downloads/cinematography/manuals/en/depth-of-field-tables/manual-depth-of-field-tables-zeiss-cinema-zoom-70-200mm.pdf)
+
 ## Exposure and ND models
 
 **Decision**: Represent exposure value differences as `log2` stop deltas from aperture, shutter time, and
@@ -74,6 +82,14 @@ is straightforward to verify with exact fixtures.
 
 **Alternatives considered**: Lookup tables alone cannot handle arbitrary partial stops; optical-density and
 filter-factor input remain presentation conversions into the canonical stop value.
+
+**Reference basis**: Nikon's exposure guidance defines a full stop as twice or half the captured light and
+identifies shutter speed, aperture, and ISO as the exposure controls. Manufacturer guidance also documents
+ND filters in stop values for obtaining longer shutter times. Calculator fixtures MUST cite their source or
+show an independent derivation from these relationships and declare a numerical tolerance.
+
+**References**: [Nikon exposure fundamentals](https://www.nikonusa.com/learn-and-explore/c/tips-and-techniques/a-basic-look-at-the-basics-of-exposure),
+[Nikon long-exposure and ND guidance](https://www.nikonusa.com/learn-and-explore/c/tips-and-techniques/creating-a-long-exposure-look-without-the-wait-or-nd-filter)
 
 ## Local persistence
 

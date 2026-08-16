@@ -95,7 +95,7 @@ conversion fixtures for each calculator and complete each screen offline with an
 
 ### Tests for User Story 1
 
-- [ ] T031 [P] [US1] Add cited depth-of-field/hyperfocal reference fixtures and failing tests in `test/fixtures/depth_of_field_fixtures.dart` and `test/unit/features/depth_of_field/depth_of_field_calculator_test.dart`
+- [ ] T031 [P] [US1] Document exact formulas, authoritative Zeiss fixture citations, input conventions, and tolerances, then add failing depth-of-field/hyperfocal tests in `test/fixtures/depth_of_field_fixtures.dart` and `test/unit/features/depth_of_field/depth_of_field_calculator_test.dart`
 - [ ] T032 [P] [US1] Add exposure symmetry/component fixtures and failing tests in `test/fixtures/exposure_fixtures.dart` and `test/unit/features/exposure_comparison/exposure_calculator_test.dart`
 - [ ] T033 [P] [US1] Add ND stop/filter-factor/optical-density fixtures and failing tests in `test/fixtures/long_exposure_fixtures.dart` and `test/unit/features/long_exposure/long_exposure_calculator_test.dart`
 - [ ] T034 [P] [US1] Write calculator input, validation, result, assumptions, and accessibility widget tests in `test/widget/features/calculators/calculator_screens_test.dart`
@@ -156,6 +156,8 @@ units, restart offline, and verify every original canonical value, assumption, w
 - [ ] T059 Run the complete iOS quickstart and record simulator/device evidence in `specs/001-photography-assistant/validation/ios.md`
 - [ ] T060 Verify CI branch protection requirements and document merge-request workflow in `CONTRIBUTING.md`
 - [ ] T061 Execute every scenario in `specs/001-photography-assistant/quickstart.md` and resolve all failures
+- [ ] T062 Conduct first-attempt usability validation for SC-002 and SC-003 with representative photographers and record anonymized protocol/results in `specs/001-photography-assistant/validation/usability.md`
+- [ ] T063 Audit the release dependency graph and Android/iOS network traffic to prove SC-010 local-only behavior, documenting evidence in `specs/001-photography-assistant/validation/privacy.md`
 
 ---
 
@@ -232,5 +234,5 @@ T040 depth-of-field screen         || T041 exposure screen         || T042 ND sc
 
 ## Format Validation
 
-All 61 tasks use the required checkbox, sequential task ID, optional `[P]`, required user-story label in
+All 63 tasks use the required checkbox, sequential task ID, optional `[P]`, required user-story label in
 story phases, actionable description, and exact file path.
