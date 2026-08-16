@@ -10,6 +10,15 @@
 planning assistant with reusable camera/lens inventory, photographic and macro calculators,
 astrophotography tools, panorama planning, and location-aware Sun, Moon, and celestial AR planners."
 
+## Clarifications
+
+### Session 2026-08-16
+
+- Q: Which platforms must the first public release support? → A: Android and iOS first; desktop and
+  web follow.
+- Q: Which capabilities must be included in the first public release? → A: Equipment inventory, depth
+  of field, exposure comparison, and long-exposure/ND calculations only.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Calculate a Photograph (Priority: P1)
@@ -230,6 +239,11 @@ equipment, and verify that the saved snapshot and checklist remain complete and 
   than silently substituting plausible values.
 - **FR-022**: Every released calculation path MUST be verifiable against documented reference fixtures,
   and every user workflow MUST have repeatable acceptance coverage on each applicable platform class.
+- **FR-023**: The first public release MUST support Android and iOS. Later desktop and web releases MUST
+  preserve compatible calculation results and saved-data meaning, with AR remaining capability-gated.
+- **FR-024**: The first public release MUST include only the shared equipment inventory, depth-of-field
+  and hyperfocal calculation, exposure comparison, and long-exposure/neutral-density calculation. Other
+  specified tools MUST be delivered incrementally after this foundation meets its release criteria.
 
 ### Key Entities
 
@@ -272,11 +286,16 @@ equipment, and verify that the saved snapshot and checklist remain complete and 
   supported devices; a one-year alignment search completes within five seconds.
 - **SC-010**: No location, orientation, equipment, plan, or usage data leaves the device during default and
   offline use, as verified by release privacy testing.
+- **SC-011**: All first-release acceptance scenarios pass on both Android and iOS; subsequent platform
+  releases produce equivalent results for the same calculation fixtures.
+- **SC-012**: The first public release ships no calculator or planner outside the scope of FR-024 unless
+  its full reference, accessibility, offline, privacy, and cross-platform acceptance criteria also pass.
 
 ## Assumptions
 
-- Phones and tablets are the primary field experience; desktop platforms receive calculators, inventory,
-  maps, and planning views, while sensor- and camera-dependent AR is capability-gated.
+- Android and iOS phones and tablets are the first public-release platforms. Desktop and web follow with
+  calculators, inventory, maps, and planning views, while sensor- and camera-dependent AR remains
+  capability-gated.
 - No account is required for the baseline product. Optional synchronization, community content, or sharing
   services require separate future specifications.
 - Equipment can be entered manually from launch. Any bundled equipment catalog must expose data provenance
@@ -289,3 +308,5 @@ equipment, and verify that the saved snapshot and checklist remain complete and 
 - Astronomical output is planning guidance, not navigation or observatory-grade measurement.
 - The project will ship incrementally in priority order; the complete catalog is the product target, not a
   requirement that every tool appear in the first public release.
+- The deliberately small first release validates the shared domain, inventory, persistence, accessibility,
+  and mobile delivery foundations before additional calculator or planner scope is accepted.
