@@ -32,3 +32,17 @@ Lens standardZoomFixture({String id = 'lens-standard-zoom'}) => Lens(
   createdAt: equipmentFixtureTime,
   updatedAt: equipmentFixtureTime,
 );
+
+NdFilter tenStopFilterFixture({String id = 'filter-ten-stop'}) => NdFilter(
+  id: id,
+  name: '10-stop ND',
+  strengthStops: 10,
+  opticalDensity: 3.010299956639812,
+  filterFactor: 1024,
+  provenance: const EquipmentProvenance(
+    source: EquipmentSource.user,
+    note: 'Measured test filter',
+  ),
+  createdAt: equipmentFixtureTime,
+  updatedAt: equipmentFixtureTime,
+);

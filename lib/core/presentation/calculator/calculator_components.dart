@@ -39,6 +39,41 @@ class CalculatorNumberField extends StatelessWidget {
   );
 }
 
+class AppliedEquipmentNotice extends StatelessWidget {
+  const AppliedEquipmentNotice({
+    required this.equipmentName,
+    required this.appliedValues,
+    super.key,
+  });
+
+  final String equipmentName;
+  final String appliedValues;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: 'Applied equipment $equipmentName, $appliedValues',
+    child: Card(
+      color: Theme.of(context).colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Icon(Icons.inventory_2_outlined),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'From $equipmentName: $appliedValues\nYou can edit these values for this calculation only.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class CalculationResultView extends StatelessWidget {
   const CalculationResultView({
     required this.title,

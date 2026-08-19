@@ -1,14 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
+import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
+import 'package:photography_assistant/features/equipment/domain/equipment.dart';
 import 'package:photography_assistant/features/exposure_comparison/presentation/exposure_comparison_screen.dart';
 import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
 
 void main() {
-  Widget app(Widget child, {double textScale = 1}) => MaterialApp(
-    home: MediaQuery(
-      data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
-      child: Scaffold(body: child),
+  late AppDatabase database;
+
+  setUp(() => database = AppDatabase.inMemory());
+  tearDown(() => database.close());
+
+  Widget app(Widget child, {double textScale = 1}) => ProviderScope(
+    overrides: <Override>[
+      equipmentRepositoryProvider.overrideWithValue(
+        DriftEquipmentRepository(database),
+      ),
+    ],
+    child: MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+        child: Scaffold(body: child),
+      ),
     ),
   );
 
@@ -90,5 +107,41 @@ void main() {
           .first,
     );
     expect(find.text('Compare exposures'), findsOneWidget);
+  });
+
+  testWidgets('saved equipment applies values and identifies provenance', (
+    tester,
+  ) async {
+    final repository = DriftEquipmentRepository(database);
+    final now = DateTime.utc(2026, 8, 20);
+    await repository.createLens(
+      Lens(
+        id: 'lens-ui',
+        name: 'Saved 85 mm',
+        minimumFocalLengthMm: 85,
+        maximumFocalLengthMm: 85,
+        minimumAperture: 1.8,
+        provenance: const EquipmentProvenance(source: EquipmentSource.user),
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+
+    await tester.pumpWidget(app(const DepthOfFieldScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Saved lens (optional)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Saved 85 mm').last);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('From Saved 85 mm'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('dof-focal')))
+          .controller!
+          .text,
+      '85.0',
+    );
+    expect(find.textContaining('edit these values'), findsOneWidget);
   });
 }

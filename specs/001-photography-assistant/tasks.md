@@ -99,7 +99,7 @@ conversion fixtures for each calculator and complete each screen offline with an
 - [X] T032 [P] [US1] Add exposure symmetry/component fixtures and failing tests in `test/fixtures/exposure_fixtures.dart` and `test/unit/features/exposure_comparison/exposure_calculator_test.dart`
 - [X] T033 [P] [US1] Add ND stop/filter-factor/optical-density fixtures and failing tests in `test/fixtures/long_exposure_fixtures.dart` and `test/unit/features/long_exposure/long_exposure_calculator_test.dart`
 - [X] T034 [P] [US1] Write calculator input, validation, result, assumptions, and accessibility widget tests in `test/widget/features/calculators/calculator_screens_test.dart`
-- [ ] T035 [US1] Write the failing manual/equipment calculator integration journeys in `integration_test/calculator_flows_test.dart`
+- [X] T035 [US1] Write the failing manual/equipment calculator integration journeys in `integration_test/calculator_flows_test.dart`
 
 ### Implementation for User Story 1
 

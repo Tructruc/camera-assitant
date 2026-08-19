@@ -1,23 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
+import '../../equipment/domain/equipment.dart';
+import '../../equipment/presentation/equipment_controller.dart';
+import '../../equipment/presentation/equipment_picker.dart';
 import '../domain/depth_of_field_calculator.dart';
 
-class DepthOfFieldScreen extends StatefulWidget {
+class DepthOfFieldScreen extends ConsumerStatefulWidget {
   const DepthOfFieldScreen({super.key});
 
   @override
-  State<DepthOfFieldScreen> createState() => _DepthOfFieldScreenState();
+  ConsumerState<DepthOfFieldScreen> createState() => _DepthOfFieldScreenState();
 }
 
-class _DepthOfFieldScreenState extends State<DepthOfFieldScreen> {
+class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
   final _focal = TextEditingController(text: '50');
   final _aperture = TextEditingController(text: '8');
   final _distance = TextEditingController(text: '10000');
   final _coc = TextEditingController(text: '0.03');
   CalculationResult<DepthOfFieldOutput>? _result;
   Map<String, String> _errors = const {};
+  Lens? _selectedLens;
+  CameraBody? _selectedCamera;
 
   @override
   void dispose() {
@@ -29,72 +35,136 @@ class _DepthOfFieldScreenState extends State<DepthOfFieldScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => CalculatorPage(
-    children: <Widget>[
-      Text('Depth of field', style: Theme.of(context).textTheme.headlineSmall),
-      const SizedBox(height: 8),
-      const Text(
-        'Calculate hyperfocal distance and the acceptable focus range.',
-      ),
-      const SizedBox(height: 16),
-      CalculatorNumberField(
-        label: 'Focal length (mm)',
-        controller: _focal,
-        fieldKey: const Key('dof-focal'),
-        errorText: _errors['focalLengthMm'],
-      ),
-      CalculatorNumberField(
-        label: 'Aperture (f-number)',
-        controller: _aperture,
-        errorText: _errors['aperture'],
-      ),
-      CalculatorNumberField(
-        label: 'Focus distance (mm)',
-        controller: _distance,
-        errorText: _errors['focusDistanceMm'],
-      ),
-      CalculatorNumberField(
-        label: 'Circle of confusion (mm)',
-        controller: _coc,
-        errorText: _errors['circleOfConfusionMm'],
-      ),
-      FilledButton(onPressed: _calculate, child: const Text('Calculate')),
-      const SizedBox(height: 16),
-      if (_result?.output case final output?)
-        CalculationResultView(
-          title: 'Depth of field result',
-          rows: <(String, String)>[
-            (
-              'Hyperfocal distance',
-              _distanceText(output.hyperfocalDistance.millimetres),
-            ),
-            ('Near limit', _distanceText(output.nearLimit.millimetres)),
-            (
-              'Far limit',
-              output.farLimit.isInfinite
-                  ? 'Infinity'
-                  : _distanceText(output.farLimit.millimetres),
-            ),
-            (
-              'Total depth',
-              output.totalDepth.isInfinite
-                  ? 'Infinity'
-                  : _distanceText(output.totalDepth.millimetres),
-            ),
-          ],
-          assumptions: const <String>[
-            'Thin-lens geometric model',
-            'Focus distance measured from the lens principal plane',
-            'Circle of confusion controls acceptable sharpness',
-          ],
-          guidance: _result!.warnings.isEmpty
-              ? 'Near and far limits are estimates, not guaranteed sharpness.'
-              : 'Close focus reduces thin-lens model accuracy.',
-          onSave: () => showSnapshotComingSoon(context),
-          onReset: _reset,
+  Widget build(BuildContext context) {
+    final equipment = ref.watch(equipmentControllerProvider).items;
+    final lenses = equipment
+        .where((entry) => entry.kind == EquipmentKind.lens)
+        .map((entry) => entry.item)
+        .whereType<Lens>()
+        .toList(growable: false);
+    final cameras = equipment
+        .where((entry) => entry.kind == EquipmentKind.camera)
+        .map((entry) => entry.item)
+        .whereType<CameraBody>()
+        .toList(growable: false);
+    return CalculatorPage(
+      children: <Widget>[
+        Text(
+          'Depth of field',
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
-    ],
-  );
+        const SizedBox(height: 8),
+        const Text(
+          'Calculate hyperfocal distance and the acceptable focus range.',
+        ),
+        const SizedBox(height: 16),
+        EquipmentPicker<Lens>(
+          label: 'Saved lens (optional)',
+          items: lenses,
+          itemLabel: (lens) => lens.name,
+          value: _selectedLens,
+          onSelected: _applyLens,
+        ),
+        const SizedBox(height: 12),
+        EquipmentPicker<CameraBody>(
+          label: 'Saved camera (optional)',
+          items: cameras,
+          itemLabel: (camera) => camera.name,
+          value: _selectedCamera,
+          onSelected: _applyCamera,
+        ),
+        if (_selectedLens case final lens?)
+          AppliedEquipmentNotice(
+            equipmentName: lens.name,
+            appliedValues: '${_focal.text} mm at f/${_aperture.text}',
+          ),
+        if (_selectedCamera case final camera?)
+          AppliedEquipmentNotice(
+            equipmentName: camera.name,
+            appliedValues: 'circle of confusion ${_coc.text} mm',
+          ),
+        CalculatorNumberField(
+          label: 'Focal length (mm)',
+          controller: _focal,
+          fieldKey: const Key('dof-focal'),
+          errorText: _errors['focalLengthMm'],
+        ),
+        CalculatorNumberField(
+          label: 'Aperture (f-number)',
+          controller: _aperture,
+          errorText: _errors['aperture'],
+        ),
+        CalculatorNumberField(
+          label: 'Focus distance (mm)',
+          controller: _distance,
+          errorText: _errors['focusDistanceMm'],
+        ),
+        CalculatorNumberField(
+          label: 'Circle of confusion (mm)',
+          controller: _coc,
+          errorText: _errors['circleOfConfusionMm'],
+        ),
+        FilledButton(onPressed: _calculate, child: const Text('Calculate')),
+        const SizedBox(height: 16),
+        if (_result?.output case final output?)
+          CalculationResultView(
+            title: 'Depth of field result',
+            rows: <(String, String)>[
+              (
+                'Hyperfocal distance',
+                _distanceText(output.hyperfocalDistance.millimetres),
+              ),
+              ('Near limit', _distanceText(output.nearLimit.millimetres)),
+              (
+                'Far limit',
+                output.farLimit.isInfinite
+                    ? 'Infinity'
+                    : _distanceText(output.farLimit.millimetres),
+              ),
+              (
+                'Total depth',
+                output.totalDepth.isInfinite
+                    ? 'Infinity'
+                    : _distanceText(output.totalDepth.millimetres),
+              ),
+            ],
+            assumptions: const <String>[
+              'Thin-lens geometric model',
+              'Focus distance measured from the lens principal plane',
+              'Circle of confusion controls acceptable sharpness',
+            ],
+            guidance: _result!.warnings.isEmpty
+                ? 'Near and far limits are estimates, not guaranteed sharpness.'
+                : 'Close focus reduces thin-lens model accuracy.',
+            onSave: () => showSnapshotComingSoon(context),
+            onReset: _reset,
+          ),
+      ],
+    );
+  }
+
+  void _applyLens(Lens? lens) {
+    setState(() {
+      _selectedLens = lens;
+      if (lens != null) {
+        _focal.text = lens.maximumFocalLengthMm.toString();
+        _aperture.text =
+            (lens.maximumFocalLengthMinimumAperture ??
+                    lens.minimumAperture ??
+                    8)
+                .toString();
+      }
+    });
+  }
+
+  void _applyCamera(CameraBody? camera) {
+    setState(() {
+      _selectedCamera = camera;
+      if (camera?.defaultCircleOfConfusionMm case final value?) {
+        _coc.text = value.toString();
+      }
+    });
+  }
 
   void _calculate() {
     final result = const DepthOfFieldCalculator().calculate(
@@ -121,6 +191,8 @@ class _DepthOfFieldScreenState extends State<DepthOfFieldScreen> {
     setState(() {
       _result = null;
       _errors = const {};
+      _selectedLens = null;
+      _selectedCamera = null;
     });
   }
 }
