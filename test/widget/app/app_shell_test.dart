@@ -3,14 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/app.dart';
 import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
+import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 
 void main() {
+  late AppDatabase database;
+
+  setUp(() {
+    database = AppDatabase.inMemory();
+  });
+
+  tearDown(() => database.close());
+
   Widget buildApp({double textScale = 1}) {
     return ProviderScope(
       overrides: <Override>[
         preferencesProvider.overrideWith(
           (ref) => Stream<AppPreferences>.value(const AppPreferences()),
+        ),
+        equipmentRepositoryProvider.overrideWithValue(
+          DriftEquipmentRepository(database),
         ),
       ],
       child: MediaQuery(
@@ -45,7 +58,7 @@ void main() {
     await tester.tap(find.text('Equipment'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Your equipment'), findsOneWidget);
+    expect(find.text('No equipment yet'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) =>

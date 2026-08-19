@@ -68,17 +68,17 @@ an in-memory consumer while provenance and validation remain correct.
 
 - [X] T020 [P] [US2] Write failing camera, lens, and ND filter entity validation tests in `test/unit/features/equipment/domain/equipment_test.dart`
 - [X] T021 [P] [US2] Write failing equipment repository CRUD/archive/reference tests in `test/data/features/equipment/equipment_repository_test.dart`
-- [ ] T022 [P] [US2] Write failing equipment list/editor semantics and 200%-text-scale tests in `test/widget/features/equipment/equipment_screens_test.dart`
+- [X] T022 [P] [US2] Write failing equipment list/editor semantics and 200%-text-scale tests in `test/widget/features/equipment/equipment_screens_test.dart`
 - [ ] T023 [US2] Write the failing offline equipment integration journey in `integration_test/equipment_flow_test.dart`
 
 ### Implementation for User Story 2
 
 - [X] T024 [P] [US2] Implement camera, lens, filter, provenance, normalization, and lifecycle entities in `lib/features/equipment/domain/equipment.dart`
 - [X] T025 [US2] Implement Drift equipment mapping and repository operations in `lib/features/equipment/data/drift_equipment_repository.dart`
-- [ ] T026 [US2] Implement equipment list/filter/archive/restore presentation state in `lib/features/equipment/presentation/equipment_controller.dart`
-- [ ] T027 [US2] Implement accessible equipment list and empty/error states in `lib/features/equipment/presentation/equipment_list_screen.dart`
-- [ ] T028 [US2] Implement validated camera, lens, and ND filter editors with provenance fields in `lib/features/equipment/presentation/equipment_editor_screen.dart`
-- [ ] T029 [US2] Implement reusable equipment picker and one-off override controls in `lib/features/equipment/presentation/equipment_picker.dart`
+- [X] T026 [US2] Implement equipment list/filter/archive/restore presentation state in `lib/features/equipment/presentation/equipment_controller.dart`
+- [X] T027 [US2] Implement accessible equipment list and empty/error states in `lib/features/equipment/presentation/equipment_list_screen.dart`
+- [X] T028 [US2] Implement validated camera, lens, and ND filter editors with provenance fields in `lib/features/equipment/presentation/equipment_editor_screen.dart`
+- [X] T029 [US2] Implement reusable equipment picker and one-off override controls in `lib/features/equipment/presentation/equipment_picker.dart`
 - [ ] T030 [US2] Complete the offline integration journey and fixture seeding in `integration_test/equipment_flow_test.dart` and `test/fixtures/equipment_fixtures.dart`
 
 **Checkpoint**: Equipment inventory is a complete independently usable offline increment.

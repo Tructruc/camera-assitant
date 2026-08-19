@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/repositories/preferences_repository.dart';
+import '../features/equipment/presentation/equipment_list_screen.dart';
 import 'navigation.dart';
 import 'providers.dart';
 import 'theme/app_theme.dart';
@@ -52,7 +53,11 @@ class _AppShellState extends State<AppShell> {
     final destination = AppDestination.values[_selectedIndex];
     return Scaffold(
       appBar: AppBar(title: Text(destination.label)),
-      body: SafeArea(child: _DestinationContent(destination: destination)),
+      body: SafeArea(
+        child: destination == AppDestination.equipment
+            ? const EquipmentListScreen()
+            : _DestinationContent(destination: destination),
+      ),
       bottomNavigationBar: NavigationBar(
         destinations: AppDestination.values
             .map((item) => item.toNavigationDestination())
