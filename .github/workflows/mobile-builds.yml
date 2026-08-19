@@ -6,7 +6,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: mobile-builds-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android:
@@ -19,22 +23,52 @@ jobs:
           flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --debug
-      - run: flutter build appbundle --debug
-      - name: Upload installable Android APK
+      - name: Restore persistent Android signing key
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/camera-assistant.jks"
+      - name: Build signed Android release
+        if: github.event_name != 'pull_request'
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/camera-assistant.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: camera_assistant
+        run: |
+          flutter build apk --release --build-number=${{ github.run_number }}
+          flutter build appbundle --release --build-number=${{ github.run_number }}
+      - name: Build Android pull-request validation
+        if: github.event_name == 'pull_request'
+        run: |
+          flutter build apk --debug
+          flutter build appbundle --debug
+      - name: Stage directly downloadable APK
+        if: github.event_name != 'pull_request'
+        run: cp build/app/outputs/flutter-apk/app-release.apk camera-assistant-v2.apk
+      - name: Upload installable Android APK artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: android-release-apk
+          path: camera-assistant-v2.apk
           if-no-files-found: error
           retention-days: 14
-      - name: Upload Android App Bundle
+      - name: Upload Android App Bundle artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: android-debug-app-bundle
-          path: build/app/outputs/bundle/debug/app-debug.aab
+          name: android-release-app-bundle
+          path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
+      - name: Publish rolling v2 prerelease
+        if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view continuous-v2 >/dev/null 2>&1 || gh release create continuous-v2 --target "$GITHUB_SHA" --prerelease --title "Latest v2 test build" --notes "Continuously updated signed Android test build from branch v2."
+          gh release upload continuous-v2 camera-assistant-v2.apk --clobber
 
   ios:
     runs-on: macos-latest

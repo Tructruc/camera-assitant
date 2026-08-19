@@ -5,6 +5,11 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val ciKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+val ciKeystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+val ciKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+val ciKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
+
 android {
     namespace = "app.photographyassistant.photography_assistant"
     compileSdk = flutter.compileSdkVersion
@@ -30,11 +35,26 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (
+            ciKeystorePath != null &&
+            ciKeystorePassword != null &&
+            ciKeyPassword != null &&
+            ciKeyAlias != null
+        ) {
+            create("ciRelease") {
+                storeFile = file(ciKeystorePath)
+                storePassword = ciKeystorePassword
+                keyAlias = ciKeyAlias
+                keyPassword = ciKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("ciRelease")
+                ?: signingConfigs.getByName("debug")
         }
     }
 }
