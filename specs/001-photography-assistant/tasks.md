@@ -39,10 +39,10 @@ first-release stories.
 
 **⚠️ CRITICAL**: No user story implementation begins until this phase passes.
 
-- [ ] T008 [P] Write failing finite-value and unit-conversion tests in `test/unit/core/domain/quantities_test.dart`
-- [ ] T009 [P] Write failing calculator result/status contract tests in `test/unit/core/domain/calculation_result_test.dart`
-- [ ] T010 Implement immutable physical quantity value objects in `lib/core/domain/quantities/quantities.dart`
-- [ ] T011 Implement typed validation errors, warnings, assumptions, and calculation results in `lib/core/domain/validation/` and `lib/core/domain/calculation_result.dart`
+- [X] T008 [P] Write failing finite-value and unit-conversion tests in `test/unit/core/domain/quantities_test.dart`
+- [X] T009 [P] Write failing calculator result/status contract tests in `test/unit/core/domain/calculation_result_test.dart`
+- [X] T010 Implement immutable physical quantity value objects in `lib/core/domain/quantities/quantities.dart`
+- [X] T011 Implement typed validation errors, warnings, assumptions, and calculation results in `lib/core/domain/validation/` and `lib/core/domain/calculation_result.dart`
 - [ ] T012 [P] Define equipment and snapshot repository interfaces in `lib/core/domain/repositories/`
 - [ ] T013 Define Drift tables, stable text enums, foreign keys, and schema version 1 in `lib/core/data/database/app_database.dart`
 - [ ] T014 [P] Write failing schema, constraint, transaction, and migration tests in `test/data/database/app_database_test.dart`
