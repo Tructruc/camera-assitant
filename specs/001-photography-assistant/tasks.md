@@ -98,7 +98,7 @@ conversion fixtures for each calculator and complete each screen offline with an
 - [X] T031 [P] [US1] Document exact formulas, authoritative Zeiss fixture citations, input conventions, and tolerances, then add failing depth-of-field/hyperfocal tests in `test/fixtures/depth_of_field_fixtures.dart` and `test/unit/features/depth_of_field/depth_of_field_calculator_test.dart`
 - [X] T032 [P] [US1] Add exposure symmetry/component fixtures and failing tests in `test/fixtures/exposure_fixtures.dart` and `test/unit/features/exposure_comparison/exposure_calculator_test.dart`
 - [X] T033 [P] [US1] Add ND stop/filter-factor/optical-density fixtures and failing tests in `test/fixtures/long_exposure_fixtures.dart` and `test/unit/features/long_exposure/long_exposure_calculator_test.dart`
-- [ ] T034 [P] [US1] Write calculator input, validation, result, assumptions, and accessibility widget tests in `test/widget/features/calculators/calculator_screens_test.dart`
+- [X] T034 [P] [US1] Write calculator input, validation, result, assumptions, and accessibility widget tests in `test/widget/features/calculators/calculator_screens_test.dart`
 - [ ] T035 [US1] Write the failing manual/equipment calculator integration journeys in `integration_test/calculator_flows_test.dart`
 
 ### Implementation for User Story 1
@@ -106,11 +106,11 @@ conversion fixtures for each calculator and complete each screen offline with an
 - [X] T036 [P] [US1] Implement versioned thin-lens depth-of-field and hyperfocal domain model in `lib/features/depth_of_field/domain/depth_of_field_calculator.dart`
 - [X] T037 [P] [US1] Implement versioned exposure comparison stop model in `lib/features/exposure_comparison/domain/exposure_calculator.dart`
 - [X] T038 [P] [US1] Implement versioned long-exposure/ND and inverse filter model in `lib/features/long_exposure/domain/long_exposure_calculator.dart`
-- [ ] T039 [US1] Implement shared calculator form/result/provenance components in `lib/core/presentation/calculator/`
-- [ ] T040 [P] [US1] Implement depth-of-field state and accessible screen in `lib/features/depth_of_field/presentation/`
-- [ ] T041 [P] [US1] Implement exposure-comparison state and accessible screen in `lib/features/exposure_comparison/presentation/`
-- [ ] T042 [P] [US1] Implement long-exposure/ND state and accessible screen in `lib/features/long_exposure/presentation/`
-- [ ] T043 [US1] Register calculator catalog metadata, favorites, and navigation in `lib/app/calculator_catalog.dart` and `lib/app/navigation.dart`
+- [X] T039 [US1] Implement shared calculator form/result/provenance components in `lib/core/presentation/calculator/`
+- [X] T040 [P] [US1] Implement depth-of-field state and accessible screen in `lib/features/depth_of_field/presentation/`
+- [X] T041 [P] [US1] Implement exposure-comparison state and accessible screen in `lib/features/exposure_comparison/presentation/`
+- [X] T042 [P] [US1] Implement long-exposure/ND state and accessible screen in `lib/features/long_exposure/presentation/`
+- [X] T043 [US1] Register calculator catalog metadata, favorites, and navigation in `lib/app/calculator_catalog.dart` and `lib/app/navigation.dart`
 - [ ] T044 [US1] Complete all calculator integration journeys and offline assertions in `integration_test/calculator_flows_test.dart`
 
 **Checkpoint**: The approved calculators work independently with manual inputs and integrate with equipment.

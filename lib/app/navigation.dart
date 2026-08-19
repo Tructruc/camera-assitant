@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+export 'calculator_catalog.dart' show CalculatorDestination;
+
 enum AppDestination {
   calculators(
     label: 'Calculators',

@@ -1,0 +1,94 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
+import 'package:photography_assistant/features/exposure_comparison/presentation/exposure_comparison_screen.dart';
+import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
+
+void main() {
+  Widget app(Widget child, {double textScale = 1}) => MaterialApp(
+    home: MediaQuery(
+      data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+      child: Scaffold(body: child),
+    ),
+  );
+
+  testWidgets('depth of field labels inputs, validates, and explains result', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const DepthOfFieldScreen()));
+
+    expect(find.text('Focal length (mm)'), findsOneWidget);
+    expect(find.text('Circle of confusion (mm)'), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('dof-focal')), '0');
+    await tester.tap(find.text('Calculate'));
+    await tester.pump();
+    expect(find.text('Enter a positive finite value.'), findsWidgets);
+
+    await tester.enterText(find.byKey(const Key('dof-focal')), '50');
+    await tester.tap(find.text('Calculate'));
+    await tester.pump();
+    expect(find.text('Near limit'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.pumpAndSettle();
+    expect(find.text('Assumptions'), findsOneWidget);
+    expect(find.textContaining('Thin-lens geometric model'), findsOneWidget);
+    expect(find.text('Save result'), findsOneWidget);
+    expect(find.text('Reset'), findsOneWidget);
+  });
+
+  testWidgets('exposure comparison reports component result and direction', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const ExposureComparisonScreen()));
+    await tester.tap(find.text('Compare exposures'));
+    await tester.pump();
+
+    expect(find.text('Equivalent exposure'), findsOneWidget);
+    expect(find.text('Aperture contribution'), findsOneWidget);
+    expect(find.text('Shutter contribution'), findsOneWidget);
+    expect(find.text('ISO contribution'), findsOneWidget);
+  });
+
+  testWidgets('long exposure calculates stacked filters and bulb guidance', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const LongExposureScreen()));
+    await tester.enterText(
+      find.byKey(const Key('long-base')),
+      '0.0333333333333333',
+    );
+    await tester.enterText(find.byKey(const Key('long-stops')), '3, 7');
+    await tester.tap(find.text('Calculate exposure'));
+    await tester.pump();
+
+    expect(find.text('34.1 s'), findsOneWidget);
+    expect(find.textContaining('Bulb or timer'), findsOneWidget);
+    expect(find.text('10.00 stops'), findsOneWidget);
+  });
+
+  testWidgets('calculator screens remain scrollable at 200 percent text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      app(const ExposureComparisonScreen(), textScale: 2),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.byType(Scrollable), findsWidgets);
+    await tester.scrollUntilVisible(
+      find.text('Compare exposures'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(ListView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text('Compare exposures'), findsOneWidget);
+  });
+}

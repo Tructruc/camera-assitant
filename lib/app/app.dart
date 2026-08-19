@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/repositories/preferences_repository.dart';
 import '../features/equipment/presentation/equipment_list_screen.dart';
+import 'calculator_catalog.dart';
 import 'navigation.dart';
 import 'providers.dart';
 import 'theme/app_theme.dart';
@@ -53,11 +54,7 @@ class _AppShellState extends State<AppShell> {
     final destination = AppDestination.values[_selectedIndex];
     return Scaffold(
       appBar: AppBar(title: Text(destination.label)),
-      body: SafeArea(
-        child: destination == AppDestination.equipment
-            ? const EquipmentListScreen()
-            : _DestinationContent(destination: destination),
-      ),
+      body: SafeArea(child: _screen(destination)),
       bottomNavigationBar: NavigationBar(
         destinations: AppDestination.values
             .map((item) => item.toNavigationDestination())
@@ -69,6 +66,13 @@ class _AppShellState extends State<AppShell> {
       ),
     );
   }
+
+  Widget _screen(AppDestination destination) => switch (destination) {
+    AppDestination.calculators => const CalculatorCatalogScreen(),
+    AppDestination.equipment => const EquipmentListScreen(),
+    AppDestination.saved ||
+    AppDestination.settings => _DestinationContent(destination: destination),
+  };
 }
 
 class _DestinationContent extends StatelessWidget {
@@ -79,10 +83,8 @@ class _DestinationContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (heading, explanation, icon) = switch (destination) {
-      AppDestination.calculators => (
-        'Choose a calculator',
-        'Depth of field, exposure comparison, and long-exposure tools.',
-        Icons.calculate_outlined,
+      AppDestination.calculators => throw StateError(
+        'Catalog has its own screen',
       ),
       AppDestination.equipment => (
         'Your equipment',

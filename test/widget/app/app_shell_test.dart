@@ -70,6 +70,22 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('calculator catalog opens each offline calculator screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Depth of field'), findsOneWidget);
+    expect(find.text('Exposure comparison'), findsOneWidget);
+    expect(find.text('Long exposure / ND'), findsOneWidget);
+
+    await tester.tap(find.text('Depth of field'));
+    await tester.pumpAndSettle();
+    expect(find.text('Focal length (mm)'), findsOneWidget);
+    expect(find.textContaining('connect'), findsNothing);
+  });
+
   testWidgets('shell remains usable at 200 percent text scale', (
     WidgetTester tester,
   ) async {
