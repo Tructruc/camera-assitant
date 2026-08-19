@@ -43,10 +43,10 @@ first-release stories.
 - [X] T009 [P] Write failing calculator result/status contract tests in `test/unit/core/domain/calculation_result_test.dart`
 - [X] T010 Implement immutable physical quantity value objects in `lib/core/domain/quantities/quantities.dart`
 - [X] T011 Implement typed validation errors, warnings, assumptions, and calculation results in `lib/core/domain/validation/` and `lib/core/domain/calculation_result.dart`
-- [ ] T012 [P] Define equipment and snapshot repository interfaces in `lib/core/domain/repositories/`
-- [ ] T013 Define Drift tables, stable text enums, foreign keys, and schema version 1 in `lib/core/data/database/app_database.dart`
-- [ ] T014 [P] Write failing schema, constraint, transaction, and migration tests in `test/data/database/app_database_test.dart`
-- [ ] T015 Implement database initialization, migrations, and deterministic in-memory test factory in `lib/core/data/database/`
+- [X] T012 [P] Define equipment and snapshot repository interfaces in `lib/core/domain/repositories/`
+- [X] T013 Define Drift tables, stable text enums, foreign keys, and schema version 1 in `lib/core/data/database/app_database.dart`
+- [X] T014 [P] Write failing schema, constraint, transaction, and migration tests in `test/data/database/app_database_test.dart`
+- [X] T015 Implement database initialization, migrations, and deterministic in-memory test factory in `lib/core/data/database/`
 - [ ] T016 [P] Implement local preferences model/repository and tests in `lib/core/data/repositories/preferences_repository.dart` and `test/data/repositories/preferences_repository_test.dart`
 - [ ] T017 [P] Implement accessible light, dark, and low-light themes in `lib/app/theme/app_theme.dart` and tests in `test/widget/app/theme_test.dart`
 - [ ] T018 Create the application shell, dependency providers, navigation destinations, and error boundary in `lib/app/app.dart`, `lib/app/navigation.dart`, and `lib/app/providers.dart`
