@@ -62,14 +62,6 @@ jobs:
           path: build/app/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
-      - name: Publish rolling v2 prerelease
-        if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view continuous-v2 >/dev/null 2>&1 || gh release create continuous-v2 --target "$GITHUB_SHA" --prerelease --title "Latest v2 test build" --notes "Continuously updated signed Android test build from branch v2."
-          gh release upload continuous-v2 camera-assistant-v2.apk --clobber
-
   ios:
     runs-on: macos-latest
     steps:
@@ -81,3 +73,35 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build ios --simulator --no-codesign
+      - name: Package iOS simulator application
+        if: github.event_name != 'pull_request'
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app camera-assistant-v2-ios-simulator.zip
+      - name: Upload iOS simulator artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-application
+          path: camera-assistant-v2-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-prerelease:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-release-apk
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios-simulator-application
+          path: release-assets
+      - name: Publish rolling v2 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view continuous-v2 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || gh release create continuous-v2 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Latest v2 test build" --notes "Continuously updated Android and iOS simulator test builds from branch v2. Android is persistently signed; iOS is an unsigned simulator archive."
+          gh release edit continuous-v2 --repo "$GITHUB_REPOSITORY" --prerelease --title "Latest v2 test build" --notes "Continuously updated Android and iOS simulator test builds from branch v2. Android is persistently signed; iOS is an unsigned simulator archive."
+          gh release upload continuous-v2 release-assets/camera-assistant-v2.apk release-assets/camera-assistant-v2-ios-simulator.zip --repo "$GITHUB_REPOSITORY" --clobber
