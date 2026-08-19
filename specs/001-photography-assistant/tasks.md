@@ -95,7 +95,7 @@ conversion fixtures for each calculator and complete each screen offline with an
 
 ### Tests for User Story 1
 
-- [ ] T031 [P] [US1] Document exact formulas, authoritative Zeiss fixture citations, input conventions, and tolerances, then add failing depth-of-field/hyperfocal tests in `test/fixtures/depth_of_field_fixtures.dart` and `test/unit/features/depth_of_field/depth_of_field_calculator_test.dart`
+- [X] T031 [P] [US1] Document exact formulas, authoritative Zeiss fixture citations, input conventions, and tolerances, then add failing depth-of-field/hyperfocal tests in `test/fixtures/depth_of_field_fixtures.dart` and `test/unit/features/depth_of_field/depth_of_field_calculator_test.dart`
 - [ ] T032 [P] [US1] Add exposure symmetry/component fixtures and failing tests in `test/fixtures/exposure_fixtures.dart` and `test/unit/features/exposure_comparison/exposure_calculator_test.dart`
 - [ ] T033 [P] [US1] Add ND stop/filter-factor/optical-density fixtures and failing tests in `test/fixtures/long_exposure_fixtures.dart` and `test/unit/features/long_exposure/long_exposure_calculator_test.dart`
 - [ ] T034 [P] [US1] Write calculator input, validation, result, assumptions, and accessibility widget tests in `test/widget/features/calculators/calculator_screens_test.dart`
@@ -103,7 +103,7 @@ conversion fixtures for each calculator and complete each screen offline with an
 
 ### Implementation for User Story 1
 
-- [ ] T036 [P] [US1] Implement versioned thin-lens depth-of-field and hyperfocal domain model in `lib/features/depth_of_field/domain/depth_of_field_calculator.dart`
+- [X] T036 [P] [US1] Implement versioned thin-lens depth-of-field and hyperfocal domain model in `lib/features/depth_of_field/domain/depth_of_field_calculator.dart`
 - [ ] T037 [P] [US1] Implement versioned exposure comparison stop model in `lib/features/exposure_comparison/domain/exposure_calculator.dart`
 - [ ] T038 [P] [US1] Implement versioned long-exposure/ND and inverse filter model in `lib/features/long_exposure/domain/long_exposure_calculator.dart`
 - [ ] T039 [US1] Implement shared calculator form/result/provenance components in `lib/core/presentation/calculator/`
