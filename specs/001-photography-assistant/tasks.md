@@ -47,7 +47,7 @@ first-release stories.
 - [X] T013 Define Drift tables, stable text enums, foreign keys, and schema version 1 in `lib/core/data/database/app_database.dart`
 - [X] T014 [P] Write failing schema, constraint, transaction, and migration tests in `test/data/database/app_database_test.dart`
 - [X] T015 Implement database initialization, migrations, and deterministic in-memory test factory in `lib/core/data/database/`
-- [ ] T016 [P] Implement local preferences model/repository and tests in `lib/core/data/repositories/preferences_repository.dart` and `test/data/repositories/preferences_repository_test.dart`
+- [X] T016 [P] Implement local preferences model/repository and tests in `lib/core/data/repositories/preferences_repository.dart` and `test/data/repositories/preferences_repository_test.dart`
 - [ ] T017 [P] Implement accessible light, dark, and low-light themes in `lib/app/theme/app_theme.dart` and tests in `test/widget/app/theme_test.dart`
 - [ ] T018 Create the application shell, dependency providers, navigation destinations, and error boundary in `lib/app/app.dart`, `lib/app/navigation.dart`, and `lib/app/providers.dart`
 - [ ] T019 Add shell navigation, semantics, 200%-text-scale, and offline-start widget tests in `test/widget/app/app_shell_test.dart`
