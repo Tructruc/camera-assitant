@@ -20,13 +20,13 @@ location-planning portion of US7 are deferred to later feature plans.
 
 **Purpose**: Create a reproducible Flutter application and CI baseline.
 
-- [ ] T001 Create the Android/iOS Flutter application scaffold and package identity in `pubspec.yaml`, `lib/main.dart`, `android/`, and `ios/`
-- [ ] T002 Pin Flutter/Dart constraints and approved runtime/dev dependencies in `pubspec.yaml` and `pubspec.lock`
-- [ ] T003 [P] Configure strict analyzer and formatter policy in `analysis_options.yaml`
-- [ ] T004 [P] Create the feature-oriented directory skeleton with library documentation in `lib/app/`, `lib/core/`, and `lib/features/`
-- [ ] T005 [P] Add generated/build/IDE exclusions and repository metadata in `.gitignore` and `README.md`
-- [ ] T006 Configure pull-request CI for format, analysis, and unit/widget/data tests in `.github/workflows/ci.yml`
-- [ ] T007 Configure Android build validation on Linux and iOS simulator build validation on macOS in `.github/workflows/mobile-builds.yml`
+- [X] T001 Create the Android/iOS Flutter application scaffold and package identity in `pubspec.yaml`, `lib/main.dart`, `android/`, and `ios/`
+- [X] T002 Pin Flutter/Dart constraints and approved runtime/dev dependencies in `pubspec.yaml` and `pubspec.lock`
+- [X] T003 [P] Configure strict analyzer and formatter policy in `analysis_options.yaml`
+- [X] T004 [P] Create the feature-oriented directory skeleton with library documentation in `lib/app/`, `lib/core/`, and `lib/features/`
+- [X] T005 [P] Add generated/build/IDE exclusions and repository metadata in `.gitignore` and `README.md`
+- [X] T006 Configure pull-request CI for format, analysis, and unit/widget/data tests in `.github/workflows/ci.yml`
+- [X] T007 Configure Android build validation on Linux and iOS simulator build validation on macOS in `.github/workflows/mobile-builds.yml`
 
 **Checkpoint**: A clean scaffold resolves dependencies and CI can analyze, test, and build both targets.
 
