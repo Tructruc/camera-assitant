@@ -15,6 +15,17 @@ final class DriftSnapshotRepository
 
   final db.AppDatabase _database;
 
+  Stream<List<SnapshotReadResult<CalculationSnapshot>>>
+  watchReadResultsNewestFirst() {
+    final query = _database.select(_database.calculationSnapshots)
+      ..orderBy([(row) => OrderingTerm.desc(row.createdAt)]);
+    return query.watch().map(
+      (rows) => List<SnapshotReadResult<CalculationSnapshot>>.unmodifiable(
+        rows.map(_readRow),
+      ),
+    );
+  }
+
   @override
   Stream<List<CalculationSnapshot>> watchNewestFirst() {
     final query = _database.select(_database.calculationSnapshots)
@@ -37,6 +48,7 @@ final class DriftSnapshotRepository
     if (row == null) return null;
     if (row.payloadVersion != CalculationSnapshot.currentPayloadVersion) {
       return UnreadableSnapshot(
+        id: row.id,
         rawPayload: row.inputPayload,
         reason: 'Unsupported snapshot payload version ${row.payloadVersion}',
       );
@@ -45,6 +57,7 @@ final class DriftSnapshotRepository
       return SupportedSnapshot(_decodeRow(row));
     } on Object catch (error) {
       return UnreadableSnapshot(
+        id: row.id,
         rawPayload: row.inputPayload,
         reason: 'Snapshot payload is corrupt: $error',
       );
@@ -141,6 +154,25 @@ final class DriftSnapshotRepository
       'warnings': _decodeList(row.warnings),
       'equipment': _decodeList(row.equipmentSnapshot),
     });
+  }
+
+  SnapshotReadResult<CalculationSnapshot> _readRow(db.CalculationSnapshot row) {
+    if (row.payloadVersion != CalculationSnapshot.currentPayloadVersion) {
+      return UnreadableSnapshot(
+        id: row.id,
+        rawPayload: row.inputPayload,
+        reason: 'Unsupported snapshot payload version ${row.payloadVersion}',
+      );
+    }
+    try {
+      return SupportedSnapshot(_decodeRow(row));
+    } on Object catch (error) {
+      return UnreadableSnapshot(
+        id: row.id,
+        rawPayload: row.inputPayload,
+        reason: 'Snapshot payload is corrupt: $error',
+      );
+    }
   }
 
   Map<String, Object?> _decodeObject(String payload) {

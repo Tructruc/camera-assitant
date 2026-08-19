@@ -129,15 +129,15 @@ units, restart offline, and verify every original canonical value, assumption, w
 
 - [X] T045 [P] [US7] Write failing snapshot serialization/versioning/immutability tests in `test/unit/core/domain/calculation_snapshot_test.dart`
 - [X] T046 [P] [US7] Write failing snapshot persistence, corruption, and legacy-version tests in `test/data/repositories/snapshot_repository_test.dart`
-- [ ] T047 [P] [US7] Write failing saved-calculation list/detail semantics and recovery tests in `test/widget/features/saved_calculations/saved_calculations_test.dart`
-- [ ] T048 [US7] Extend the failing restart/offline integration journey in `integration_test/calculator_flows_test.dart`
+- [X] T047 [P] [US7] Write failing saved-calculation list/detail semantics and recovery tests in `test/widget/features/saved_calculations/saved_calculations_test.dart`
+- [X] T048 [US7] Extend the failing restart/offline integration journey in `integration_test/calculator_flows_test.dart`
 
 ### Implementation for User Story 7
 
 - [X] T049 [P] [US7] Implement versioned immutable snapshot entity and codecs in `lib/core/domain/calculation_snapshot.dart`
 - [X] T050 [US7] Implement transactional Drift snapshot repository and corruption recovery in `lib/core/data/repositories/drift_snapshot_repository.dart`
-- [ ] T051 [US7] Add snapshot save actions to shared results in `lib/core/presentation/calculator/calculation_result_view.dart`
-- [ ] T052 [US7] Implement saved-calculation list, detail, notes, and delete flows in `lib/features/saved_calculations/presentation/`
+- [X] T051 [US7] Add snapshot save actions to shared results in `lib/core/presentation/calculator/calculation_result_view.dart`
+- [X] T052 [US7] Implement saved-calculation list, detail, notes, and delete flows in `lib/features/saved_calculations/presentation/`
 - [ ] T053 [US7] Complete snapshot restart, equipment mutation, preference change, and recovery integration cases in `integration_test/calculator_flows_test.dart`
 
 **Checkpoint**: Saved results remain explainable and unchanged across restarts and equipment edits.

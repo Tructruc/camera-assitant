@@ -26,6 +26,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
           preferencesProvider.overrideWith(
             (ref) => Stream<AppPreferences>.value(const AppPreferences()),
           ),
@@ -57,6 +58,14 @@ void main() {
     expect(find.text('Near limit'), findsOneWidget);
     expect(find.textContaining('From 24-70 mm'), findsWidgets);
     expect(find.textContaining('connect'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Save result'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Save result'));
+    await tester.pumpAndSettle();
+    expect(find.text('Result saved on this device.'), findsOneWidget);
 
     // Manual exposure comparison works without inventory or network access.
     await tester.pageBack();
@@ -93,5 +102,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('34.1 s'), findsOneWidget);
     expect(find.textContaining('From 10-stop ND'), findsWidgets);
+
+    // The snapshot survives rebuilding the app and retains its original data.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          preferencesProvider.overrideWith(
+            (ref) => Stream<AppPreferences>.value(const AppPreferences()),
+          ),
+          equipmentRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const PhotographyAssistantApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Saved'));
+    await tester.pumpAndSettle();
+    expect(find.text('Depth of field result'), findsOneWidget);
+    await tester.tap(find.text('Depth of field result'));
+    await tester.pumpAndSettle();
+    expect(find.text('focalLengthMm: 70.0'), findsOneWidget);
+    expect(find.textContaining('immutable'), findsOneWidget);
   });
 }

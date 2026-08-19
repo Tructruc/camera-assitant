@@ -12,7 +12,12 @@ final class SupportedSnapshot<T> extends SnapshotReadResult<T> {
 }
 
 final class UnreadableSnapshot<T> extends SnapshotReadResult<T> {
-  const UnreadableSnapshot({required this.rawPayload, required this.reason});
+  const UnreadableSnapshot({
+    required this.rawPayload,
+    required this.reason,
+    this.id,
+  });
+  final String? id;
   final String rawPayload;
   final String reason;
 }

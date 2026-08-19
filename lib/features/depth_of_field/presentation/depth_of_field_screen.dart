@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/domain/calculation_result.dart';
+import '../../../core/domain/calculation_snapshot.dart';
+import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
@@ -136,7 +138,7 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
             guidance: _result!.warnings.isEmpty
                 ? 'Near and far limits are estimates, not guaranteed sharpness.'
                 : 'Close focus reduces thin-lens model accuracy.',
-            onSave: () => showSnapshotComingSoon(context),
+            onSave: () => _save(output),
             onReset: _reset,
           ),
       ],
@@ -181,6 +183,68 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
         for (final error in result.errors) error.field: _message(error.code),
       };
     });
+  }
+
+  Future<void> _save(DepthOfFieldOutput output) async {
+    final result = _result!;
+    await saveCalculationSnapshot(
+      context,
+      ref,
+      CalculationSnapshot(
+        id: '${DepthOfFieldCalculator.id}_${DateTime.now().microsecondsSinceEpoch}',
+        calculatorId: DepthOfFieldCalculator.id,
+        formulaVersion: DepthOfFieldCalculator.version,
+        createdAt: DateTime.now().toUtc(),
+        title: 'Depth of field result',
+        canonicalInputs: <String, Object?>{
+          'focalLengthMm': _number(_focal.text),
+          'aperture': _number(_aperture.text),
+          'focusDistanceMm': _number(_distance.text),
+          'circleOfConfusionMm': _number(_coc.text),
+        },
+        canonicalOutputs: <String, Object?>{
+          'hyperfocalDistanceMm': output.hyperfocalDistance.millimetres,
+          'nearLimitMm': output.nearLimit.millimetres,
+          'farLimitMm': output.farLimit.isInfinite
+              ? 'infinity'
+              : output.farLimit.millimetres,
+          'totalDepthMm': output.totalDepth.isInfinite
+              ? 'infinity'
+              : output.totalDepth.millimetres,
+        },
+        displayContext: const <String, Object?>{
+          'distanceUnit': 'automaticMetric',
+          'infinityLabel': 'Infinity',
+        },
+        assumptions: result.assumptions,
+        warnings: result.warnings,
+        equipment: <AppliedEquipmentSnapshot>[
+          if (_selectedLens case final lens?)
+            AppliedEquipmentSnapshot(
+              id: lens.id,
+              type: SnapshotEquipmentType.lens,
+              name: lens.name,
+              source: lens.provenance.source.name,
+              note: lens.provenance.note,
+              values: <String, Object?>{
+                'focalLengthMm': _number(_focal.text),
+                'aperture': _number(_aperture.text),
+              },
+            ),
+          if (_selectedCamera case final camera?)
+            AppliedEquipmentSnapshot(
+              id: camera.id,
+              type: SnapshotEquipmentType.camera,
+              name: camera.name,
+              source: camera.provenance.source.name,
+              note: camera.provenance.note,
+              values: <String, Object?>{
+                'circleOfConfusionMm': _number(_coc.text),
+              },
+            ),
+        ],
+      ),
+    );
   }
 
   void _reset() {

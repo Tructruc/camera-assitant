@@ -144,11 +144,3 @@ class CalculationResultView extends StatelessWidget {
     ),
   );
 }
-
-void showSnapshotComingSoon(BuildContext context) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Saving results is coming in the next update.'),
-    ),
-  );
-}

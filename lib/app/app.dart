@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/repositories/preferences_repository.dart';
 import '../features/equipment/presentation/equipment_list_screen.dart';
+import '../features/saved_calculations/presentation/saved_calculations_screen.dart';
 import 'calculator_catalog.dart';
 import 'navigation.dart';
 import 'providers.dart';
@@ -70,7 +71,7 @@ class _AppShellState extends State<AppShell> {
   Widget _screen(AppDestination destination) => switch (destination) {
     AppDestination.calculators => const CalculatorCatalogScreen(),
     AppDestination.equipment => const EquipmentListScreen(),
-    AppDestination.saved ||
+    AppDestination.saved => const SavedCalculationsScreen(),
     AppDestination.settings => _DestinationContent(destination: destination),
   };
 }

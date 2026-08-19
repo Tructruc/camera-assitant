@@ -5,9 +5,12 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/data/database/app_database.dart';
+import '../core/data/database/app_database.dart' hide CalculationSnapshot;
 import '../core/data/database/database_factory.dart';
+import '../core/data/repositories/drift_snapshot_repository.dart';
 import '../core/data/repositories/preferences_repository.dart';
+import '../core/domain/calculation_snapshot.dart';
+import '../core/domain/repositories/snapshot_repository.dart';
 import '../features/equipment/data/drift_equipment_repository.dart';
 
 final Provider<AppDatabase> appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -24,6 +27,19 @@ final Provider<PreferencesRepository> preferencesRepositoryProvider =
 final Provider<DriftEquipmentRepository> equipmentRepositoryProvider =
     Provider<DriftEquipmentRepository>((ref) {
       return DriftEquipmentRepository(ref.watch(appDatabaseProvider));
+    });
+
+final Provider<DriftSnapshotRepository> snapshotRepositoryProvider =
+    Provider<DriftSnapshotRepository>((ref) {
+      return DriftSnapshotRepository(ref.watch(appDatabaseProvider));
+    });
+
+final StreamProvider<List<SnapshotReadResult<CalculationSnapshot>>>
+savedSnapshotsProvider =
+    StreamProvider<List<SnapshotReadResult<CalculationSnapshot>>>((ref) {
+      return ref
+          .watch(snapshotRepositoryProvider)
+          .watchReadResultsNewestFirst();
     });
 
 final StreamProvider<AppPreferences> preferencesProvider =

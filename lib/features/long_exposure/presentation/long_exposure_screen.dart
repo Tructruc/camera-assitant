@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/domain/calculation_result.dart';
+import '../../../core/domain/calculation_snapshot.dart';
+import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
@@ -121,7 +123,7 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
             guidance: output.requiresBulbOrTimer
                 ? 'Use Bulb or timer mode; conventional shutter ranges usually end at 30 seconds.'
                 : 'Use the nearest supported shutter time and review the raw value.',
-            onSave: () => showSnapshotComingSoon(context),
+            onSave: () => _save(output),
             onReset: _reset,
           ),
       ],
@@ -158,6 +160,58 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
               : 'Enter a valid non-negative ND value.',
       };
     });
+  }
+
+  Future<void> _save(LongExposureOutput output) async {
+    final result = _result!;
+    final filters = _stops.text.trim().isEmpty
+        ? <double>[]
+        : _stops.text.split(',').map((item) => _number(item)).toList();
+    await saveCalculationSnapshot(
+      context,
+      ref,
+      CalculationSnapshot(
+        id: '${LongExposureCalculator.id}_${DateTime.now().microsecondsSinceEpoch}',
+        calculatorId: LongExposureCalculator.id,
+        formulaVersion: LongExposureCalculator.version,
+        createdAt: DateTime.now().toUtc(),
+        title: 'Long exposure result',
+        canonicalInputs: <String, Object?>{
+          'baseTimeSeconds': _number(_base.text),
+          'filterStops': filters,
+          'targetTimeSeconds': _target.text.trim().isEmpty
+              ? null
+              : _number(_target.text),
+        },
+        canonicalOutputs: <String, Object?>{
+          'filteredTimeSeconds': output.filteredTime.seconds,
+          'totalStrengthStops': output.totalStrength.stops,
+          'requiredStrengthStops': output.requiredStrength?.stops,
+          'requiresBulbOrTimer': output.requiresBulbOrTimer,
+        },
+        displayContext: <String, Object?>{
+          'shutterLabel': output.conventionalGuidance,
+          'secondsPrecision': 6,
+        },
+        assumptions: result.assumptions,
+        warnings: result.warnings,
+        equipment: <AppliedEquipmentSnapshot>[
+          if (_selectedFilter case final filter?)
+            AppliedEquipmentSnapshot(
+              id: filter.id,
+              type: SnapshotEquipmentType.filter,
+              name: filter.name,
+              source: filter.provenance.source.name,
+              note: filter.provenance.note,
+              values: <String, Object?>{
+                'strengthStops': filter.strengthStops,
+                'opticalDensity': filter.opticalDensity,
+                'filterFactor': filter.filterFactor,
+              },
+            ),
+        ],
+      ),
+    );
   }
 
   void _reset() {

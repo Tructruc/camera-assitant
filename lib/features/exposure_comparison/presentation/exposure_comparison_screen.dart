@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/domain/calculation_result.dart';
+import '../../../core/domain/calculation_snapshot.dart';
+import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../domain/exposure_calculator.dart';
 
-class ExposureComparisonScreen extends StatefulWidget {
+class ExposureComparisonScreen extends ConsumerStatefulWidget {
   const ExposureComparisonScreen({super.key});
 
   @override
-  State<ExposureComparisonScreen> createState() =>
+  ConsumerState<ExposureComparisonScreen> createState() =>
       _ExposureComparisonScreenState();
 }
 
-class _ExposureComparisonScreenState extends State<ExposureComparisonScreen> {
+class _ExposureComparisonScreenState
+    extends ConsumerState<ExposureComparisonScreen> {
   final _controllers = <TextEditingController>[
     TextEditingController(text: '4'),
     TextEditingController(text: '0.008'),
@@ -94,7 +98,7 @@ class _ExposureComparisonScreenState extends State<ExposureComparisonScreen> {
             'Each stop doubles or halves exposure',
             'Scene light and transmission remain unchanged',
           ],
-          onSave: () => showSnapshotComingSoon(context),
+          onSave: () => _save(output),
           onReset: _reset,
         ),
     ],
@@ -122,6 +126,48 @@ class _ExposureComparisonScreenState extends State<ExposureComparisonScreen> {
           error.field: 'Enter a positive finite value.',
       };
     });
+  }
+
+  Future<void> _save(ExposureComparisonOutput output) async {
+    final result = _result!;
+    final values = _controllers.map((item) => _number(item.text)).toList();
+    await saveCalculationSnapshot(
+      context,
+      ref,
+      CalculationSnapshot(
+        id: '${ExposureCalculator.id}_${DateTime.now().microsecondsSinceEpoch}',
+        calculatorId: ExposureCalculator.id,
+        formulaVersion: ExposureCalculator.version,
+        createdAt: DateTime.now().toUtc(),
+        title: 'Exposure comparison result',
+        canonicalInputs: <String, Object?>{
+          'baseline': <String, Object?>{
+            'aperture': values[0],
+            'timeSeconds': values[1],
+            'iso': values[2],
+          },
+          'candidate': <String, Object?>{
+            'aperture': values[3],
+            'timeSeconds': values[4],
+            'iso': values[5],
+          },
+        },
+        canonicalOutputs: <String, Object?>{
+          'totalDifferenceStops': output.totalDifference.stops,
+          'apertureContributionStops': output.apertureContribution.stops,
+          'timeContributionStops': output.timeContribution.stops,
+          'isoContributionStops': output.isoContribution.stops,
+          'multiplier': output.multiplier,
+          'direction': output.direction.name,
+        },
+        displayContext: const <String, Object?>{
+          'stopPrecision': 2,
+          'multiplierPrecision': 2,
+        },
+        assumptions: result.assumptions,
+        warnings: result.warnings,
+      ),
+    );
   }
 
   void _reset() {
