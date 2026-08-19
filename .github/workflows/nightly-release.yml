@@ -1,0 +1,82 @@
+name: Nightly release
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nightly-release
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Android release bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.x
+          cache: true
+      - run: flutter pub get
+      - name: Build Android app bundle
+        run: flutter build appbundle --release --build-number "$GITHUB_RUN_NUMBER"
+      - name: Name Android artifact
+        run: mv build/app/outputs/bundle/release/app-release.aab photography-assistant-android.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-android
+          path: photography-assistant-android.aab
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    name: Unsigned iOS release app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.x
+          cache: true
+      - run: flutter pub get
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign --build-number "$GITHUB_RUN_NUMBER"
+      - name: Package unsigned iOS app
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app photography-assistant-ios-unsigned.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ios-unsigned
+          path: photography-assistant-ios-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish GitHub prerelease
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nightly-*
+          path: artifacts
+          merge-multiple: true
+      - name: Create dated nightly prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="nightly-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" \
+            artifacts/photography-assistant-android.aab \
+            artifacts/photography-assistant-ios-unsigned.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Photography Assistant nightly $(date -u +%Y-%m-%d)" \
+            --notes "Automated prerelease from commit $GITHUB_SHA. The Android bundle uses development signing; the iOS app is unsigned and intended for validation only." \
+            --prerelease
