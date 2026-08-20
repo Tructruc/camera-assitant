@@ -148,7 +148,7 @@ units, restart offline, and verify every original canonical value, assumption, w
 
 **Purpose**: Validate the complete first-release slice on both platforms and close quality risks.
 
-- [ ] T054 [P] Audit all user-visible strings, units, help, limitations, and recovery messages in `lib/` and add missing assertions in `test/widget/`
+- [X] T054 [P] Audit all user-visible strings, units, help, limitations, and recovery messages in `lib/` and add missing assertions in `test/widget/`
 - [ ] T055 [P] Add stable golden coverage for calculator and equipment states in `test/golden/`
 - [ ] T056 [P] Add database migration fixtures and backup/recovery documentation in `test/fixtures/database/` and `README.md`
 - [ ] T057 Profile calculation, launch, inventory, and scrolling budgets and record results in `specs/001-photography-assistant/performance-results.md`

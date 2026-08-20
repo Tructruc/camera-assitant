@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/data/repositories/preferences_repository.dart';
 import '../features/equipment/presentation/equipment_list_screen.dart';
 import '../features/saved_calculations/presentation/saved_calculations_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
 import 'calculator_catalog.dart';
 import 'navigation.dart';
 import 'providers.dart';
@@ -72,48 +73,8 @@ class _AppShellState extends State<AppShell> {
     AppDestination.calculators => const CalculatorCatalogScreen(),
     AppDestination.equipment => const EquipmentListScreen(),
     AppDestination.saved => const SavedCalculationsScreen(),
-    AppDestination.settings => _DestinationContent(destination: destination),
+    AppDestination.settings => const SettingsScreen(),
   };
-}
-
-class _DestinationContent extends StatelessWidget {
-  const _DestinationContent({required this.destination});
-
-  final AppDestination destination;
-
-  @override
-  Widget build(BuildContext context) {
-    final (heading, explanation, icon) = switch (destination) {
-      AppDestination.calculators => throw StateError(
-        'Catalog has its own screen',
-      ),
-      AppDestination.equipment => (
-        'Your equipment',
-        'Keep reusable cameras, lenses, and ND filters on this device.',
-        Icons.camera_alt_outlined,
-      ),
-      AppDestination.saved => (
-        'Saved calculations',
-        'Reopen unchanged results and their original assumptions offline.',
-        Icons.bookmark_border,
-      ),
-      AppDestination.settings => (
-        'Field settings',
-        'Choose units, shutter formatting, and a field-ready theme.',
-        Icons.settings_outlined,
-      ),
-    };
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: <Widget>[
-        Icon(icon, size: 48, semanticLabel: heading),
-        const SizedBox(height: 16),
-        Text(heading, style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        Text(explanation),
-      ],
-    );
-  }
 }
 
 class AppErrorBoundary extends StatefulWidget {

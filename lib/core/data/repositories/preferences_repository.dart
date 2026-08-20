@@ -50,6 +50,20 @@ final class AppPreferences {
   final AppThemeMode themeMode;
   final List<String> favoriteToolIds;
 
+  AppPreferences copyWith({
+    LengthDisplay? lengthDisplay,
+    ShutterDisplay? shutterDisplay,
+    FractionStep? fractionStep,
+    AppThemeMode? themeMode,
+    List<String>? favoriteToolIds,
+  }) => AppPreferences(
+    lengthDisplay: lengthDisplay ?? this.lengthDisplay,
+    shutterDisplay: shutterDisplay ?? this.shutterDisplay,
+    fractionStep: fractionStep ?? this.fractionStep,
+    themeMode: themeMode ?? this.themeMode,
+    favoriteToolIds: favoriteToolIds ?? this.favoriteToolIds,
+  );
+
   AppPreferences immutable() => AppPreferences(
     lengthDisplay: lengthDisplay,
     shutterDisplay: shutterDisplay,

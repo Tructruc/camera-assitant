@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
@@ -38,6 +40,8 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final preferences =
+        ref.watch(preferencesProvider).valueOrNull ?? const AppPreferences();
     final equipment = ref.watch(equipmentControllerProvider).items;
     final lenses = equipment
         .where((entry) => entry.kind == EquipmentKind.lens)
@@ -114,20 +118,35 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
             rows: <(String, String)>[
               (
                 'Hyperfocal distance',
-                _distanceText(output.hyperfocalDistance.millimetres),
+                _distanceText(
+                  output.hyperfocalDistance.millimetres,
+                  preferences.lengthDisplay,
+                ),
               ),
-              ('Near limit', _distanceText(output.nearLimit.millimetres)),
+              (
+                'Near limit',
+                _distanceText(
+                  output.nearLimit.millimetres,
+                  preferences.lengthDisplay,
+                ),
+              ),
               (
                 'Far limit',
                 output.farLimit.isInfinite
                     ? 'Infinity'
-                    : _distanceText(output.farLimit.millimetres),
+                    : _distanceText(
+                        output.farLimit.millimetres,
+                        preferences.lengthDisplay,
+                      ),
               ),
               (
                 'Total depth',
                 output.totalDepth.isInfinite
                     ? 'Infinity'
-                    : _distanceText(output.totalDepth.millimetres),
+                    : _distanceText(
+                        output.totalDepth.millimetres,
+                        preferences.lengthDisplay,
+                      ),
               ),
             ],
             assumptions: const <String>[
@@ -138,7 +157,7 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
             guidance: _result!.warnings.isEmpty
                 ? 'Near and far limits are estimates, not guaranteed sharpness.'
                 : 'Close focus reduces thin-lens model accuracy.',
-            onSave: () => _save(output),
+            onSave: () => _save(output, preferences),
             onReset: _reset,
           ),
       ],
@@ -185,7 +204,10 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
     });
   }
 
-  Future<void> _save(DepthOfFieldOutput output) async {
+  Future<void> _save(
+    DepthOfFieldOutput output,
+    AppPreferences preferences,
+  ) async {
     final result = _result!;
     await saveCalculationSnapshot(
       context,
@@ -212,8 +234,8 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
               ? 'infinity'
               : output.totalDepth.millimetres,
         },
-        displayContext: const <String, Object?>{
-          'distanceUnit': 'automaticMetric',
+        displayContext: <String, Object?>{
+          'distanceUnit': preferences.lengthDisplay.name,
           'infinityLabel': 'Infinity',
         },
         assumptions: result.assumptions,
@@ -265,6 +287,14 @@ double _number(String text) => double.tryParse(text.trim()) ?? double.nan;
 String _message(String code) => code == 'not_beyond_focal_length'
     ? 'Focus distance must be greater than focal length.'
     : 'Enter a positive finite value.';
-String _distanceText(double millimetres) => millimetres >= 1000
-    ? '${(millimetres / 1000).toStringAsFixed(2)} m'
-    : '${millimetres.toStringAsFixed(1)} mm';
+String _distanceText(double millimetres, LengthDisplay display) {
+  if (display == LengthDisplay.imperial) {
+    final inches = millimetres / 25.4;
+    return inches >= 12
+        ? '${(inches / 12).toStringAsFixed(2)} ft'
+        : '${inches.toStringAsFixed(2)} in';
+  }
+  return millimetres >= 1000
+      ? '${(millimetres / 1000).toStringAsFixed(2)} m'
+      : '${millimetres.toStringAsFixed(1)} mm';
+}

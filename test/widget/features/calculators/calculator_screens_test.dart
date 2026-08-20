@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 import 'package:photography_assistant/features/equipment/domain/equipment.dart';
@@ -15,8 +16,16 @@ void main() {
   setUp(() => database = AppDatabase.inMemory());
   tearDown(() => database.close());
 
-  Widget app(Widget child, {double textScale = 1}) => ProviderScope(
+  Widget app(
+    Widget child, {
+    double textScale = 1,
+    AppPreferences preferences = const AppPreferences(),
+  }) => ProviderScope(
+    key: UniqueKey(),
     overrides: <Override>[
+      preferencesProvider.overrideWith(
+        (ref) => Stream<AppPreferences>.value(preferences),
+      ),
       equipmentRepositoryProvider.overrideWithValue(
         DriftEquipmentRepository(database),
       ),
@@ -78,9 +87,37 @@ void main() {
     await tester.tap(find.text('Calculate exposure'));
     await tester.pump();
 
-    expect(find.text('34.1 s'), findsOneWidget);
+    expect(find.text('34.133333 seconds'), findsOneWidget);
     expect(find.textContaining('Bulb or timer'), findsOneWidget);
     expect(find.text('10.00 stops'), findsOneWidget);
+  });
+
+  testWidgets('preferences change result presentation, not calculations', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      app(
+        const DepthOfFieldScreen(),
+        preferences: const AppPreferences(
+          lengthDisplay: LengthDisplay.imperial,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Calculate'));
+    await tester.pump();
+    expect(find.textContaining('ft'), findsWidgets);
+
+    await tester.pumpWidget(
+      app(
+        const LongExposureScreen(),
+        preferences: const AppPreferences(
+          shutterDisplay: ShutterDisplay.conventional,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Calculate exposure'));
+    await tester.pump();
+    expect(find.text('34.1 s'), findsOneWidget);
   });
 
   testWidgets('calculator screens remain scrollable at 200 percent text', (

@@ -116,14 +116,6 @@ class CalculatorCatalogScreen extends ConsumerWidget {
     favorites.contains(id) ? favorites.remove(id) : favorites.add(id);
     await ref
         .read(preferencesRepositoryProvider)
-        .save(
-          AppPreferences(
-            lengthDisplay: preferences.lengthDisplay,
-            shutterDisplay: preferences.shutterDisplay,
-            fractionStep: preferences.fractionStep,
-            themeMode: preferences.themeMode,
-            favoriteToolIds: favorites,
-          ),
-        );
+        .save(preferences.copyWith(favoriteToolIds: favorites));
   }
 }

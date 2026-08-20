@@ -86,6 +86,25 @@ void main() {
     expect(find.textContaining('connect'), findsNothing);
   });
 
+  testWidgets('settings exposes units, shutter, theme, and privacy guidance', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Distance units'), findsOneWidget);
+    expect(find.text('Shutter display'), findsOneWidget);
+    expect(find.textContaining('Canonical calculation values'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Theme'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Theme'), findsOneWidget);
+  });
+
   testWidgets('shell remains usable at 200 percent text scale', (
     WidgetTester tester,
   ) async {

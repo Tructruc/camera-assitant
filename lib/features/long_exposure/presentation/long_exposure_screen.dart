@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
@@ -35,6 +37,8 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final preferences =
+        ref.watch(preferencesProvider).valueOrNull ?? const AppPreferences();
     final filters = ref
         .watch(equipmentControllerProvider)
         .items
@@ -100,7 +104,9 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         const SizedBox(height: 16),
         if (_result?.output case final output?)
           CalculationResultView(
-            title: output.conventionalGuidance,
+            title: preferences.shutterDisplay == ShutterDisplay.conventional
+                ? output.conventionalGuidance
+                : '${output.filteredTime.seconds.toStringAsFixed(6)} seconds',
             rows: <(String, String)>[
               (
                 'Raw exposure',
@@ -123,7 +129,7 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
             guidance: output.requiresBulbOrTimer
                 ? 'Use Bulb or timer mode; conventional shutter ranges usually end at 30 seconds.'
                 : 'Use the nearest supported shutter time and review the raw value.',
-            onSave: () => _save(output),
+            onSave: () => _save(output, preferences),
             onReset: _reset,
           ),
       ],
@@ -162,7 +168,10 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
     });
   }
 
-  Future<void> _save(LongExposureOutput output) async {
+  Future<void> _save(
+    LongExposureOutput output,
+    AppPreferences preferences,
+  ) async {
     final result = _result!;
     final filters = _stops.text.trim().isEmpty
         ? <double>[]
@@ -190,6 +199,8 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
           'requiresBulbOrTimer': output.requiresBulbOrTimer,
         },
         displayContext: <String, Object?>{
+          'shutterDisplay': preferences.shutterDisplay.name,
+          'fractionStep': preferences.fractionStep.name,
           'shutterLabel': output.conventionalGuidance,
           'secondsPrecision': 6,
         },
