@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/data/repositories/preferences_repository.dart';
 import '../features/depth_of_field/presentation/depth_of_field_screen.dart';
 import '../features/exposure_comparison/presentation/exposure_comparison_screen.dart';
+import '../features/flash_exposure/presentation/flash_exposure_screen.dart';
 import '../features/long_exposure/presentation/long_exposure_screen.dart';
 import '../features/optics/presentation/optics_screens.dart';
+import '../features/timelapse/presentation/timelapse_screen.dart';
 import 'providers.dart';
 
 enum CalculatorDestination {
@@ -44,6 +46,18 @@ enum CalculatorDestination {
     label: 'Focus stack planner',
     description: 'Ordered focus distances with overlap',
     icon: Icons.layers_outlined,
+  ),
+  flashExposure(
+    id: 'flash_exposure',
+    label: 'Flash exposure',
+    description: 'Guide number, power, ISO, and distance',
+    icon: Icons.flash_on_outlined,
+  ),
+  timelapse(
+    id: 'timelapse',
+    label: 'Timelapse planner',
+    description: 'Frames, playback, storage, and exposure ramp',
+    icon: Icons.movie_creation_outlined,
   );
 
   const CalculatorDestination({
@@ -65,6 +79,8 @@ enum CalculatorDestination {
     fieldOfView => const FieldOfViewScreen(),
     diffraction => const DiffractionScreen(),
     focusStacking => const FocusStackScreen(),
+    flashExposure => const FlashExposureScreen(),
+    timelapse => const TimelapseScreen(),
   };
 }
 

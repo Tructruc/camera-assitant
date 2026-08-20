@@ -14,6 +14,72 @@ import '../test/fixtures/equipment_fixtures.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('plans flash and timelapse results offline', (tester) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          equipmentRepositoryProvider.overrideWithValue(
+            DriftEquipmentRepository(database),
+          ),
+        ],
+        child: const PhotographyAssistantApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Timelapse planner'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Timelapse planner'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Plan timelapse'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Plan timelapse'));
+    await tester.pumpAndSettle();
+    expect(find.text('361'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Save result'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Save result'));
+    await tester.pumpAndSettle();
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Flash exposure'),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Flash exposure'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Calculate flash exposure'));
+    await tester.pumpAndSettle();
+    expect(find.text('f/8.0'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Save result'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Save result'));
+    await tester.pumpAndSettle();
+
+    final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
+    expect(snapshots.map((item) => item.calculatorId).toSet(), {
+      'timelapse',
+      'flash_exposure',
+    });
+  });
+
   testWidgets('calculates manually and from saved equipment offline', (
     tester,
   ) async {

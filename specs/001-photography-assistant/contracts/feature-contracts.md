@@ -95,6 +95,19 @@ Acceptance invariants:
   reaches the far distance.
 - Each result declares formula version, assumptions, limitations, and remains savable offline.
 
+## Flash exposure contract
+
+Positive ISO-100 guide number, ISO, power fraction `(0, 1]`, and distance produce adjusted guide number,
+recommended aperture, power reduction in stops, and equivalent full-power range. Results identify direct
+flash and nominal-rating assumptions and never imply that bounce, modifiers, ambient light, or TTL metering
+are modeled.
+
+## Timelapse contract
+
+Positive interval, capture duration, playback rate, estimated frame size, and exposure-ramp endpoints
+produce inclusive frame count, playback length, storage estimate, signed ramp stops, and maximum duty
+cycle. A longest exposure equal to or exceeding the interval produces a visible feasibility warning.
+
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine

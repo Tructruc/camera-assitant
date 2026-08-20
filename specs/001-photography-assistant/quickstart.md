@@ -54,6 +54,10 @@ Expected:
     the app explains that this is guidance, not a universal sharpness cutoff.
 11. Create a 0.5–1 m focus-stack plan at 100 mm, f/8, 0.03 mm circle of confusion, and 20% overlap;
     verify ordered focus distances start at 0.5 m, end at 1 m, and persist in the saved snapshot.
+12. For guide number 40 at ISO 100, full power, and 5 m, verify flash guidance recommends f/8 and states
+    that bounce, modifiers, ambient light, and TTL metering are outside the model.
+13. Plan a one-hour timelapse at ten-second intervals, 30 fps, 25 MB per frame, ramping from one to four
+    seconds; verify 361 frames, 12.03 seconds playback, 9,025 MB storage, and a +2-stop ramp.
 
 ## Platform build gates
 

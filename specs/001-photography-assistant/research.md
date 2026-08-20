@@ -152,3 +152,13 @@ distortion, focus breathing, broadband light, close-focus, and distance-scale li
 **Alternatives considered**: Lens-specific projection/distortion profiles and wave-optics simulation imply
 unsupported precision without calibrated lens data. Image-analysis-driven stacking requires captured image
 access and belongs outside this planning calculator.
+
+## Flash and timelapse models
+
+**Decision**: Direct-flash guidance scales an ISO-100 guide number by the square roots of ISO ratio and
+power fraction, then divides by subject distance for aperture. Timelapse planning uses an inclusive
+endpoint schedule, constant estimated frame size, playback frame rate, and logarithmic exposure ramp.
+
+**Rationale**: Both models are transparent, deterministic, offline, and expose the practical planning
+variables photographers can obtain before a shoot. Bounce, modifier loss, TTL behavior, write latency,
+and changing compressed file sizes remain visible limitations rather than hidden correction factors.

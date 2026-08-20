@@ -9,7 +9,9 @@ import 'package:photography_assistant/features/depth_of_field/presentation/depth
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 import 'package:photography_assistant/features/equipment/domain/equipment.dart';
 import 'package:photography_assistant/features/exposure_comparison/presentation/exposure_comparison_screen.dart';
+import 'package:photography_assistant/features/flash_exposure/presentation/flash_exposure_screen.dart';
 import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
+import 'package:photography_assistant/features/timelapse/presentation/timelapse_screen.dart';
 
 void main() {
   late AppDatabase database;
@@ -92,6 +94,29 @@ void main() {
     expect(find.text('34.133333 seconds'), findsOneWidget);
     expect(find.textContaining('Bulb or timer'), findsOneWidget);
     expect(find.text('10.00 stops'), findsOneWidget);
+  });
+
+  testWidgets('flash exposure calculates aperture and explains limitations', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const FlashExposureScreen()));
+    await tester.tap(find.text('Calculate flash exposure'));
+    await tester.pump();
+    expect(find.text('f/8.0'), findsOneWidget);
+    expect(find.text('Effective guide number'), findsOneWidget);
+    expect(find.textContaining('bounce loss'), findsOneWidget);
+  });
+
+  testWidgets('timelapse plans frames, playback, storage, and ramp', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const TimelapseScreen()));
+    await tester.tap(find.text('Plan timelapse'));
+    await tester.pump();
+    expect(find.text('361'), findsOneWidget);
+    expect(find.text('12.03 seconds'), findsOneWidget);
+    expect(find.text('8.81 GB'), findsOneWidget);
+    expect(find.text('+2.00 stops'), findsOneWidget);
   });
 
   testWidgets('preferences change result presentation, not calculations', (
@@ -215,13 +240,20 @@ void main() {
       'Compare exposures',
     );
     await calculateAndSave(const LongExposureScreen(), 'Calculate exposure');
+    await calculateAndSave(
+      const FlashExposureScreen(),
+      'Calculate flash exposure',
+    );
+    await calculateAndSave(const TimelapseScreen(), 'Plan timelapse');
 
     final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
-    expect(snapshots, hasLength(3));
+    expect(snapshots, hasLength(5));
     expect(snapshots.map((snapshot) => snapshot.calculatorId).toSet(), <String>{
       'depth_of_field',
       'exposure_comparison',
       'long_exposure_nd',
+      'flash_exposure',
+      'timelapse',
     });
     expect(
       snapshots.every(

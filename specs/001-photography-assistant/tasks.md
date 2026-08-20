@@ -174,9 +174,9 @@ result, restart offline, and confirm its inputs, outputs, assumptions, and limit
 - [X] T067 [P] [US1] Implement ordered thin-lens focus-stack planning in `lib/features/optics/domain/optics_calculators.dart`
 - [X] T068 [US1] Add accessible inputs, guidance, validation, and saved snapshots in `lib/features/optics/presentation/optics_screens.dart`
 - [X] T069 [US1] Register the optics tools and favorites in `lib/app/calculator_catalog.dart`
-- [ ] T070 [P] [US1] Add reference-tested guide-number and power-ratio flash calculations in `lib/features/flash_exposure/`
-- [ ] T071 [P] [US1] Add interval, duration, frame-count, playback, storage, and exposure-ramp timelapse planning in `lib/features/timelapse/`
-- [ ] T072 [US1] Extend calculator widget and offline integration journeys in `test/widget/features/calculators/` and `integration_test/calculator_flows_test.dart`
+- [X] T070 [P] [US1] Add reference-tested guide-number and power-ratio flash calculations in `lib/features/flash_exposure/`
+- [X] T071 [P] [US1] Add interval, duration, frame-count, playback, storage, and exposure-ramp timelapse planning in `lib/features/timelapse/`
+- [X] T072 [US1] Extend calculator widget and offline integration journeys in `test/widget/features/calculators/` and `integration_test/calculator_flows_test.dart`
 
 ---
 
