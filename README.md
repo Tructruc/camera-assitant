@@ -2,6 +2,13 @@
 
 An offline-first Flutter application for dependable photographic planning on Android and iOS.
 
+> [!WARNING]
+> This project and its current implementation were produced entirely by AI. It has not received a
+> complete independent human code, security, accessibility, or photographic-accuracy review. Treat all
+> calculations as estimates, verify important results with trusted references and your own equipment,
+> and do not rely on the app for safety-critical decisions. The software is provided without warranty;
+> inspect the source and release provenance before installing or using it.
+
 The first release includes reusable camera, lens, and ND-filter inventory; depth-of-field and
 hyperfocal calculations; exposure comparison; long-exposure/ND timing; and immutable saved results.
 Calculations preserve canonical values and expose their assumptions, warnings, and formula version.
