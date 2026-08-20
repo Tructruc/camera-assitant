@@ -28,20 +28,23 @@ a topic branch and pull request for review:
 5. Merge without rewriting published release commits unless repository maintainers agree otherwise.
 
 For enforced protection, configure `v2` to require a pull request and the `quality`, `android`, `ios`,
-and `android-integration` status checks, require the branch to be up to date, dismiss stale approvals,
-and prevent force pushes and deletions. Do not enable those rules until the repository owner decides
-whether direct pushes should remain part of the current development workflow.
+`android-integration`, and `ios-integration` status checks, require the branch to be up to date, dismiss
+stale approvals, and prevent force pushes and deletions. Do not enable those rules until the repository
+owner decides whether direct pushes should remain part of the current development workflow.
 
 ## CI and release artifacts
 
 `CI` runs formatting, strict analysis, and the complete device-independent test suite on pushes to `v2`
 or `main` and on every pull request. `Mobile builds` validates Android and iOS on every push and pull
-request. The Android emulator additionally runs the complete offline equipment, calculator, restart,
-snapshot-mutation, and recovery journeys. Pull requests use unsigned/debug validation artifacts and
-cannot publish a release.
+request. Android and iOS simulators additionally run the complete offline equipment, calculator,
+restart, snapshot-mutation, and recovery journeys. Pull requests use unsigned/debug validation
+artifacts and cannot publish a release.
 
 Pushes to `v2` publish the rolling `continuous-v2` prerelease after both platforms build successfully.
 The same build runs nightly at 02:17 UTC, explicitly checking out `v2`, and refreshes that prerelease.
+Mobile runs are queued rather than cancelled when another commit arrives, so every pushed commit retains
+its platform evidence. Only the publish job receives contents-write permission; build and integration
+jobs remain read-only.
 The Android APK uses the persistent repository signing key so it can update an earlier installed build.
 The Android App Bundle is retained as a workflow artifact. The iOS ZIP is an unsigned simulator build;
 physical iPhone installation requires a separately configured Apple signing identity and provisioning
