@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
@@ -23,6 +24,7 @@ void main() {
   }) => ProviderScope(
     key: UniqueKey(),
     overrides: <Override>[
+      appDatabaseProvider.overrideWithValue(database),
       preferencesProvider.overrideWith(
         (ref) => Stream<AppPreferences>.value(preferences),
       ),
@@ -180,5 +182,55 @@ void main() {
       '85.0',
     );
     expect(find.textContaining('edit these values'), findsOneWidget);
+  });
+
+  testWidgets('every calculator saves canonical results to the local store', (
+    tester,
+  ) async {
+    Future<void> calculateAndSave(Widget screen, String calculateLabel) async {
+      await tester.pumpWidget(app(screen));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text(calculateLabel),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text(calculateLabel));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Save result'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save result'));
+      await tester.pumpAndSettle();
+      expect(find.text('Result saved on this device.'), findsOneWidget);
+    }
+
+    await calculateAndSave(const DepthOfFieldScreen(), 'Calculate');
+    await calculateAndSave(
+      const ExposureComparisonScreen(),
+      'Compare exposures',
+    );
+    await calculateAndSave(const LongExposureScreen(), 'Calculate exposure');
+
+    final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
+    expect(snapshots, hasLength(3));
+    expect(snapshots.map((snapshot) => snapshot.calculatorId).toSet(), <String>{
+      'depth_of_field',
+      'exposure_comparison',
+      'long_exposure_nd',
+    });
+    expect(
+      snapshots.every(
+        (snapshot) =>
+            snapshot.canonicalInputs.isNotEmpty &&
+            snapshot.canonicalOutputs.isNotEmpty &&
+            snapshot.displayContext.isNotEmpty,
+      ),
+      isTrue,
+    );
   });
 }

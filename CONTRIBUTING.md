@@ -27,16 +27,18 @@ a topic branch and pull request for review:
 4. Review changes to formulas, schema versions, signing, permissions, and release workflows explicitly.
 5. Merge without rewriting published release commits unless repository maintainers agree otherwise.
 
-For enforced protection, configure `v2` to require a pull request and the `quality`, `android`, and `ios`
-status checks, require the branch to be up to date, dismiss stale approvals, and prevent force pushes and
-deletions. Do not enable those rules until the repository owner decides whether direct pushes should
-remain part of the current development workflow.
+For enforced protection, configure `v2` to require a pull request and the `quality`, `android`, `ios`,
+and `android-integration` status checks, require the branch to be up to date, dismiss stale approvals,
+and prevent force pushes and deletions. Do not enable those rules until the repository owner decides
+whether direct pushes should remain part of the current development workflow.
 
 ## CI and release artifacts
 
 `CI` runs formatting, strict analysis, and the complete device-independent test suite on pushes to `v2`
 or `main` and on every pull request. `Mobile builds` validates Android and iOS on every push and pull
-request. Pull requests use unsigned/debug validation artifacts and cannot publish a release.
+request. The Android emulator additionally runs the complete offline equipment, calculator, restart,
+snapshot-mutation, and recovery journeys. Pull requests use unsigned/debug validation artifacts and
+cannot publish a release.
 
 Pushes to `v2` publish the rolling `continuous-v2` prerelease after both platforms build successfully.
 The same build runs nightly at 02:17 UTC, explicitly checking out `v2`, and refreshes that prerelease.

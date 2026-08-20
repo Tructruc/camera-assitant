@@ -79,7 +79,7 @@ an in-memory consumer while provenance and validation remain correct.
 - [X] T027 [US2] Implement accessible equipment list and empty/error states in `lib/features/equipment/presentation/equipment_list_screen.dart`
 - [X] T028 [US2] Implement validated camera, lens, and ND filter editors with provenance fields in `lib/features/equipment/presentation/equipment_editor_screen.dart`
 - [X] T029 [US2] Implement reusable equipment picker and one-off override controls in `lib/features/equipment/presentation/equipment_picker.dart`
-- [ ] T030 [US2] Complete the offline integration journey and fixture seeding in `integration_test/equipment_flow_test.dart` and `test/fixtures/equipment_fixtures.dart`
+- [X] T030 [US2] Complete the offline integration journey and fixture seeding in `integration_test/equipment_flow_test.dart` and `test/fixtures/equipment_fixtures.dart`
 
 **Checkpoint**: Equipment inventory is a complete independently usable offline increment.
 
@@ -111,7 +111,7 @@ conversion fixtures for each calculator and complete each screen offline with an
 - [X] T041 [P] [US1] Implement exposure-comparison state and accessible screen in `lib/features/exposure_comparison/presentation/`
 - [X] T042 [P] [US1] Implement long-exposure/ND state and accessible screen in `lib/features/long_exposure/presentation/`
 - [X] T043 [US1] Register calculator catalog metadata, favorites, and navigation in `lib/app/calculator_catalog.dart` and `lib/app/navigation.dart`
-- [ ] T044 [US1] Complete all calculator integration journeys and offline assertions in `integration_test/calculator_flows_test.dart`
+- [X] T044 [US1] Complete all calculator integration journeys and offline assertions in `integration_test/calculator_flows_test.dart`
 
 **Checkpoint**: The approved calculators work independently with manual inputs and integrate with equipment.
 
@@ -138,7 +138,7 @@ units, restart offline, and verify every original canonical value, assumption, w
 - [X] T050 [US7] Implement transactional Drift snapshot repository and corruption recovery in `lib/core/data/repositories/drift_snapshot_repository.dart`
 - [X] T051 [US7] Add snapshot save actions to shared results in `lib/core/presentation/calculator/calculation_result_view.dart`
 - [X] T052 [US7] Implement saved-calculation list, detail, notes, and delete flows in `lib/features/saved_calculations/presentation/`
-- [ ] T053 [US7] Complete snapshot restart, equipment mutation, preference change, and recovery integration cases in `integration_test/calculator_flows_test.dart`
+- [X] T053 [US7] Complete snapshot restart, equipment mutation, preference change, and recovery integration cases in `integration_test/calculator_flows_test.dart`
 
 **Checkpoint**: Saved results remain explainable and unchanged across restarts and equipment edits.
 

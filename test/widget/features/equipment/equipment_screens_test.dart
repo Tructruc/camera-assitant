@@ -18,7 +18,10 @@ void main() {
 
   setUp(() {
     database = AppDatabase.inMemory();
-    repository = DriftEquipmentRepository(database, now: () => timestamp);
+    repository = DriftEquipmentRepository(
+      database,
+      now: () => DateTime.utc(2030),
+    );
   });
 
   tearDown(() => database.close());
@@ -26,6 +29,7 @@ void main() {
   Widget listApp({double textScale = 1}) {
     return ProviderScope(
       overrides: <Override>[
+        appDatabaseProvider.overrideWithValue(database),
         equipmentRepositoryProvider.overrideWithValue(repository),
       ],
       child: MaterialApp(
@@ -174,5 +178,54 @@ void main() {
 
     expect(find.text('From saved equipment: 36 mm'), findsOneWidget);
     expect(find.text('Use a one-off Sensor width override'), findsOneWidget);
+  });
+
+  testWidgets('create, restart, archive, and restore remain fully offline', (
+    tester,
+  ) async {
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add equipment'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add camera'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Camera name'),
+      'Restart Camera',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor width (mm)'),
+      '36',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor height (mm)'),
+      '24',
+    );
+    await tester.tap(find.text('Save camera'));
+    await tester.pumpAndSettle();
+    expect(find.text('Restart Camera'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    expect(find.text('Restart Camera'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Archive Restart Camera'));
+    await tester.pumpAndSettle();
+    expect(find.text('Restart Camera'), findsNothing);
+    expect(await repository.listCameras(includeArchived: true), hasLength(1));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archived'));
+    await tester.pumpAndSettle();
+    expect(find.text('Restart Camera'), findsOneWidget);
+    await tester.tap(find.byTooltip('Restore Restart Camera'));
+    await tester.pumpAndSettle();
+    expect(find.text('Restart Camera'), findsOneWidget);
+    expect(find.textContaining('connect'), findsNothing);
+    expect(find.textContaining('sign in'), findsNothing);
   });
 }
