@@ -58,6 +58,11 @@ Expected:
     that bounce, modifiers, ambient light, and TTL metering are outside the model.
 13. Plan a one-hour timelapse at ten-second intervals, 30 fps, 25 MB per frame, ramping from one to four
     seconds; verify 361 frames, 12.03 seconds playback, 9,025 MB storage, and a +2-stop ramp.
+14. Add a saved 25 mm extension tube, select it with a 50 mm lens at native 0.2× and f/8, and verify the
+    macro estimate reports 0.70×, effective f/13.6, approximately 51.4 mm subject width on a 36 mm sensor,
+    and explicit working-distance/internal-focus limitations.
+15. Switch between reversed-lens and coupled-lens configurations and verify irrelevant inputs disappear,
+    saved lens provenance remains visible, and each saved result retains only its active model inputs.
 
 ## Platform build gates
 

@@ -97,20 +97,20 @@ class EquipmentListScreen extends ConsumerWidget {
           ),
         ),
       ),
-      EquipmentLoadStatus.ready when state.items.isEmpty => const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(Icons.camera_alt_outlined, size: 48),
-              SizedBox(height: 12),
-              Text('No equipment yet'),
-              SizedBox(height: 8),
-              Text('Add a camera, lens, or ND filter for faster calculations.'),
-            ],
+      EquipmentLoadStatus.ready when state.items.isEmpty => ListView(
+        padding: const EdgeInsets.fromLTRB(24, 56, 24, 96),
+        children: const <Widget>[
+          Icon(Icons.camera_alt_outlined, size: 48),
+          SizedBox(height: 12),
+          Center(child: Text('No equipment yet')),
+          SizedBox(height: 8),
+          Center(
+            child: Text(
+              'Add a camera, lens, filter, tube, or converter for faster calculations.',
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
+        ],
       ),
       EquipmentLoadStatus.ready => ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -206,18 +206,21 @@ String _kindLabel(EquipmentKind kind) => switch (kind) {
   EquipmentKind.camera => 'Camera',
   EquipmentKind.lens => 'Lens',
   EquipmentKind.filter => 'ND filter',
+  EquipmentKind.accessory => 'Optical accessory',
 };
 
 String _kindPlural(EquipmentKind kind) => switch (kind) {
   EquipmentKind.camera => 'Cameras',
   EquipmentKind.lens => 'Lenses',
   EquipmentKind.filter => 'ND filters',
+  EquipmentKind.accessory => 'Accessories',
 };
 
 IconData _kindIcon(EquipmentKind kind) => switch (kind) {
   EquipmentKind.camera => Icons.camera_alt_outlined,
   EquipmentKind.lens => Icons.camera_outlined,
   EquipmentKind.filter => Icons.filter_alt_outlined,
+  EquipmentKind.accessory => Icons.extension_outlined,
 };
 
 String _sourceLabel(EquipmentSource source) => switch (source) {

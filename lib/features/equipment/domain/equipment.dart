@@ -202,6 +202,49 @@ final class NdFilter extends EquipmentItem {
   );
 }
 
+enum OpticalAccessoryKind { extensionTube, teleconverter }
+
+final class OpticalAccessory extends EquipmentItem {
+  OpticalAccessory({
+    required super.id,
+    required super.name,
+    required this.kind,
+    required double value,
+    required super.provenance,
+    required super.createdAt,
+    required super.updatedAt,
+    this.notes,
+    super.archivedAt,
+  }) : value = _accessoryValue(kind, value);
+
+  final OpticalAccessoryKind kind;
+  final double value;
+  final String? notes;
+
+  double? get extensionLengthMm =>
+      kind == OpticalAccessoryKind.extensionTube ? value : null;
+  double? get magnificationFactor =>
+      kind == OpticalAccessoryKind.teleconverter ? value : null;
+
+  OpticalAccessory archive(DateTime at) =>
+      _copy(archivedAt: _lifecycleTime(at));
+  OpticalAccessory restore(DateTime at) =>
+      _copy(archivedAt: null, updatedAt: _lifecycleTime(at));
+
+  OpticalAccessory _copy({DateTime? archivedAt, DateTime? updatedAt}) =>
+      OpticalAccessory(
+        id: id,
+        name: name,
+        kind: kind,
+        value: value,
+        notes: notes,
+        provenance: provenance,
+        createdAt: createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        archivedAt: archivedAt,
+      );
+}
+
 String _requiredText(String value, String field) {
   final trimmed = value.trim();
   if (trimmed.isEmpty) {
@@ -242,12 +285,20 @@ double _focalMaximum(double maximum, double minimum) {
   return maximum;
 }
 
+double _accessoryValue(OpticalAccessoryKind kind, double value) {
+  _positive(value, 'value');
+  if (kind == OpticalAccessoryKind.teleconverter && value < 1) {
+    _fail('value', 'teleconverterRange');
+  }
+  return value;
+}
+
 double? _consistentDensity(double? density, double stops) {
   if (density == null) {
     return null;
   }
   _nonNegative(density, 'opticalDensity');
-  if ((density / 0.3 - stops).abs() > 0.01) {
+  if ((density * math.log(10) / math.ln2 - stops).abs() > 0.02) {
     _fail('opticalDensity', 'inconsistent');
   }
   return density;

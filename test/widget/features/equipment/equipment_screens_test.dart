@@ -140,6 +140,32 @@ void main() {
     expect(find.text('Enter a number greater than zero'), findsOneWidget);
   });
 
+  testWidgets('accessory editor switches between tube and converter values', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EquipmentEditorScreen(
+          kind: EquipmentKind.accessory,
+          onSave: (_) async {},
+        ),
+      ),
+    );
+    expect(find.text('Extension tube'), findsOneWidget);
+    expect(
+      find.widgetWithText(TextFormField, 'Extension length (mm)'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Extension tube'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Teleconverter').last);
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(TextFormField, 'Magnification factor (×)'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('picker identifies source and supports a one-off override', (
     WidgetTester tester,
   ) async {
@@ -218,6 +244,11 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(-800, 0),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Archived'));
     await tester.pumpAndSettle();

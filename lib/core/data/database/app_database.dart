@@ -11,7 +11,12 @@ import 'package:drift/native.dart';
 part 'app_database.g.dart';
 
 const _sourceTypes = <String>['user', 'bundled', 'user_override'];
-const _equipmentTypes = <String>['camera', 'lens', 'nd_filter'];
+const _equipmentTypes = <String>[
+  'camera',
+  'lens',
+  'nd_filter',
+  'optical_accessory',
+];
 
 abstract class EquipmentTable extends Table {
   TextColumn get id => text()();
@@ -55,6 +60,14 @@ class NdFilters extends EquipmentTable {
       real().check(strengthStops.isBiggerOrEqualValue(0))();
   RealColumn get opticalDensity => real().nullable()();
   RealColumn get filterFactor => real().nullable()();
+  TextColumn get notes => text().nullable()();
+}
+
+class OpticalAccessories extends EquipmentTable {
+  TextColumn get kind => text().check(
+    kind.isIn(const <String>['extension_tube', 'teleconverter']),
+  )();
+  RealColumn get value => real().check(value.isBiggerThanValue(0))();
   TextColumn get notes => text().nullable()();
 }
 
@@ -124,6 +137,7 @@ class UserPreferences extends Table {
     CameraBodies,
     Lenses,
     NdFilters,
+    OpticalAccessories,
     CalculationSnapshots,
     SnapshotEquipmentReferences,
     UserPreferences,
@@ -135,7 +149,7 @@ final class AppDatabase extends _$AppDatabase {
   AppDatabase.inMemory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -156,11 +170,23 @@ final class AppDatabase extends _$AppDatabase {
         'CREATE UNIQUE INDEX active_nd_filter_name '
         'ON nd_filters(normalized_name) WHERE archived_at IS NULL',
       );
+      await customStatement(
+        'CREATE UNIQUE INDEX active_optical_accessory_name '
+        'ON optical_accessories(normalized_name) WHERE archived_at IS NULL',
+      );
       await into(userPreferences).insert(const UserPreferencesCompanion());
     },
     onUpgrade: (Migrator migrator, int from, int to) async {
       if (from < 1) {
         await migrator.createAll();
+      }
+      if (from < 2) {
+        await migrator.createTable(opticalAccessories);
+        await migrator.alterTable(TableMigration(snapshotEquipmentReferences));
+        await customStatement(
+          'CREATE UNIQUE INDEX active_optical_accessory_name '
+          'ON optical_accessories(normalized_name) WHERE archived_at IS NULL',
+        );
       }
     },
   );

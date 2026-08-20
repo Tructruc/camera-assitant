@@ -108,6 +108,15 @@ Positive interval, capture duration, playback rate, estimated frame size, and ex
 produce inclusive frame count, playback length, storage estimate, signed ramp stops, and maximum duty
 cycle. A longest exposure equal to or exceeding the interval produces a visible feasibility warning.
 
+## Macro contract
+
+The selected configuration controls the input schema: extension-tube mode accepts focal length, extension,
+native magnification, aperture, and sensor width; reversed-lens mode accepts reversed focal length,
+flange/extension distance, aperture, and sensor width; coupled-lens mode accepts both focal lengths,
+aperture, and sensor width. Each returns magnification, effective aperture, subject width, exposure
+compensation, formula version, and an unavoidable configuration-estimate warning. Saved equipment values
+and provenance are embedded and remain immutable after inventory edits.
+
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine

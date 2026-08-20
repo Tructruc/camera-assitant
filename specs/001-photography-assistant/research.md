@@ -162,3 +162,23 @@ endpoint schedule, constant estimated frame size, playback frame rate, and logar
 **Rationale**: Both models are transparent, deterministic, offline, and expose the practical planning
 variables photographers can obtain before a shoot. Bounce, modifier loss, TTL behavior, write latency,
 and changing compressed file sizes remain visible limitations rather than hidden correction factors.
+
+## Macro configuration models
+
+**Decision**: Extension-tube magnification is estimated as native magnification plus extension divided by
+focal length. A reversed lens uses flange/extension distance divided by focal length as an explicitly rough
+model, while coupled lenses use primary focal length divided by reversed-lens focal length. Effective
+f-number uses `N × (1 + magnification)` under a stated unit pupil-magnification assumption; subject width
+is sensor width divided by magnification.
+
+**Rationale**: These transparent models let users compare configurations without inventing lens-specific
+precision. Nikon documents that higher reproduction ratios reduce sensor illumination, increase effective
+f-number, and may require exposure compensation; its lens manuals also publish configuration-specific
+reproduction ratios that demonstrate why working distance and internal focusing must remain limitations.
+
+**Alternatives considered**: Predicting exact working distance, pupil magnification, or internal-focus
+behavior without calibrated lens data would be misleading. The UI therefore labels all three results as
+estimates and recommends confirming framing and exposure with the physical setup.
+
+**References**: [Nikon AF-S Micro-NIKKOR 60 mm manual](https://download.nikonimglib.com/archive2/U1lmk009Baix01iwN8x705IXwC55/AFSMICRO60_2.8GED_NT%28C2_DL%2911.pdf),
+[Nikon AF Micro-NIKKOR 60 mm manual and close-up tables](https://download.nikonimglib.com/archive2/6Vex200Zt1ox02k1UZm06GC9j487/AFMicro60_2.8D_%2827_DL%2902.pdf)

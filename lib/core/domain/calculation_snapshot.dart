@@ -3,7 +3,7 @@ library;
 
 import 'validation/validation.dart';
 
-enum SnapshotEquipmentType { camera, lens, filter }
+enum SnapshotEquipmentType { camera, lens, filter, opticalAccessory }
 
 final class UnsupportedSnapshotVersionException implements Exception {
   const UnsupportedSnapshotVersionException(this.version);

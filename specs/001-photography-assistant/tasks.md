@@ -185,10 +185,10 @@ result, restart offline, and confirm its inputs, outputs, assumptions, and limit
 **Independent Test**: Compare extension-tube, reversed-lens, and coupled-lens configurations against
 documented fixtures using manual and saved equipment values.
 
-- [ ] T073 [P] [US3] Add extension tube and converter inventory entities and persistence in `lib/features/equipment/`
-- [ ] T074 [P] [US3] Add macro reference fixtures and domain tests in `test/unit/features/macro/`
-- [ ] T075 [US3] Implement extension, reversed-lens, and coupled-lens models in `lib/features/macro/domain/`
-- [ ] T076 [US3] Implement model-specific macro inputs, comparison results, guidance, and snapshots in `lib/features/macro/presentation/`
+- [X] T073 [P] [US3] Add extension tube and converter inventory entities and persistence in `lib/features/equipment/`
+- [X] T074 [P] [US3] Add macro reference fixtures and domain tests in `test/unit/features/macro/`
+- [X] T075 [US3] Implement extension, reversed-lens, and coupled-lens models in `lib/features/macro/domain/`
+- [X] T076 [US3] Implement model-specific macro inputs, comparison results, guidance, and snapshots in `lib/features/macro/presentation/`
 
 ---
 

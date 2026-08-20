@@ -11,6 +11,7 @@ import 'package:photography_assistant/features/equipment/domain/equipment.dart';
 import 'package:photography_assistant/features/exposure_comparison/presentation/exposure_comparison_screen.dart';
 import 'package:photography_assistant/features/flash_exposure/presentation/flash_exposure_screen.dart';
 import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
+import 'package:photography_assistant/features/macro/presentation/macro_screen.dart';
 import 'package:photography_assistant/features/timelapse/presentation/timelapse_screen.dart';
 
 void main() {
@@ -117,6 +118,22 @@ void main() {
     expect(find.text('12.03 seconds'), findsOneWidget);
     expect(find.text('8.81 GB'), findsOneWidget);
     expect(find.text('+2.00 stops'), findsOneWidget);
+  });
+
+  testWidgets('macro planner calculates and explains its approximation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const MacroScreen()));
+    await tester.scrollUntilVisible(
+      find.text('Calculate macro setup'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Calculate macro setup'));
+    await tester.pump();
+    expect(find.text('0.70×'), findsOneWidget);
+    expect(find.text('f/13.6'), findsOneWidget);
+    expect(find.textContaining('Working distance'), findsOneWidget);
   });
 
   testWidgets('preferences change result presentation, not calculations', (
@@ -245,15 +262,17 @@ void main() {
       'Calculate flash exposure',
     );
     await calculateAndSave(const TimelapseScreen(), 'Plan timelapse');
+    await calculateAndSave(const MacroScreen(), 'Calculate macro setup');
 
     final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
-    expect(snapshots, hasLength(5));
+    expect(snapshots, hasLength(6));
     expect(snapshots.map((snapshot) => snapshot.calculatorId).toSet(), <String>{
       'depth_of_field',
       'exposure_comparison',
       'long_exposure_nd',
       'flash_exposure',
       'timelapse',
+      'macro',
     });
     expect(
       snapshots.every(

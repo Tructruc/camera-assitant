@@ -130,4 +130,42 @@ void main() {
       throwsA(isA<EquipmentValidationException>()),
     );
   });
+
+  test('optical accessories preserve only their variant-specific value', () {
+    final tube = OpticalAccessory(
+      id: 'tube-1',
+      name: '25 mm tube',
+      kind: OpticalAccessoryKind.extensionTube,
+      value: 25,
+      provenance: provenance,
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+    final converter = OpticalAccessory(
+      id: 'tc-1',
+      name: '1.4× converter',
+      kind: OpticalAccessoryKind.teleconverter,
+      value: 1.4,
+      provenance: provenance,
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+
+    expect(tube.extensionLengthMm, 25);
+    expect(tube.magnificationFactor, isNull);
+    expect(converter.extensionLengthMm, isNull);
+    expect(converter.magnificationFactor, 1.4);
+    expect(
+      () => OpticalAccessory(
+        id: 'bad',
+        name: 'Invalid converter',
+        kind: OpticalAccessoryKind.teleconverter,
+        value: 0.8,
+        provenance: provenance,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+      ),
+      throwsA(isA<EquipmentValidationException>()),
+    );
+  });
 }

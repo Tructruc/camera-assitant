@@ -50,7 +50,9 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Save result'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save result'));
     await tester.pumpAndSettle();
 
     await tester.pageBack();
@@ -70,7 +72,9 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Save result'));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Save result'));
     await tester.pumpAndSettle();
 
     final snapshots = await DriftSnapshotRepository(database).listNewestFirst();

@@ -55,6 +55,22 @@ Represents a neutral-density filter.
 
 Multiple selected filters are ordered for display but their canonical strengths sum for calculation.
 
+## Optical Accessory
+
+Represents a reusable extension tube or teleconverter.
+
+- `id`, `name`, provenance, notes, and lifecycle fields match other equipment.
+- `kind`: stable `extension_tube` or `teleconverter` identifier.
+- `value`: positive extension length in millimetres for a tube, or a factor of at least 1× for a converter.
+- Schema version 2 adds the accessory table and expands immutable snapshot references without changing
+  existing camera, lens, filter, preference, or calculation payloads.
+
+## Macro Result
+
+An immutable configuration-specific estimate containing magnification, effective aperture, subject width
+across the sensor, and exposure compensation. Its snapshot stores only inputs relevant to the selected
+extension-tube, reversed-lens, or coupled-lens model plus exact applied equipment values.
+
 ## User Preferences
 
 Singleton local settings record.

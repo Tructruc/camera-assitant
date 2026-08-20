@@ -176,6 +176,42 @@ void main() {
     expect((await populated).single.id, 'camera-1');
   });
 
+  test(
+    'persists, updates, archives, and restores optical accessories',
+    () async {
+      final tube = OpticalAccessory(
+        id: 'tube-1',
+        name: '25 mm tube',
+        kind: OpticalAccessoryKind.extensionTube,
+        value: 25,
+        provenance: provenance,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+      );
+      await repository.createAccessory(tube);
+      expect((await repository.listAccessories()).single.extensionLengthMm, 25);
+
+      await repository.updateAccessory(
+        OpticalAccessory(
+          id: tube.id,
+          name: '30 mm tube',
+          kind: tube.kind,
+          value: 30,
+          notes: 'Electronic contacts',
+          provenance: provenance,
+          createdAt: createdAt,
+          updatedAt: changedAt,
+        ),
+      );
+      await repository.archiveAccessory(tube.id);
+      expect(await repository.listAccessories(), isEmpty);
+      await repository.restoreAccessory(tube.id);
+      final restored = (await repository.listAccessories()).single;
+      expect(restored.value, 30);
+      expect(restored.notes, 'Electronic contacts');
+    },
+  );
+
   test('reference impact counts immutable snapshot links', () async {
     await repository.createCamera(camera());
     await database.customStatement(

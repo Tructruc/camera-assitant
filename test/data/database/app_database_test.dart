@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
@@ -18,8 +19,8 @@ void main() {
 
   tearDown(() => database.close());
 
-  test('schema version 1 creates every foundation table', () async {
-    expect(database.schemaVersion, 1);
+  test('current schema creates every equipment and snapshot table', () async {
+    expect(database.schemaVersion, 2);
 
     final rows = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -32,6 +33,7 @@ void main() {
         'camera_bodies',
         'lenses',
         'nd_filters',
+        'optical_accessories',
         'calculation_snapshots',
         'snapshot_equipment_references',
         'user_preferences',
@@ -89,7 +91,7 @@ void main() {
     final version = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 1);
+    expect(version.read<int>('user_version'), 2);
   });
 
   test('frozen schema v1 fixture remains readable without data loss', () async {
@@ -183,6 +185,69 @@ void main() {
         )
         .getSingle();
     expect(references.read<int>('count'), 1);
+  });
+
+  test('migrates v1 snapshot references for optical accessories', () async {
+    await database.close();
+    final migrated = AppDatabase(
+      NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''
+            CREATE TABLE calculation_snapshots (
+              id TEXT NOT NULL PRIMARY KEY,
+              calculator_id TEXT NOT NULL,
+              formula_version INTEGER NOT NULL,
+              created_at INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              notes TEXT,
+              payload_version INTEGER NOT NULL,
+              input_payload TEXT NOT NULL,
+              output_payload TEXT NOT NULL,
+              display_context TEXT NOT NULL,
+              assumptions TEXT NOT NULL,
+              warnings TEXT NOT NULL,
+              equipment_snapshot TEXT NOT NULL
+            );
+          ''');
+          raw.execute('''
+            CREATE TABLE snapshot_equipment_references (
+              snapshot_id TEXT NOT NULL REFERENCES calculation_snapshots(id) ON DELETE CASCADE,
+              equipment_id TEXT NOT NULL,
+              equipment_type TEXT NOT NULL CHECK (equipment_type IN ('camera', 'lens', 'nd_filter')),
+              display_order INTEGER NOT NULL CHECK (display_order >= 0),
+              PRIMARY KEY (snapshot_id, equipment_id, equipment_type)
+            );
+          ''');
+          raw.execute('PRAGMA user_version = 1');
+        },
+      ),
+    );
+    addTearDown(migrated.close);
+
+    await migrated.customStatement('''
+      INSERT INTO calculation_snapshots
+      (id, calculator_id, formula_version, created_at, title, payload_version,
+       input_payload, output_payload, display_context, assumptions, warnings,
+       equipment_snapshot)
+      VALUES ('macro-1', 'macro', 1, 1, 'Macro', 1, '{}', '{}', '{}', '[]', '[]', '[]')
+    ''');
+    await migrated.customStatement('''
+      INSERT INTO snapshot_equipment_references
+      (snapshot_id, equipment_id, equipment_type, display_order)
+      VALUES ('macro-1', 'tube-1', 'optical_accessory', 0)
+    ''');
+
+    final version = await migrated
+        .customSelect('PRAGMA user_version')
+        .getSingle();
+    expect(version.read<int>('user_version'), 2);
+    final tables = await migrated
+        .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+        .get();
+    expect(
+      tables.map((row) => row.read<String>('name')),
+      contains('optical_accessories'),
+    );
   });
 }
 

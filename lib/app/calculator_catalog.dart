@@ -6,6 +6,7 @@ import '../features/depth_of_field/presentation/depth_of_field_screen.dart';
 import '../features/exposure_comparison/presentation/exposure_comparison_screen.dart';
 import '../features/flash_exposure/presentation/flash_exposure_screen.dart';
 import '../features/long_exposure/presentation/long_exposure_screen.dart';
+import '../features/macro/presentation/macro_screen.dart';
 import '../features/optics/presentation/optics_screens.dart';
 import '../features/timelapse/presentation/timelapse_screen.dart';
 import 'providers.dart';
@@ -58,6 +59,12 @@ enum CalculatorDestination {
     label: 'Timelapse planner',
     description: 'Frames, playback, storage, and exposure ramp',
     icon: Icons.movie_creation_outlined,
+  ),
+  macro(
+    id: 'macro',
+    label: 'Macro planner',
+    description: 'Extension, reversed, and coupled-lens estimates',
+    icon: Icons.local_florist_outlined,
   );
 
   const CalculatorDestination({
@@ -81,6 +88,7 @@ enum CalculatorDestination {
     focusStacking => const FocusStackScreen(),
     flashExposure => const FlashExposureScreen(),
     timelapse => const TimelapseScreen(),
+    macro => const MacroScreen(),
   };
 }
 

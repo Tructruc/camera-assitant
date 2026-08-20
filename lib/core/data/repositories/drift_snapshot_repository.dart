@@ -195,5 +195,6 @@ final class DriftSnapshotRepository
     SnapshotEquipmentType.camera => 'camera',
     SnapshotEquipmentType.lens => 'lens',
     SnapshotEquipmentType.filter => 'nd_filter',
+    SnapshotEquipmentType.opticalAccessory => 'optical_accessory',
   };
 }

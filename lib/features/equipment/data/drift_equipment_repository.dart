@@ -178,6 +178,49 @@ final class DriftEquipmentRepository {
     _requireExisting(changed, id);
   }
 
+  Future<List<domain.OpticalAccessory>> listAccessories({
+    bool includeArchived = false,
+  }) async {
+    final query = _database.select(_database.opticalAccessories)
+      ..orderBy(<OrderingTerm Function(db.$OpticalAccessoriesTable)>[
+        (table) => OrderingTerm.asc(table.normalizedName),
+      ]);
+    if (!includeArchived) query.where((table) => table.archivedAt.isNull());
+    return List<domain.OpticalAccessory>.unmodifiable(
+      (await query.get()).map(_accessoryFromRow),
+    );
+  }
+
+  Future<void> createAccessory(domain.OpticalAccessory accessory) async {
+    await _database
+        .into(_database.opticalAccessories)
+        .insert(_accessoryCompanion(accessory));
+  }
+
+  Future<void> updateAccessory(domain.OpticalAccessory accessory) async {
+    final changed =
+        await (_database.update(_database.opticalAccessories)
+              ..where((table) => table.id.equals(accessory.id)))
+            .write(_accessoryCompanion(accessory));
+    _requireExisting(changed, accessory.id);
+  }
+
+  Future<void> archiveAccessory(String id) => _setAccessoryArchived(id, _now());
+  Future<void> restoreAccessory(String id) => _setAccessoryArchived(id, null);
+
+  Future<void> _setAccessoryArchived(String id, DateTime? archivedAt) async {
+    final changed =
+        await (_database.update(
+          _database.opticalAccessories,
+        )..where((table) => table.id.equals(id))).write(
+          db.OpticalAccessoriesCompanion(
+            archivedAt: Value<DateTime?>(archivedAt),
+            updatedAt: Value<DateTime>(_now()),
+          ),
+        );
+    _requireExisting(changed, id);
+  }
+
   Future<EquipmentReferenceImpact> referenceImpact(String equipmentId) async {
     final count = _database.snapshotEquipmentReferences.snapshotId.count();
     final query = _database.selectOnly(_database.snapshotEquipmentReferences)
@@ -240,6 +283,26 @@ final class DriftEquipmentRepository {
         updatedAt: Value<DateTime>(filter.updatedAt),
         archivedAt: Value<DateTime?>(filter.archivedAt),
       );
+
+  db.OpticalAccessoriesCompanion _accessoryCompanion(
+    domain.OpticalAccessory accessory,
+  ) => db.OpticalAccessoriesCompanion(
+    id: Value<String>(accessory.id),
+    name: Value<String>(accessory.name),
+    normalizedName: Value<String>(accessory.normalizedName),
+    kind: Value<String>(
+      accessory.kind == domain.OpticalAccessoryKind.extensionTube
+          ? 'extension_tube'
+          : 'teleconverter',
+    ),
+    value: Value<double>(accessory.value),
+    notes: Value<String?>(accessory.notes),
+    sourceType: Value<String>(_sourceToStorage(accessory.provenance.source)),
+    sourceNote: Value<String?>(accessory.provenance.note),
+    createdAt: Value<DateTime>(accessory.createdAt),
+    updatedAt: Value<DateTime>(accessory.updatedAt),
+    archivedAt: Value<DateTime?>(accessory.archivedAt),
+  );
 }
 
 domain.CameraBody _cameraFromRow(db.CameraBody row) => domain.CameraBody(
@@ -281,6 +344,21 @@ domain.NdFilter _filterFromRow(db.NdFilter row) => domain.NdFilter(
   updatedAt: row.updatedAt.toUtc(),
   archivedAt: row.archivedAt?.toUtc(),
 );
+
+domain.OpticalAccessory _accessoryFromRow(db.OpticalAccessory row) =>
+    domain.OpticalAccessory(
+      id: row.id,
+      name: row.name,
+      kind: row.kind == 'extension_tube'
+          ? domain.OpticalAccessoryKind.extensionTube
+          : domain.OpticalAccessoryKind.teleconverter,
+      value: row.value,
+      notes: row.notes,
+      provenance: _provenance(row.sourceType, row.sourceNote),
+      createdAt: row.createdAt.toUtc(),
+      updatedAt: row.updatedAt.toUtc(),
+      archivedAt: row.archivedAt?.toUtc(),
+    );
 
 domain.EquipmentProvenance _provenance(String source, String? note) =>
     domain.EquipmentProvenance(source: _sourceFromStorage(source), note: note);

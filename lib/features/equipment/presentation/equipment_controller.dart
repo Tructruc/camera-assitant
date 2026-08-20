@@ -7,7 +7,7 @@ import '../../../app/providers.dart';
 import '../data/drift_equipment_repository.dart';
 import '../domain/equipment.dart';
 
-enum EquipmentKind { camera, lens, filter }
+enum EquipmentKind { camera, lens, filter, accessory }
 
 enum EquipmentLoadStatus { loading, ready, error }
 
@@ -84,6 +84,18 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
                   .toList(),
             ),
         _repository
+            .listAccessories(includeArchived: state.includeArchived)
+            .then(
+              (items) => items
+                  .map(
+                    (item) => EquipmentListEntry(
+                      kind: EquipmentKind.accessory,
+                      item: item,
+                    ),
+                  )
+                  .toList(),
+            ),
+        _repository
             .listLenses(includeArchived: state.includeArchived)
             .then(
               (items) => items
@@ -144,6 +156,8 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
         await _repository.createLens(item);
       case NdFilter():
         await _repository.createFilter(item);
+      case OpticalAccessory():
+        await _repository.createAccessory(item);
     }
     await load();
   }
@@ -156,6 +170,8 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
         await _repository.archiveLens(entry.item.id);
       case EquipmentKind.filter:
         await _repository.archiveFilter(entry.item.id);
+      case EquipmentKind.accessory:
+        await _repository.archiveAccessory(entry.item.id);
     }
     await load();
   }
@@ -168,6 +184,8 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
         await _repository.restoreLens(entry.item.id);
       case EquipmentKind.filter:
         await _repository.restoreFilter(entry.item.id);
+      case EquipmentKind.accessory:
+        await _repository.restoreAccessory(entry.item.id);
     }
     await load();
   }

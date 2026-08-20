@@ -30,6 +30,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
   final _sourceNote = TextEditingController();
   final _notes = TextEditingController();
   var _source = EquipmentSource.user;
+  var _accessoryKind = OpticalAccessoryKind.extensionTube;
   var _saving = false;
 
   @override
@@ -128,6 +129,31 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
       const SizedBox(height: 12),
       _numberField(_third, 'Filter factor', optional: true),
     ],
+    EquipmentKind.accessory => <Widget>[
+      DropdownButtonFormField<OpticalAccessoryKind>(
+        decoration: const InputDecoration(labelText: 'Accessory type'),
+        initialValue: OpticalAccessoryKind.extensionTube,
+        items: const [
+          DropdownMenuItem(
+            value: OpticalAccessoryKind.extensionTube,
+            child: Text('Extension tube'),
+          ),
+          DropdownMenuItem(
+            value: OpticalAccessoryKind.teleconverter,
+            child: Text('Teleconverter'),
+          ),
+        ],
+        onChanged: (value) =>
+            setState(() => _accessoryKind = value ?? _accessoryKind),
+      ),
+      const SizedBox(height: 12),
+      _numberField(
+        _first,
+        _accessoryKind == OpticalAccessoryKind.extensionTube
+            ? 'Extension length (mm)'
+            : 'Magnification factor (×)',
+      ),
+    ],
   };
 
   TextFormField _numberField(
@@ -189,6 +215,16 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           createdAt: now,
           updatedAt: now,
         ),
+        EquipmentKind.accessory => OpticalAccessory(
+          id: id,
+          name: _name.text,
+          kind: _accessoryKind,
+          value: _value(_first),
+          notes: _nullableText(_notes.text),
+          provenance: provenance,
+          createdAt: now,
+          updatedAt: now,
+        ),
       };
       final save = widget.onSave;
       if (save != null) {
@@ -220,6 +256,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
     EquipmentKind.camera => 'Camera',
     EquipmentKind.lens => 'Lens',
     EquipmentKind.filter => 'ND filter',
+    EquipmentKind.accessory => 'Optical accessory',
   };
 }
 
