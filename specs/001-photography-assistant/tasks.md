@@ -150,11 +150,11 @@ units, restart offline, and verify every original canonical value, assumption, w
 
 - [X] T054 [P] Audit all user-visible strings, units, help, limitations, and recovery messages in `lib/` and add missing assertions in `test/widget/`
 - [ ] T055 [P] Add stable golden coverage for calculator and equipment states in `test/golden/`
-- [ ] T056 [P] Add database migration fixtures and backup/recovery documentation in `test/fixtures/database/` and `README.md`
+- [X] T056 [P] Add database migration fixtures and backup/recovery documentation in `test/fixtures/database/` and `README.md`
 - [ ] T057 Profile calculation, launch, inventory, and scrolling budgets and record results in `specs/001-photography-assistant/performance-results.md`
 - [ ] T058 Run the complete Android quickstart and record device/API evidence in `specs/001-photography-assistant/validation/android.md`
 - [ ] T059 Run the complete iOS quickstart and record simulator/device evidence in `specs/001-photography-assistant/validation/ios.md`
-- [ ] T060 Verify CI branch protection requirements and document merge-request workflow in `CONTRIBUTING.md`
+- [X] T060 Verify CI branch protection requirements and document merge-request workflow in `CONTRIBUTING.md`
 - [ ] T061 Execute every scenario in `specs/001-photography-assistant/quickstart.md` and resolve all failures
 - [ ] T062 Conduct first-attempt usability validation for SC-002 and SC-003 with representative photographers and record anonymized protocol/results in `specs/001-photography-assistant/validation/usability.md`
 - [ ] T063 Audit the release dependency graph and Android/iOS network traffic to prove SC-010 local-only behavior, documenting evidence in `specs/001-photography-assistant/validation/privacy.md`

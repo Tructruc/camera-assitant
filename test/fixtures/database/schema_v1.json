@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "camera": {
+    "id": "fixture-camera-v1",
+    "name": "Fixture full frame",
+    "normalizedName": "fixture full frame",
+    "sensorWidthMm": 36.0,
+    "sensorHeightMm": 24.0,
+    "circleOfConfusionMm": 0.03,
+    "sourceType": "user",
+    "createdAt": 1776297600000,
+    "updatedAt": 1776297600000
+  },
+  "preferences": {
+    "lengthDisplay": "imperial",
+    "shutterDisplay": "conventional",
+    "fractionStep": "third",
+    "themeMode": "low_light",
+    "favoriteToolIds": "[\"depth_of_field\"]"
+  },
+  "snapshot": {
+    "id": "fixture-snapshot-v1",
+    "calculatorId": "depth_of_field",
+    "formulaVersion": 1,
+    "createdAt": 1776297600000,
+    "title": "Fixture depth result",
+    "payloadVersion": 1,
+    "inputPayload": "{\"focalLengthMm\":50.0,\"aperture\":8.0}",
+    "outputPayload": "{\"nearLimitMm\":4500.0}",
+    "displayContext": "{\"distanceUnit\":\"imperial\"}",
+    "assumptions": "[{\"key\":\"lensModel\",\"value\":\"thinLens\"}]",
+    "warnings": "[]",
+    "equipmentSnapshot": "[{\"id\":\"fixture-camera-v1\",\"type\":\"camera\",\"name\":\"Fixture full frame\",\"source\":\"user\",\"note\":null,\"values\":{\"circleOfConfusionMm\":0.03}}]"
+  }
+}

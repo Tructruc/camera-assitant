@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '17 2 * * *'
 
 permissions:
   contents: write
@@ -17,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -66,6 +70,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -86,7 +92,7 @@ jobs:
           retention-days: 14
 
   publish-prerelease:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/v2'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/v2') || github.event_name == 'schedule'
     needs: [android, ios]
     runs-on: ubuntu-latest
     steps:

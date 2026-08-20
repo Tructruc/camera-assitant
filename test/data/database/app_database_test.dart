@@ -1,5 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
+import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
+import 'package:photography_assistant/core/domain/calculation_snapshot.dart'
+    as domain;
+import 'package:photography_assistant/core/domain/repositories/snapshot_repository.dart';
 
 void main() {
   late AppDatabase database;
@@ -83,4 +91,128 @@ void main() {
         .getSingle();
     expect(version.read<int>('user_version'), 1);
   });
+
+  test('frozen schema v1 fixture remains readable without data loss', () async {
+    final fixture = _object(
+      jsonDecode(
+        await File('test/fixtures/database/schema_v1.json').readAsString(),
+      ),
+    );
+    expect(
+      _integer(fixture, 'schemaVersion'),
+      lessThanOrEqualTo(database.schemaVersion),
+    );
+    final camera = _object(fixture['camera']);
+    final preferences = _object(fixture['preferences']);
+    final snapshot = _object(fixture['snapshot']);
+
+    await database.customStatement(
+      '''INSERT INTO camera_bodies
+         (id, name, normalized_name, sensor_width_mm, sensor_height_mm,
+          default_circle_of_confusion_mm, source_type, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      <Object>[
+        _string(camera, 'id'),
+        _string(camera, 'name'),
+        _string(camera, 'normalizedName'),
+        _number(camera, 'sensorWidthMm'),
+        _number(camera, 'sensorHeightMm'),
+        _number(camera, 'circleOfConfusionMm'),
+        _string(camera, 'sourceType'),
+        _integer(camera, 'createdAt'),
+        _integer(camera, 'updatedAt'),
+      ],
+    );
+    await database.customStatement(
+      '''UPDATE user_preferences SET
+         length_display = ?, shutter_display = ?, fraction_step = ?,
+         theme_mode = ?, favorite_tool_ids = ? WHERE id = 1''',
+      <Object>[
+        _string(preferences, 'lengthDisplay'),
+        _string(preferences, 'shutterDisplay'),
+        _string(preferences, 'fractionStep'),
+        _string(preferences, 'themeMode'),
+        _string(preferences, 'favoriteToolIds'),
+      ],
+    );
+    await database.customStatement(
+      '''INSERT INTO calculation_snapshots
+         (id, calculator_id, formula_version, created_at, title,
+          payload_version, input_payload, output_payload, display_context,
+          assumptions, warnings, equipment_snapshot)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+      <Object>[
+        _string(snapshot, 'id'),
+        _string(snapshot, 'calculatorId'),
+        _integer(snapshot, 'formulaVersion'),
+        _integer(snapshot, 'createdAt'),
+        _string(snapshot, 'title'),
+        _integer(snapshot, 'payloadVersion'),
+        _string(snapshot, 'inputPayload'),
+        _string(snapshot, 'outputPayload'),
+        _string(snapshot, 'displayContext'),
+        _string(snapshot, 'assumptions'),
+        _string(snapshot, 'warnings'),
+        _string(snapshot, 'equipmentSnapshot'),
+      ],
+    );
+    await database.customStatement(
+      '''INSERT INTO snapshot_equipment_references
+         (snapshot_id, equipment_id, equipment_type, display_order)
+         VALUES (?, ?, ?, ?)''',
+      const <Object>['fixture-snapshot-v1', 'fixture-camera-v1', 'camera', 0],
+    );
+
+    final loadedPreferences = await PreferencesRepository(database).load();
+    expect(loadedPreferences.lengthDisplay, LengthDisplay.imperial);
+    expect(loadedPreferences.themeMode, AppThemeMode.lowLight);
+    expect(loadedPreferences.favoriteToolIds, <String>['depth_of_field']);
+
+    final loaded = await DriftSnapshotRepository(
+      database,
+    ).getById('fixture-snapshot-v1');
+    final saved =
+        (loaded! as SupportedSnapshot<domain.CalculationSnapshot>).snapshot;
+    expect(saved.title, 'Fixture depth result');
+    expect(saved.canonicalInputs['focalLengthMm'], 50.0);
+    expect(saved.equipment.single.name, 'Fixture full frame');
+
+    final references = await database
+        .customSelect(
+          'SELECT COUNT(*) AS count FROM snapshot_equipment_references',
+        )
+        .getSingle();
+    expect(references.read<int>('count'), 1);
+  });
+}
+
+Map<String, Object?> _object(Object? value) {
+  if (value is! Map<String, Object?>) {
+    throw const FormatException('Expected object');
+  }
+  return value;
+}
+
+String _string(Map<String, Object?> object, String key) {
+  final value = object[key];
+  if (value is! String) {
+    throw FormatException('Expected string at $key');
+  }
+  return value;
+}
+
+int _integer(Map<String, Object?> object, String key) {
+  final value = object[key];
+  if (value is! int) {
+    throw FormatException('Expected integer at $key');
+  }
+  return value;
+}
+
+double _number(Map<String, Object?> object, String key) {
+  final value = object[key];
+  if (value is! num) {
+    throw FormatException('Expected number at $key');
+  }
+  return value.toDouble();
 }
