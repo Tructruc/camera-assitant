@@ -48,6 +48,12 @@ Expected:
    equipment values originally applied.
 8. Enable 200% text scaling and a screen reader; complete the same journey without clipped content,
    unlabeled controls, or color-only feedback.
+9. For a 36 × 24 mm sensor, 50 mm lens, and 10 m distance, verify field of view is approximately
+   39.6° × 27.0° with 7.2 m × 4.8 m coverage.
+10. At f/8, 550 nm, and 4 µm pixels, verify the Airy disk is approximately 10.736 µm or 2.684 pixels and
+    the app explains that this is guidance, not a universal sharpness cutoff.
+11. Create a 0.5–1 m focus-stack plan at 100 mm, f/8, 0.03 mm circle of confusion, and 20% overlap;
+    verify ordered focus distances start at 0.5 m, end at 1 m, and persist in the saved snapshot.
 
 ## Platform build gates
 

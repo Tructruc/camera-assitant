@@ -5,6 +5,7 @@ import '../core/data/repositories/preferences_repository.dart';
 import '../features/depth_of_field/presentation/depth_of_field_screen.dart';
 import '../features/exposure_comparison/presentation/exposure_comparison_screen.dart';
 import '../features/long_exposure/presentation/long_exposure_screen.dart';
+import '../features/optics/presentation/optics_screens.dart';
 import 'providers.dart';
 
 enum CalculatorDestination {
@@ -25,6 +26,24 @@ enum CalculatorDestination {
     label: 'Long exposure / ND',
     description: 'Stack ND filters and calculate shutter time',
     icon: Icons.timer_outlined,
+  ),
+  fieldOfView(
+    id: 'field_of_view',
+    label: 'Field of view',
+    description: 'Viewing angles and scene coverage',
+    icon: Icons.aspect_ratio,
+  ),
+  diffraction(
+    id: 'diffraction',
+    label: 'Diffraction guidance',
+    description: 'Airy disk size and sensor sampling',
+    icon: Icons.blur_circular,
+  ),
+  focusStacking(
+    id: 'focus_stacking',
+    label: 'Focus stack planner',
+    description: 'Ordered focus distances with overlap',
+    icon: Icons.layers_outlined,
   );
 
   const CalculatorDestination({
@@ -43,6 +62,9 @@ enum CalculatorDestination {
     depthOfField => const DepthOfFieldScreen(),
     exposureComparison => const ExposureComparisonScreen(),
     longExposure => const LongExposureScreen(),
+    fieldOfView => const FieldOfViewScreen(),
+    diffraction => const DiffractionScreen(),
+    focusStacking => const FocusStackScreen(),
   };
 }
 

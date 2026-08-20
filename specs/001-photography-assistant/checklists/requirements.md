@@ -32,4 +32,6 @@
 ## Notes
 
 - Validation passed on 2026-08-16 after reviewing all requirements, scenarios, assumptions, and outcomes.
+- Scope validation passed again on 2026-08-21 after activating the complete specification and replacing
+  the obsolete first-release exclusion with incremental release gates.
 - Platform selection and architecture belong to the planning phase, not this product specification.

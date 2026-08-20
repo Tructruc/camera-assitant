@@ -96,6 +96,15 @@ Snapshots are never updated when equipment changes. A user may delete a snapshot
 formula migrations preserve the original payload/version; viewing code adapts old versions without
 silently recalculating them.
 
+## Optics Planning Results
+
+- **Field of View Result**: horizontal, vertical, and diagonal angle plus scene width/height at the entered
+  distance, tied to sensor dimensions, focal length, and rectilinear-projection assumptions.
+- **Diffraction Result**: Airy disk diameter/radius and diameter in sensor pixels, tied to aperture,
+  wavelength, pixel pitch, and the circular-aperture/first-minimum criterion.
+- **Focus Stack Result**: immutable ordered focus distances and frame count, tied to near/far bounds,
+  overlap, focal length, aperture, circle of confusion, and thin-lens assumptions.
+
 ## State transitions
 
 ### Equipment

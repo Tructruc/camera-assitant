@@ -84,6 +84,17 @@ Acceptance invariants:
 - Stacked filter order does not change the raw result.
 - Optical density and filter factor inputs convert to the same canonical stops within tolerance.
 
+## Core optics contracts
+
+- Field of view accepts positive sensor width/height, focal length, and subject distance and returns
+  rectilinear horizontal/vertical/diagonal angles and scene coverage.
+- Diffraction accepts positive f-number, wavelength, and pixel pitch and returns first-minimum Airy disk
+  measurements, warning when its diameter spans at least two pixels.
+- Focus stacking accepts positive optical values, a far bound greater than the near bound, and overlap in
+  `[0, 100)`, returning a strictly increasing, bounded capture list that starts at the near distance and
+  reaches the far distance.
+- Each result declares formula version, assumptions, limitations, and remains savable offline.
+
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine

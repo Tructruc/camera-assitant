@@ -138,3 +138,17 @@ logs remain useful during development without creating an undisclosed data path.
 
 **Alternatives considered**: Default cloud telemetry conflicts with the privacy baseline; swallowing errors
 can produce plausible but unsafe photographic guidance.
+
+## Core optics expansion
+
+**Decision**: Field of view uses rectilinear pinhole geometry; diffraction reports the first Airy-minimum
+diameter `2.44 × wavelength × f-number`; focus-stack planning uses the existing thin-lens depth-of-field
+criterion and emits conservative ordered near-to-far focus positions with user-selected overlap.
+
+**Rationale**: These models are deterministic, explainable, useful offline, and share the already tested
+sensor, focal-length, aperture, distance, and circle-of-confusion inputs. Results explicitly describe
+distortion, focus breathing, broadband light, close-focus, and distance-scale limitations.
+
+**Alternatives considered**: Lens-specific projection/distortion profiles and wave-optics simulation imply
+unsupported precision without calibrated lens data. Image-analysis-driven stacking requires captured image
+access and belongs outside this planning calculator.

@@ -1,16 +1,16 @@
-# Implementation Plan: Photography Assistant Foundation
+# Implementation Plan: Complete Photography Assistant
 
-**Branch**: `v2` | **Date**: 2026-08-16 | **Spec**: [spec.md](spec.md)
+**Branch**: `v2` | **Date**: 2026-08-21 | **Spec**: [spec.md](spec.md)
 
 **Input**: Feature specification from `specs/001-photography-assistant/spec.md`
 
 ## Summary
 
-Deliver a small, offline Android/iOS application containing camera and lens inventory, depth-of-field
-and hyperfocal calculation, exposure comparison, and long-exposure/ND calculation. Use Flutter with a
-pure Dart domain layer, feature-oriented presentation, and typed local SQLite persistence. Establish the
-architecture, calculation contracts, accessibility behavior, reference fixtures, GitHub CI, and test
-pyramid that later macro, panorama, astronomical, and AR features can extend without rewriting the core.
+Extend the delivered offline Android/iOS foundation into the complete specified photography assistant.
+The next increments add field of view, diffraction, focus stacking, flash, and timelapse; then macro and
+panorama planning; then offline astronomical, Sun/Moon alignment, map/compass/timeline, and capability-
+gated AR views. Every increment reuses pure Dart calculations, typed local persistence, inventory,
+accessible result contracts, reference fixtures, and cross-platform CI.
 
 ## Technical Context
 
@@ -20,8 +20,8 @@ pyramid that later macro, panorama, astronomical, and AR features can extend wit
 Drift 2.x with drift_flutter for typed SQLite access and migrations; intl for unit-aware formatting;
 go_router only if navigation outgrows the initial shell
 
-**Storage**: On-device SQLite for equipment, preferences, and immutable calculation snapshots; no remote
-storage or account in v1
+**Storage**: On-device SQLite for equipment, preferences, immutable calculation snapshots, locations,
+celestial data metadata, and observation plans; no account or default remote storage
 
 **Testing**: Dart unit tests, Flutter widget and semantics tests, Drift in-memory database tests, golden
 tests for a small stable visual set, Flutter integration_test for primary journeys, and Android/iOS
@@ -38,11 +38,12 @@ devices; scrolling sustains 60 frames per second
 
 **Constraints**: Offline-first; no account or telemetry; all physical quantities normalized to SI inside
 the domain; deterministic calculations; accessibility at 200% text scale; no platform API in domain code;
-no AR, maps, location, or network dependency in v1
+location, sensor, camera, map, and optional data access isolated behind capability interfaces with a
+complete numeric fallback; explicit solar safety and uncertainty guidance
 
-**Scale/Scope**: Four first-release capabilities, approximately 8-12 primary screens/sheets, up to 1,000
-equipment records and 10,000 saved snapshots per installation, English UI initially with all strings and
-units structured for later localization
+**Scale/Scope**: Complete seven-story specification delivered in independently releasable increments,
+up to 1,000 equipment records and 10,000 saved calculations/plans per installation, English UI initially
+with all strings and units structured for later localization
 
 ## Constitution Check
 
@@ -128,7 +129,7 @@ ios/
 **Structure Decision**: One Flutter application with feature-oriented vertical slices. Calculation code
 is pure Dart under each feature's domain directory; shared physical quantities and validation remain in
 `core/domain`. Persistence implementations remain behind repository interfaces. This keeps v1 simple while
-allowing later tools to reuse stable contracts without depending on Flutter widgets or SQLite.
+allowing every planned tool to reuse stable contracts without depending on Flutter widgets or SQLite.
 
 ## Complexity Tracking
 

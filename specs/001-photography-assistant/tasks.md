@@ -7,9 +7,8 @@
 **Tests**: Test-first development is mandatory under the constitution. Each behavior task begins with a
 failing test or reference fixture and completes only after that test passes.
 
-**Scope**: First public release only: Android/iOS equipment inventory, depth of field/hyperfocal, exposure
-comparison, long-exposure/ND, and immutable saved calculation snapshots. Product stories US3-US6 and the
-location-planning portion of US7 are deferred to later feature plans.
+**Scope**: Complete active specification. The original mobile foundation is complete; remaining calculators
+and planners are delivered as independently tested increments in story-priority order.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -161,6 +160,60 @@ units, restart offline, and verify every original canonical value, assumption, w
 
 ---
 
+## Phase 7: User Story 1 - Complete the Core Calculator Catalog (Priority: P1)
+
+**Goal**: Add field-of-view, diffraction, focus-stack, flash-exposure, and timelapse tools with the same
+offline, saved-result, accessible contracts as the delivered calculators.
+
+**Independent Test**: Run documented fixtures and invalid boundaries for every calculator, save each
+result, restart offline, and confirm its inputs, outputs, assumptions, and limitations remain available.
+
+- [X] T064 [P] [US1] Add field-of-view, diffraction, and focus-stack reference tests in `test/unit/features/optics/optics_calculators_test.dart`
+- [X] T065 [P] [US1] Implement field-of-view and scene-coverage calculations in `lib/features/optics/domain/optics_calculators.dart`
+- [X] T066 [P] [US1] Implement Airy-disk diffraction guidance in `lib/features/optics/domain/optics_calculators.dart`
+- [X] T067 [P] [US1] Implement ordered thin-lens focus-stack planning in `lib/features/optics/domain/optics_calculators.dart`
+- [X] T068 [US1] Add accessible inputs, guidance, validation, and saved snapshots in `lib/features/optics/presentation/optics_screens.dart`
+- [X] T069 [US1] Register the optics tools and favorites in `lib/app/calculator_catalog.dart`
+- [ ] T070 [P] [US1] Add reference-tested guide-number and power-ratio flash calculations in `lib/features/flash_exposure/`
+- [ ] T071 [P] [US1] Add interval, duration, frame-count, playback, storage, and exposure-ramp timelapse planning in `lib/features/timelapse/`
+- [ ] T072 [US1] Extend calculator widget and offline integration journeys in `test/widget/features/calculators/` and `integration_test/calculator_flows_test.dart`
+
+---
+
+## Phase 8: User Story 3 - Plan Macro Magnification (Priority: P2)
+
+**Independent Test**: Compare extension-tube, reversed-lens, and coupled-lens configurations against
+documented fixtures using manual and saved equipment values.
+
+- [ ] T073 [P] [US3] Add extension tube and converter inventory entities and persistence in `lib/features/equipment/`
+- [ ] T074 [P] [US3] Add macro reference fixtures and domain tests in `test/unit/features/macro/`
+- [ ] T075 [US3] Implement extension, reversed-lens, and coupled-lens models in `lib/features/macro/domain/`
+- [ ] T076 [US3] Implement model-specific macro inputs, comparison results, guidance, and snapshots in `lib/features/macro/presentation/`
+
+---
+
+## Phase 9: User Story 6 - Plan Panoramas and Stacks (Priority: P3)
+
+**Independent Test**: Verify horizontal, vertical, and multi-row grids cover reference bounds with the
+requested overlap and correct orientation.
+
+- [ ] T077 [P] [US6] Add panorama geometry fixtures and tests in `test/unit/features/panorama/`
+- [ ] T078 [US6] Implement frame-grid, overlap, increment, and coverage planning in `lib/features/panorama/`
+
+---
+
+## Phase 10: User Stories 4 and 5 - Celestial and Alignment Planning (Priority: P2)
+
+**Independent Test**: Compare positions, events, and alignment candidates for known coordinates and times,
+then repeat offline and with every location/camera/sensor permission denied.
+
+- [ ] T079 [P] [US4] Select, license, document, and fixture-test astronomical algorithms and offline data in `specs/001-photography-assistant/research.md` and `test/fixtures/astronomy/`
+- [ ] T080 [US4] Implement target positions, events, Milky Way, star shutter, and star-trail numeric planning in `lib/features/astronomy/`
+- [ ] T081 [P] [US5] Implement Sun/Moon bearing and elevation alignment search with safety guidance in `lib/features/alignment/`
+- [ ] T082 [US4] Add saved locations/plans and map, compass, timeline, numeric, permission-fallback, and capability-gated AR views in `lib/features/planning/`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -180,8 +233,8 @@ Setup -> Foundation -> US2 Equipment ----┐
                     -> US1 Domain -------+-> US1 Integrated Calculators -> US7 Snapshots -> Release
 ```
 
-US3 Macro, US4 Night Sky, US5 Alignment, and US6 Panorama are deferred and receive separate specifications
-or plan amendments after the first-release foundation passes.
+The delivered foundation enables Phase 7 immediately. Macro and panorama reuse optics and equipment;
+astronomy/alignment may proceed after its algorithm, licensing, accuracy, and privacy research gate passes.
 
 ### Within Each User Story
 
@@ -234,5 +287,5 @@ T040 depth-of-field screen         || T041 exposure screen         || T042 ND sc
 
 ## Format Validation
 
-All 63 tasks use the required checkbox, sequential task ID, optional `[P]`, required user-story label in
+All 82 tasks use the required checkbox, sequential task ID, optional `[P]`, required user-story label in
 story phases, actionable description, and exact file path.
