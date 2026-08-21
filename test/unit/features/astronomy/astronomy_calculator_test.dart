@@ -59,6 +59,18 @@ void main() {
     );
   });
 
+  test('moving planets change equatorial position over time', () {
+    final first = CelestialTarget.jupiter.equatorialAt(
+      DateTime.utc(2026, 1, 1),
+    );
+    final later = CelestialTarget.jupiter.equatorialAt(
+      DateTime.utc(2026, 7, 1),
+    );
+    expect(first.$1, isNot(closeTo(later.$1, 0.01)));
+    expect(first.$1, inInclusiveRange(0, 360));
+    expect(first.$2, inInclusiveRange(-90, 90));
+  });
+
   test('rejects invalid location, optics, and trail inputs', () {
     final result = calculator.calculate(
       AstronomyInput(

@@ -10,6 +10,7 @@ import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
+import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
 import '../../planning/presentation/field_checklist.dart';
 import '../domain/astronomy_calculator.dart';
@@ -40,6 +41,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     'Focus on a bright star': false,
     'Capture a test frame and inspect stars': false,
   };
+  var _timeZoneId = 'UTC';
 
   @override
   void initState() {
@@ -103,6 +105,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             setState(() {
               _latitude.text = location.latitudeDegrees.toString();
               _longitude.text = location.longitudeDegrees.toString();
+              _timeZoneId = location.timeZoneId;
               _result = null;
             });
           },
@@ -214,6 +217,19 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         ),
         const SizedBox(height: 16),
         if (_result?.output case final output?) ...[
+          Builder(
+            builder: (context) {
+              final time = PlanningTimeContext.parse(_timeZoneId);
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    'Location ${_latitude.text}, ${_longitude.text} · ${time.timeZoneId}\n${time.confidenceLabel}\nTrue north · geometric horizon · planning accuracy · offline catalog bundled 2026-08-21',
+                  ),
+                ),
+              );
+            },
+          ),
           CalculationResultView(
             title: '${_target.label} plan',
             rows: [
@@ -233,8 +249,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                 _duration(output.trailDurationSeconds),
               ),
             ],
-            assumptions: const [
-              'Fixed ICRS/J2000 target coordinates',
+            assumptions: [
+              _target.isMoving
+                  ? 'Low-precision circular orbital model; verify planet framing with an authoritative ephemeris'
+                  : 'Fixed ICRS/J2000 target coordinates',
               'Airless geometric horizon; terrain and refraction excluded',
               'Approximate mean sidereal time and planning-grade exposure rules',
             ],
@@ -247,7 +265,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           Text('Next events', style: Theme.of(context).textTheme.titleMedium),
           for (final event in output.events)
             Text(
-              '${event.type.name}: ${DateFormat("yyyy-MM-dd HH:mm 'UTC'").format(event.instantUtc)}',
+              '${event.type.name}: ${PlanningTimeContext.parse(_timeZoneId).format(event.instantUtc)}',
             ),
           const SizedBox(height: 12),
           Text(
@@ -329,8 +347,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         'longitudeDegrees': _value(_longitude),
         'instantUtc': _instantUtc.toIso8601String(),
         'target': _target.name,
-        'rightAscensionDegrees': _target.rightAscensionDegrees,
-        'declinationDegrees': _target.declinationDegrees,
+        'rightAscensionDegrees': _target.equatorialAt(_instantUtc).$1,
+        'declinationDegrees': _target.equatorialAt(_instantUtc).$2,
         'focalLengthMm': _value(_focalLength),
         'cropFactor': _value(_cropFactor),
         'aperture': _value(_aperture),
@@ -356,8 +374,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             .map((entry) => {'task': entry.key, 'complete': entry.value})
             .toList(growable: false),
       },
-      displayContext: const {
-        'timeZone': 'UTC',
+      displayContext: {
+        'timeZone': _timeZoneId,
         'azimuthReference': 'trueNorth',
         'angleUnit': 'degrees',
       },
@@ -395,6 +413,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   };
   String _category(TargetCategory category) => switch (category) {
     TargetCategory.milkyWay => 'Milky Way',
+    TargetCategory.planet => 'Planet · low-precision moving model',
     TargetCategory.star => 'Star',
     TargetCategory.nebula => 'Nebula',
     TargetCategory.galaxy => 'Galaxy',

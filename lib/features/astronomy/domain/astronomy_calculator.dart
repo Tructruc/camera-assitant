@@ -33,21 +33,62 @@ enum CelestialTarget {
     250.4235,
     36.4613,
   ),
-  omegaCentauri('Omega Centauri', TargetCategory.cluster, 201.697, -47.4795);
+  omegaCentauri('Omega Centauri', TargetCategory.cluster, 201.697, -47.4795),
+  mercury('Mercury', TargetCategory.planet, 0, 0, 87.969, 252.25, 0.387),
+  venus('Venus', TargetCategory.planet, 0, 0, 224.701, 181.98, 0.723),
+  mars('Mars', TargetCategory.planet, 0, 0, 686.98, 355.43, 1.524),
+  jupiter('Jupiter', TargetCategory.planet, 0, 0, 4332.59, 34.35, 5.203),
+  saturn('Saturn', TargetCategory.planet, 0, 0, 10759.22, 50.08, 9.537);
 
   const CelestialTarget(
     this.label,
     this.category,
     this.rightAscensionDegrees,
-    this.declinationDegrees,
-  );
+    this.declinationDegrees, [
+    this.orbitalPeriodDays,
+    this.longitudeAtEpochDegrees,
+    this.orbitalRadiusAu,
+  ]);
   final String label;
   final TargetCategory category;
   final double rightAscensionDegrees;
   final double declinationDegrees;
+  final double? orbitalPeriodDays;
+  final double? longitudeAtEpochDegrees;
+  final double? orbitalRadiusAu;
+
+  bool get isMoving => orbitalPeriodDays != null;
+
+  (double, double) equatorialAt(DateTime instantUtc) {
+    if (!isMoving) return (rightAscensionDegrees, declinationDegrees);
+    final days =
+        instantUtc.difference(DateTime.utc(2000, 1, 1, 12)).inSeconds /
+        Duration.secondsPerDay;
+    final planetLongitude = _radians(
+      _normalize(longitudeAtEpochDegrees! + 360 * days / orbitalPeriodDays!),
+    );
+    final earthLongitude = _radians(_normalize(100.464 + 360 * days / 365.256));
+    final x =
+        orbitalRadiusAu! * math.cos(planetLongitude) - math.cos(earthLongitude);
+    final y =
+        orbitalRadiusAu! * math.sin(planetLongitude) - math.sin(earthLongitude);
+    final longitude = math.atan2(y, x);
+    final obliquity = _radians(23.4393);
+    return (
+      _normalize(
+        _degrees(
+          math.atan2(
+            math.sin(longitude) * math.cos(obliquity),
+            math.cos(longitude),
+          ),
+        ),
+      ),
+      _degrees(math.asin(math.sin(longitude) * math.sin(obliquity))),
+    );
+  }
 }
 
-enum TargetCategory { milkyWay, star, nebula, galaxy, cluster }
+enum TargetCategory { milkyWay, planet, star, nebula, galaxy, cluster }
 
 enum CelestialEventType { rise, transit, set }
 
@@ -161,14 +202,13 @@ final class AstronomyCalculator {
     }
 
     final latitude = _radians(input.observerLatitudeDegrees);
-    final declination = _radians(input.target.declinationDegrees);
+    final coordinates = input.target.equatorialAt(input.instantUtc);
+    final declination = _radians(coordinates.$2);
     final localSidereal = _normalize(
       _greenwichSiderealDegrees(input.instantUtc) +
           input.observerLongitudeDegrees,
     );
-    final hourAngleDegrees = _signed(
-      localSidereal - input.target.rightAscensionDegrees,
-    );
+    final hourAngleDegrees = _signed(localSidereal - coordinates.$1);
     final hourAngle = _radians(hourAngleDegrees);
     final altitude = math.asin(
       math.sin(latitude) * math.sin(declination) +
@@ -184,7 +224,13 @@ final class AstronomyCalculator {
           ) +
           180,
     );
-    final eventPlan = _events(input, localSidereal, latitude, declination);
+    final eventPlan = _events(
+      input,
+      localSidereal,
+      latitude,
+      declination,
+      coordinates.$1,
+    );
     final path = <SkyPositionSample>[
       for (var offset = -6; offset <= 6; offset += 2)
         _positionSample(input, input.instantUtc.add(Duration(hours: offset))),
@@ -208,10 +254,12 @@ final class AstronomyCalculator {
             _siderealDaySeconds * input.desiredTrailDegrees / 360,
         trailRotationDegreesPerHour: 360 * 3600 / _siderealDaySeconds,
       ),
-      assumptions: const [
+      assumptions: [
         CalculationAssumption(
           key: 'coordinates',
-          value: 'ICRS/J2000 fixed target',
+          value: input.target.isMoving
+              ? 'low-precision circular geocentric orbital model'
+              : 'ICRS/J2000 fixed target',
         ),
         CalculationAssumption(
           key: 'horizon',
@@ -233,12 +281,13 @@ final class AstronomyCalculator {
 
   SkyPositionSample _positionSample(AstronomyInput input, DateTime instantUtc) {
     final latitude = _radians(input.observerLatitudeDegrees);
-    final declination = _radians(input.target.declinationDegrees);
+    final coordinates = input.target.equatorialAt(instantUtc);
+    final declination = _radians(coordinates.$2);
     final hourAngle = _radians(
       _signed(
         _greenwichSiderealDegrees(instantUtc) +
             input.observerLongitudeDegrees -
-            input.target.rightAscensionDegrees,
+            coordinates.$1,
       ),
     );
     final altitude = math.asin(
@@ -267,16 +316,35 @@ final class AstronomyCalculator {
     double localSidereal,
     double latitude,
     double declination,
+    double rightAscensionDegrees,
   ) {
-    final transit = _event(input, localSidereal, 0, CelestialEventType.transit);
+    final transit = _event(
+      input,
+      localSidereal,
+      rightAscensionDegrees,
+      0,
+      CelestialEventType.transit,
+    );
     final cosHourAngle = -math.tan(latitude) * math.tan(declination);
     if (cosHourAngle < -1) return (VisibilityCycle.circumpolar, [transit]);
     if (cosHourAngle > 1) return (VisibilityCycle.neverRises, [transit]);
     final horizonHourAngle = _degrees(math.acos(cosHourAngle));
     final events = [
-      _event(input, localSidereal, -horizonHourAngle, CelestialEventType.rise),
+      _event(
+        input,
+        localSidereal,
+        rightAscensionDegrees,
+        -horizonHourAngle,
+        CelestialEventType.rise,
+      ),
       transit,
-      _event(input, localSidereal, horizonHourAngle, CelestialEventType.set),
+      _event(
+        input,
+        localSidereal,
+        rightAscensionDegrees,
+        horizonHourAngle,
+        CelestialEventType.set,
+      ),
     ]..sort((a, b) => a.instantUtc.compareTo(b.instantUtc));
     return (VisibilityCycle.risesAndSets, List.unmodifiable(events));
   }
@@ -284,12 +352,11 @@ final class AstronomyCalculator {
   CelestialEvent _event(
     AstronomyInput input,
     double localSidereal,
+    double rightAscensionDegrees,
     double targetHourAngle,
     CelestialEventType type,
   ) {
-    final currentHourAngle = _signed(
-      localSidereal - input.target.rightAscensionDegrees,
-    );
+    final currentHourAngle = _signed(localSidereal - rightAscensionDegrees);
     final siderealDegreesAhead = _normalize(targetHourAngle - currentHourAngle);
     final seconds = (_siderealDaySeconds * siderealDegreesAhead / 360).round();
     return CelestialEvent(

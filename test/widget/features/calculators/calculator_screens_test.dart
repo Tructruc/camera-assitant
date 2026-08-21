@@ -175,6 +175,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Plan night sky'));
       await tester.pump();
+      await tester.scrollUntilVisible(
+        find.text('500 rule'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('500 rule'), findsOneWidget);
       expect(find.text('NPF rule'), findsOneWidget);
       await tester.scrollUntilVisible(
@@ -183,7 +188,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('Next events'), findsOneWidget);
-      expect(find.textContaining('true'), findsOneWidget);
+      expect(find.textContaining('true'), findsWidgets);
     },
   );
 

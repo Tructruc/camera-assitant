@@ -9,6 +9,7 @@ import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../planning/domain/planning_capabilities.dart';
+import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
 import '../../planning/presentation/field_checklist.dart';
 import '../../planning/presentation/live_ar_view.dart';
@@ -40,6 +41,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     'Confirm framing before the event': false,
     'Use certified solar filtration for Sun plans': false,
   };
+  var _timeZoneId = 'UTC';
 
   @override
   void initState() {
@@ -94,6 +96,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             if (location.elevationMetres != null) {
               _observerElevation.text = location.elevationMetres.toString();
             }
+            _timeZoneId = location.timeZoneId;
             _result = null;
           });
         },
@@ -300,7 +303,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         children: [
           for (final candidate in output.candidates.take(8))
             Text(
-              '${DateFormat("HH:mm 'UTC'").format(candidate.instantUtc)} — az ${candidate.azimuthDegrees.toStringAsFixed(1)}°, alt ${candidate.altitudeDegrees.toStringAsFixed(1)}°, error ${candidate.angularErrorDegrees.toStringAsFixed(2)}°',
+              '${PlanningTimeContext.parse(_timeZoneId).format(candidate.instantUtc)} — az ${candidate.azimuthDegrees.toStringAsFixed(1)}°, alt ${candidate.altitudeDegrees.toStringAsFixed(1)}°, error ${candidate.angularErrorDegrees.toStringAsFixed(2)}°',
             ),
         ],
       ),
@@ -447,8 +450,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             .map((entry) => {'task': entry.key, 'complete': entry.value})
             .toList(growable: false),
       },
-      displayContext: const {
-        'timeZone': 'UTC',
+      displayContext: {
+        'timeZone': _timeZoneId,
         'northReference': 'true',
         'mapMode': 'offlineSchematic',
       },
