@@ -71,6 +71,13 @@ An immutable configuration-specific estimate containing magnification, effective
 across the sensor, and exposure compensation. Its snapshot stores only inputs relevant to the selected
 extension-tube, reversed-lens, or coupled-lens model plus exact applied equipment values.
 
+## Panorama Plan
+
+An immutable angular capture plan containing orientation, per-frame horizontal/vertical field of view,
+minimum column and row counts, movement increments, resulting coverage, and an ordered list of frame
+positions. Each position records a one-based capture index plus zero-based row/column and centered yaw and
+pitch angles. Saved plans embed applied camera sensor dimensions and lens focal length.
+
 ## User Preferences
 
 Singleton local settings record.

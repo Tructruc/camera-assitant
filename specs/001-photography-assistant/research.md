@@ -182,3 +182,19 @@ estimates and recommends confirming framing and exposure with the physical setup
 
 **References**: [Nikon AF-S Micro-NIKKOR 60 mm manual](https://download.nikonimglib.com/archive2/U1lmk009Baix01iwN8x705IXwC55/AFSMICRO60_2.8GED_NT%28C2_DL%2911.pdf),
 [Nikon AF Micro-NIKKOR 60 mm manual and close-up tables](https://download.nikonimglib.com/archive2/6Vex200Zt1ox02k1UZm06GC9j487/AFMicro60_2.8D_%2827_DL%2902.pdf)
+
+## Panorama geometry
+
+**Decision**: Derive each frame's rectilinear angular field of view from sensor dimensions and focal
+length, swapping the axes for portrait orientation. The movement increment is frame field of view times
+`(1 - overlap)`. The minimum count on each axis is one frame when it covers the requested bound, otherwise
+`ceil((requested bound - frame field of view) / increment) + 1`. Positions are centered on zero and emitted
+top-to-bottom in alternating left/right directions.
+
+**Rationale**: This produces deterministic horizontal, vertical, and multi-row plans whose coverage and
+overlap can be independently verified. Centered angular positions are usable with tripod heads, while
+serpentine order avoids an unnecessary full-width return between rows.
+
+**Limitations**: The planner intentionally does not claim lens-specific distortion, stitched-image crop,
+projection, leveling, or parallax precision. It tells users to rotate near the entrance pupil and retain
+extra crop margin; exact nodal setup and distortion correction require the actual lens and stitching tool.

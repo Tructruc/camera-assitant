@@ -8,6 +8,7 @@ import '../features/flash_exposure/presentation/flash_exposure_screen.dart';
 import '../features/long_exposure/presentation/long_exposure_screen.dart';
 import '../features/macro/presentation/macro_screen.dart';
 import '../features/optics/presentation/optics_screens.dart';
+import '../features/panorama/presentation/panorama_screen.dart';
 import '../features/timelapse/presentation/timelapse_screen.dart';
 import 'providers.dart';
 
@@ -65,6 +66,12 @@ enum CalculatorDestination {
     label: 'Macro planner',
     description: 'Extension, reversed, and coupled-lens estimates',
     icon: Icons.local_florist_outlined,
+  ),
+  panorama(
+    id: 'panorama',
+    label: 'Panorama planner',
+    description: 'Frame grids, overlap, movement, and coverage',
+    icon: Icons.panorama_horizontal_outlined,
   );
 
   const CalculatorDestination({
@@ -89,6 +96,7 @@ enum CalculatorDestination {
     flashExposure => const FlashExposureScreen(),
     timelapse => const TimelapseScreen(),
     macro => const MacroScreen(),
+    panorama => const PanoramaScreen(),
   };
 }
 

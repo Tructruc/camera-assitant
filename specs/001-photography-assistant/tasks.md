@@ -197,8 +197,8 @@ documented fixtures using manual and saved equipment values.
 **Independent Test**: Verify horizontal, vertical, and multi-row grids cover reference bounds with the
 requested overlap and correct orientation.
 
-- [ ] T077 [P] [US6] Add panorama geometry fixtures and tests in `test/unit/features/panorama/`
-- [ ] T078 [US6] Implement frame-grid, overlap, increment, and coverage planning in `lib/features/panorama/`
+- [X] T077 [P] [US6] Add panorama geometry fixtures and tests in `test/unit/features/panorama/`
+- [X] T078 [US6] Implement frame-grid, overlap, increment, and coverage planning in `lib/features/panorama/`
 
 ---
 

@@ -63,6 +63,9 @@ Expected:
     and explicit working-distance/internal-focus limitations.
 15. Switch between reversed-lens and coupled-lens configurations and verify irrelevant inputs disappear,
     saved lens provenance remains visible, and each saved result retains only its active model inputs.
+16. Plan a 90° × 45° panorama with a 36 × 24 mm sensor, 50 mm lens, landscape orientation, and 30%
+    overlap on both axes; verify a 3 × 2 grid (six frames), approximately 27.7° yaw and 18.9° pitch
+    increments, at least the requested coverage, centered serpentine positions, and a reusable saved plan.
 
 ## Platform build gates
 

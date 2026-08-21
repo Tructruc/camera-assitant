@@ -117,6 +117,15 @@ aperture, and sensor width. Each returns magnification, effective aperture, subj
 compensation, formula version, and an unavoidable configuration-estimate warning. Saved equipment values
 and provenance are embedded and remain immutable after inventory edits.
 
+## Panorama contract
+
+Positive sensor dimensions and focal length, landscape or portrait orientation, horizontal bounds in
+`(0, 360]`, vertical bounds in `(0, 180]`, and per-axis overlaps in `[0, 100)` produce the minimum covering
+column/row grid. Output includes frame field of view, yaw/pitch increments, resulting coverage, total frame
+count, and centered positions in serpentine capture order. Coverage never falls below requested bounds,
+portrait orientation swaps sensor axes, and a bound within one frame returns one centered position.
+Snapshots retain every position and applied camera/lens provenance.
+
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine

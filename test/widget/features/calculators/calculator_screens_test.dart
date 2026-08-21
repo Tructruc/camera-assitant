@@ -12,6 +12,7 @@ import 'package:photography_assistant/features/exposure_comparison/presentation/
 import 'package:photography_assistant/features/flash_exposure/presentation/flash_exposure_screen.dart';
 import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
 import 'package:photography_assistant/features/macro/presentation/macro_screen.dart';
+import 'package:photography_assistant/features/panorama/presentation/panorama_screen.dart';
 import 'package:photography_assistant/features/timelapse/presentation/timelapse_screen.dart';
 
 void main() {
@@ -134,6 +135,23 @@ void main() {
     expect(find.text('0.70×'), findsOneWidget);
     expect(find.text('f/13.6'), findsOneWidget);
     expect(find.textContaining('Working distance'), findsOneWidget);
+  });
+
+  testWidgets('panorama planner shows a complete ordered capture grid', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const PanoramaScreen()));
+    await tester.scrollUntilVisible(
+      find.text('Plan panorama'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Plan panorama'));
+    await tester.pump();
+    expect(find.text('3 columns × 2 rows'), findsOneWidget);
+    expect(find.text('6'), findsOneWidget);
+    expect(find.textContaining('yaw'), findsWidgets);
+    expect(find.textContaining('lens distortion'), findsOneWidget);
   });
 
   testWidgets('preferences change result presentation, not calculations', (
@@ -263,9 +281,10 @@ void main() {
     );
     await calculateAndSave(const TimelapseScreen(), 'Plan timelapse');
     await calculateAndSave(const MacroScreen(), 'Calculate macro setup');
+    await calculateAndSave(const PanoramaScreen(), 'Plan panorama');
 
     final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
-    expect(snapshots, hasLength(6));
+    expect(snapshots, hasLength(7));
     expect(snapshots.map((snapshot) => snapshot.calculatorId).toSet(), <String>{
       'depth_of_field',
       'exposure_comparison',
@@ -273,6 +292,7 @@ void main() {
       'flash_exposure',
       'timelapse',
       'macro',
+      'panorama',
     });
     expect(
       snapshots.every(
