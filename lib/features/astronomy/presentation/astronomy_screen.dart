@@ -10,13 +10,16 @@ import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
+import '../../planning/domain/planning_capabilities.dart';
 import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
 import '../../planning/presentation/field_checklist.dart';
+import '../../planning/presentation/live_ar_view.dart';
 import '../domain/astronomy_calculator.dart';
 
 class AstronomyScreen extends ConsumerStatefulWidget {
-  const AstronomyScreen({super.key});
+  const AstronomyScreen({this.capabilities, super.key});
+  final PlanningCapabilities? capabilities;
   @override
   ConsumerState<AstronomyScreen> createState() => _AstronomyScreenState();
 }
@@ -31,6 +34,9 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   final _trailDegrees = TextEditingController(text: '30');
   late DateTime _instantUtc;
   var _target = CelestialTarget.milkyWayCore;
+  var _shutterRule = StarShutterRule.npf;
+  var _sharpnessTolerance = StarSharpnessTolerance.balanced;
+  var _view = PlanningView.numeric;
   CameraBody? _camera;
   Lens? _lens;
   CalculationResult<AstronomyOutput>? _result;
@@ -211,6 +217,46 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           controller: _trailDegrees,
           errorText: _errors['desiredTrailDegrees'],
         ),
+        DropdownButtonFormField<StarShutterRule>(
+          decoration: const InputDecoration(labelText: 'Sharp-star rule'),
+          initialValue: _shutterRule,
+          items: const [
+            DropdownMenuItem(
+              value: StarShutterRule.npf,
+              child: Text('NPF rule'),
+            ),
+            DropdownMenuItem(
+              value: StarShutterRule.rule500,
+              child: Text('500 rule'),
+            ),
+          ],
+          onChanged: (value) => setState(() {
+            _shutterRule = value ?? _shutterRule;
+            _result = null;
+          }),
+        ),
+        const SizedBox(height: 12),
+        SegmentedButton<StarSharpnessTolerance>(
+          segments: const [
+            ButtonSegment(
+              value: StarSharpnessTolerance.strict,
+              label: Text('Strict'),
+            ),
+            ButtonSegment(
+              value: StarSharpnessTolerance.balanced,
+              label: Text('Balanced'),
+            ),
+            ButtonSegment(
+              value: StarSharpnessTolerance.relaxed,
+              label: Text('Relaxed'),
+            ),
+          ],
+          selected: {_sharpnessTolerance},
+          onSelectionChanged: (values) => setState(() {
+            _sharpnessTolerance = values.first;
+            _result = null;
+          }),
+        ),
         FilledButton(
           onPressed: _calculate,
           child: const Text('Plan night sky'),
@@ -245,6 +291,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
               ),
               ('NPF rule', '${output.npfSeconds.toStringAsFixed(1)} seconds'),
               (
+                'Recommended (${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'}, ${_sharpnessTolerance.name})',
+                '${output.recommendedShutterSeconds.toStringAsFixed(1)} seconds',
+              ),
+              (
                 '${_value(_trailDegrees).toStringAsFixed(0)}° star trail',
                 _duration(output.trailDurationSeconds),
               ),
@@ -261,6 +311,36 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             onSave: () => _save(output),
             onReset: _reset,
           ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<PlanningView>(
+              segments: const [
+                ButtonSegment(
+                  value: PlanningView.numeric,
+                  label: Text('Numeric'),
+                ),
+                ButtonSegment(
+                  value: PlanningView.timeline,
+                  label: Text('Timeline'),
+                ),
+                ButtonSegment(
+                  value: PlanningView.compass,
+                  label: Text('Compass'),
+                ),
+                ButtonSegment(value: PlanningView.map, label: Text('Map')),
+                ButtonSegment(
+                  value: PlanningView.augmentedReality,
+                  label: Text('AR'),
+                ),
+              ],
+              selected: {_view},
+              onSelectionChanged: (values) =>
+                  setState(() => _view = values.first),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _planningView(output),
           const SizedBox(height: 12),
           Text('Next events', style: Theme.of(context).textTheme.titleMedium),
           for (final event in output.events)
@@ -312,6 +392,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         aperture: _value(_aperture),
         pixelPitchMicrometres: _value(_pixelPitch),
         desiredTrailDegrees: _value(_trailDegrees),
+        selectedRule: _shutterRule,
+        sharpnessTolerance: _sharpnessTolerance,
       ),
     );
     setState(() {
@@ -354,6 +436,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         'aperture': _value(_aperture),
         'pixelPitchMicrometres': _value(_pixelPitch),
         'desiredTrailDegrees': _value(_trailDegrees),
+        'selectedRule': _shutterRule.name,
+        'sharpnessTolerance': _sharpnessTolerance.name,
       },
       canonicalOutputs: {
         'altitudeDegrees': output.altitudeDegrees,
@@ -363,6 +447,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         'rule500Seconds': output.rule500Seconds,
         'npfSeconds': output.npfSeconds,
         'trailDurationSeconds': output.trailDurationSeconds,
+        'recommendedShutterSeconds': output.recommendedShutterSeconds,
         'events': [
           for (final event in output.events)
             {
@@ -434,10 +519,84 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     _trailDegrees.text = '30';
     setState(() {
       _target = CelestialTarget.milkyWayCore;
+      _shutterRule = StarShutterRule.npf;
+      _sharpnessTolerance = StarSharpnessTolerance.balanced;
+      _view = PlanningView.numeric;
       _camera = null;
       _lens = null;
       _result = null;
       _errors = const {};
     });
+  }
+
+  Widget _planningView(AstronomyOutput output) {
+    if (_view == PlanningView.augmentedReality &&
+        widget.capabilities != null &&
+        !widget.capabilities!.canShowAr) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: Text(
+            'AR unavailable. Numeric, timeline, compass, and offline-map views remain usable without camera or orientation permission.',
+          ),
+        ),
+      );
+    }
+    return switch (_view) {
+      PlanningView.numeric => Text(
+        '${_target.label}: ${output.altitudeDegrees.toStringAsFixed(1)}° altitude, ${output.azimuthDegrees.toStringAsFixed(1)}° true azimuth',
+      ),
+      PlanningView.timeline => Column(
+        children: [
+          for (final sample in output.path)
+            ListTile(
+              dense: true,
+              title: Text(
+                PlanningTimeContext.parse(
+                  _timeZoneId,
+                ).format(sample.instantUtc),
+              ),
+              trailing: Text(
+                '${sample.altitudeDegrees.toStringAsFixed(0)}° / ${sample.azimuthDegrees.toStringAsFixed(0)}°',
+              ),
+            ),
+        ],
+      ),
+      PlanningView.compass => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Transform.rotate(
+                angle: output.azimuthDegrees * 3.141592653589793 / 180,
+                child: const Icon(Icons.navigation, size: 72),
+              ),
+              Text('${output.azimuthDegrees.toStringAsFixed(1)}° true north'),
+              const Text(
+                'Calibrate away from metal; magnetic declination is not applied.',
+              ),
+            ],
+          ),
+        ),
+      ),
+      PlanningView.map => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text(
+            'Offline schematic · observer ${_latitude.text}, ${_longitude.text}\nSight line ${output.azimuthDegrees.toStringAsFixed(1)}° true · terrain and map tiles unavailable',
+          ),
+        ),
+      ),
+      PlanningView.augmentedReality => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: LiveArView(
+            azimuthDegrees: output.azimuthDegrees,
+            altitudeDegrees: output.altitudeDegrees,
+            isSun: false,
+          ),
+        ),
+      ),
+    };
   }
 }

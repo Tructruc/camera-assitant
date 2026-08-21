@@ -94,6 +94,10 @@ enum CelestialEventType { rise, transit, set }
 
 enum VisibilityCycle { risesAndSets, circumpolar, neverRises }
 
+enum StarShutterRule { rule500, npf }
+
+enum StarSharpnessTolerance { strict, balanced, relaxed }
+
 final class CelestialEvent {
   const CelestialEvent({required this.type, required this.instantUtc});
   final CelestialEventType type;
@@ -111,6 +115,8 @@ final class AstronomyInput {
     required this.aperture,
     required this.pixelPitchMicrometres,
     required this.desiredTrailDegrees,
+    this.selectedRule = StarShutterRule.npf,
+    this.sharpnessTolerance = StarSharpnessTolerance.balanced,
   }) : assert(instantUtc.isUtc);
   final double observerLatitudeDegrees;
   final double observerLongitudeDegrees;
@@ -121,6 +127,8 @@ final class AstronomyInput {
   final double aperture;
   final double pixelPitchMicrometres;
   final double desiredTrailDegrees;
+  final StarShutterRule selectedRule;
+  final StarSharpnessTolerance sharpnessTolerance;
 }
 
 final class AstronomyOutput {
@@ -135,6 +143,7 @@ final class AstronomyOutput {
     required this.npfSeconds,
     required this.trailDurationSeconds,
     required this.trailRotationDegreesPerHour,
+    required this.recommendedShutterSeconds,
   });
   final double altitudeDegrees;
   final double azimuthDegrees;
@@ -146,6 +155,7 @@ final class AstronomyOutput {
   final double npfSeconds;
   final double trailDurationSeconds;
   final double trailRotationDegreesPerHour;
+  final double recommendedShutterSeconds;
 }
 
 final class SkyPositionSample {
@@ -236,6 +246,19 @@ final class AstronomyCalculator {
         _positionSample(input, input.instantUtc.add(Duration(hours: offset))),
     ];
 
+    final rule500 = 500 / (input.focalLengthMm * input.cropFactor);
+    final npf =
+        (35 * input.aperture + 30 * input.pixelPitchMicrometres) /
+        input.focalLengthMm;
+    final toleranceMultiplier = switch (input.sharpnessTolerance) {
+      StarSharpnessTolerance.strict => 0.75,
+      StarSharpnessTolerance.balanced => 1.0,
+      StarSharpnessTolerance.relaxed => 1.25,
+    };
+    final selectedBase = input.selectedRule == StarShutterRule.rule500
+        ? rule500
+        : npf;
+
     return CalculationResult.valid(
       calculatorId: id,
       formulaVersion: version,
@@ -246,13 +269,12 @@ final class AstronomyCalculator {
         visibilityCycle: eventPlan.$1,
         events: eventPlan.$2,
         path: List.unmodifiable(path),
-        rule500Seconds: 500 / (input.focalLengthMm * input.cropFactor),
-        npfSeconds:
-            (35 * input.aperture + 30 * input.pixelPitchMicrometres) /
-            input.focalLengthMm,
+        rule500Seconds: rule500,
+        npfSeconds: npf,
         trailDurationSeconds:
             _siderealDaySeconds * input.desiredTrailDegrees / 360,
         trailRotationDegreesPerHour: 360 * 3600 / _siderealDaySeconds,
+        recommendedShutterSeconds: selectedBase * toleranceMultiplier,
       ),
       assumptions: [
         CalculationAssumption(

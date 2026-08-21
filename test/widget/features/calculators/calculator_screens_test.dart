@@ -181,7 +181,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       expect(find.text('500 rule'), findsOneWidget);
-      expect(find.text('NPF rule'), findsOneWidget);
+      expect(find.text('NPF rule'), findsWidgets);
       await tester.scrollUntilVisible(
         find.text('Next events'),
         300,

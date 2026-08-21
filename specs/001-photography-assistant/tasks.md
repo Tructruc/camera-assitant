@@ -298,3 +298,10 @@ story phases, actionable description, and exact file path.
 - [X] T086 [US4] Add a persisted true/magnetic north preference and surface reference/calibration state in compass and AR planning per FR-012 and FR-020 (partial)
 - [X] T087 [US4] Add live device-orientation-aware AR positioning and permission/capability fallbacks per FR-011 and FR-012 (partial)
 - [X] T088 [US7] Extend immutable observation-plan snapshots and editable field checklists across celestial planners per FR-014 (partial)
+
+## Phase 12: Convergence
+
+- [X] T089 [US4] Add numeric, timeline, compass, offline-map, and capability-gated AR views to the night-sky planner per FR-011 and US4/AC3 (partial)
+- [X] T090 [US5] Add start/end date controls and multi-day candidate grouping to the Sun/Moon alignment UI per FR-010 and US5/AC1 (partial)
+- [X] T091 [US4] Add selectable 500/NPF shutter rules and an explicit sharpness-tolerance choice preserved in saved plans per FR-005 and US4/AC2 (partial)
+- [ ] T092 [US4] Replace or calibrate the circular planet model against documented authoritative position/event fixtures and declare supported tolerances per SC-004 and FR-022 (partial)

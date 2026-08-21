@@ -33,6 +33,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   var _body = AlignmentBody.sun;
   var _view = PlanningView.numeric;
   late DateTime _startUtc;
+  late DateTime _endUtc;
   CalculationResult<AlignmentSearchOutput>? _result;
   Map<String, String> _errors = const {};
   Map<String, bool> _checklist = {
@@ -48,6 +49,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     super.initState();
     final now = DateTime.now().toUtc();
     _startUtc = DateTime.utc(now.year, now.month, now.day);
+    _endUtc = _startUtc.add(const Duration(days: 1));
   }
 
   @override
@@ -176,12 +178,12 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         errorText: _errors['angularToleranceDegrees'],
       ),
       InputDecorator(
-        decoration: const InputDecoration(labelText: 'Search date (UTC)'),
+        decoration: const InputDecoration(labelText: 'Start date (UTC)'),
         child: Row(
           children: [
             IconButton(
               tooltip: 'Previous day',
-              onPressed: () => _shiftDay(-1),
+              onPressed: () => _shiftStartDay(-1),
               icon: const Icon(Icons.chevron_left),
             ),
             Expanded(
@@ -192,7 +194,33 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             ),
             IconButton(
               tooltip: 'Next day',
-              onPressed: () => _shiftDay(1),
+              onPressed: () => _shiftStartDay(1),
+              icon: const Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'End date (UTC, maximum 31 days)',
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'End one day earlier',
+              onPressed: () => _shiftEndDay(-1),
+              icon: const Icon(Icons.chevron_left),
+            ),
+            Expanded(
+              child: Text(
+                DateFormat('yyyy-MM-dd').format(_endUtc),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            IconButton(
+              tooltip: 'End one day later',
+              onPressed: () => _shiftEndDay(1),
               icon: const Icon(Icons.chevron_right),
             ),
           ],
@@ -311,7 +339,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Best opportunities on ${DateFormat('yyyy-MM-dd').format(_startUtc)}',
+            'Best opportunities ${DateFormat('yyyy-MM-dd').format(_startUtc)} to ${DateFormat('yyyy-MM-dd').format(_endUtc)}',
           ),
           for (final candidate in output.candidates.take(8))
             LinearProgressIndicator(
@@ -396,7 +424,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         desiredBearingDegrees: _value(_bearing),
         angularToleranceDegrees: _value(_tolerance),
         startUtc: _startUtc,
-        endUtc: _startUtc.add(const Duration(days: 1)),
+        endUtc: _endUtc,
       ),
     );
     setState(() {
@@ -408,8 +436,12 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     });
   }
 
-  void _shiftDay(int days) => setState(() {
+  void _shiftStartDay(int days) => setState(() {
     _startUtc = _startUtc.add(Duration(days: days));
+    _result = null;
+  });
+  void _shiftEndDay(int days) => setState(() {
+    _endUtc = _endUtc.add(Duration(days: days));
     _result = null;
   });
   Future<void> _save(AlignmentSearchOutput output) => saveCalculationSnapshot(
@@ -432,6 +464,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         'desiredBearingDegrees': _value(_bearing),
         'angularToleranceDegrees': _value(_tolerance),
         'startUtc': _startUtc.toIso8601String(),
+        'endUtc': _endUtc.toIso8601String(),
       },
       canonicalOutputs: {
         'desiredAltitudeDegrees': output.desiredAltitudeDegrees,
@@ -470,6 +503,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     setState(() {
       _body = AlignmentBody.sun;
       _view = PlanningView.numeric;
+      _endUtc = _startUtc.add(const Duration(days: 1));
       _result = null;
       _errors = const {};
     });

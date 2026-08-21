@@ -44,10 +44,35 @@ void main() {
     expect(output.rule500Seconds, closeTo(20.833, 0.001));
     expect(output.npfSeconds, closeTo(10.333, 0.001));
     expect(output.trailDurationSeconds, closeTo(7180.34, 0.1));
+    expect(output.recommendedShutterSeconds, closeTo(output.npfSeconds, 0.001));
     expect(output.path, hasLength(7));
     expect(
       output.path[3].altitudeDegrees,
       closeTo(output.altitudeDegrees, 0.001),
+    );
+  });
+
+  test('selected rule and tolerance alter the recommendation', () {
+    final strict = calculator
+        .calculate(
+          AstronomyInput(
+            observerLatitudeDegrees: 51.4779,
+            observerLongitudeDegrees: 0,
+            instantUtc: DateTime.utc(2026, 1, 15, 22),
+            target: CelestialTarget.sirius,
+            focalLengthMm: 24,
+            cropFactor: 1,
+            aperture: 2,
+            pixelPitchMicrometres: 5,
+            desiredTrailDegrees: 30,
+            selectedRule: StarShutterRule.rule500,
+            sharpnessTolerance: StarSharpnessTolerance.strict,
+          ),
+        )
+        .output!;
+    expect(
+      strict.recommendedShutterSeconds,
+      closeTo(strict.rule500Seconds * 0.75, 0.001),
     );
   });
 
