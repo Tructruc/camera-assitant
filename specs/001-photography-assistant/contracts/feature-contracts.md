@@ -135,6 +135,18 @@ rise/set rather than inventing times. The same result includes 500-rule and NPF 
 sidereal duration for a requested trail arc. Calculations remain offline, disclose exclusions and UTC
 context, and snapshots preserve target coordinates, event times, and equipment provenance.
 
+## Sun/Moon alignment contract
+
+A supported body, valid observer coordinates, finite manual observer/target elevations, positive target
+distance, true bearing, angular tolerance, and UTC range no longer than 31 days produce a derived target
+altitude and ordered local-minimum candidates. Every candidate includes time, azimuth, altitude, angular
+error, and horizon state. Search resolution, terrain/refraction exclusions, true-north reference, and
+expected accuracy remain visible and are saved. Sun views always display optical safety guidance.
+
+Planning view capability states are `available`, `permissionRequired`, `denied`, or `unsupported`. Live AR
+requires camera, orientation, and AR support simultaneously. Any missing capability leaves numeric,
+timeline, compass-fallback, and offline schematic-map views usable without fabricating sensor readings.
+
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine

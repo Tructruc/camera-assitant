@@ -224,3 +224,34 @@ accuracy fixtures before release.
 [IAU SOFA standards service](https://www.iau.org/WG191/WG191/Home.aspx),
 [NASA JPL Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html), and
 [SIMBAD Sirius record](https://simbad.cds.unistra.fr/simbad/sim-basic?Ident=Sirius).
+
+## Sun/Moon alignment search
+
+**Decision**: Solar equatorial coordinates use NOAA's published low-accuracy/Meeus model. Lunar
+coordinates use an explicitly planning-grade elliptical-orbit approximation before conversion through
+local mean sidereal time. Alignment altitude comes from manual observer/target elevation difference and
+horizontal distance. The engine samples a maximum 31-day UTC range at ten-minute intervals, retains local
+angular-error minima inside the requested tolerance, and orders the best 20 by angular error.
+
+**Rationale**: This is deterministic, fast, and fully offline while supporting bearing-plus-elevation
+composition search. Manual target geometry is preferable to silently inventing terrain. Ten-minute
+sampling and an explicit error score make the result understandable and prevent false exactness.
+
+**Accuracy and safety boundary**: The Sun model is expected within approximately 1° and the truncated Moon
+model within approximately 1.5° for composition scouting; candidate time resolution is ten minutes.
+Terrain, atmospheric refraction, limb radius, parallax, and weather are excluded. Every solar result shows
+a persistent warning never to view the Sun through optical equipment without a certified solar filter.
+
+**References**: [NOAA solar calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html) and
+[NASA JPL Horizons observer-coordinate definitions](https://ssd.jpl.nasa.gov/horizons/manual.html).
+
+## Planning capability fallback
+
+**Decision**: Numeric results are authoritative within the planner. Timeline, compass, offline schematic
+map, and AR are projections of the same saved result. Camera, orientation, location, and AR support use
+separate capability states. An AR view activates only when camera, orientation, and AR capabilities are all
+available; otherwise it explains the missing capability and retains every non-AR view without requesting a
+permission at app startup.
+
+**Rationale**: This preserves the complete offline workflow on unsupported or denied devices and provides
+an honest seam for platform camera/sensor adapters. A visual placeholder is never reported as live AR.

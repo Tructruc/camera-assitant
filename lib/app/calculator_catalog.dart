@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/repositories/preferences_repository.dart';
+import '../features/alignment/presentation/alignment_screen.dart';
 import '../features/astronomy/presentation/astronomy_screen.dart';
 import '../features/depth_of_field/presentation/depth_of_field_screen.dart';
 import '../features/exposure_comparison/presentation/exposure_comparison_screen.dart';
@@ -14,6 +15,12 @@ import '../features/timelapse/presentation/timelapse_screen.dart';
 import 'providers.dart';
 
 enum CalculatorDestination {
+  alignment(
+    id: 'sun_moon_alignment',
+    label: 'Sun & Moon alignment',
+    description: 'Search bearings, elevations, and shooting times',
+    icon: Icons.align_horizontal_left,
+  ),
   astronomy(
     id: 'astronomy',
     label: 'Night-sky planner',
@@ -94,6 +101,7 @@ enum CalculatorDestination {
   final IconData icon;
 
   Widget screen() => switch (this) {
+    alignment => const AlignmentScreen(),
     astronomy => const AstronomyScreen(),
     depthOfField => const DepthOfFieldScreen(),
     exposureComparison => const ExposureComparisonScreen(),

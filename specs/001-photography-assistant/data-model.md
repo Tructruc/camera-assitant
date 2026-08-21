@@ -85,6 +85,13 @@ azimuth, above-horizon state, circumpolar/rising visibility cycle, next geometri
 500-rule and NPF shutter estimates, and star-trail duration. Its snapshot embeds the target coordinates,
 observer coordinates, formula version, optical inputs, applied equipment, assumptions, and event instants.
 
+## Alignment Result
+
+An immutable Sun/Moon composition search containing observer coordinates/elevation, target elevation and
+distance, desired true bearing, derived target altitude, UTC range, angular tolerance, sampling resolution,
+and ordered candidates. Each candidate records UTC instant, true azimuth, altitude, angular error, and
+horizon state. Numeric, timeline, compass, map, and AR-capability views consume this same result.
+
 ## User Preferences
 
 Singleton local settings record.

@@ -5,6 +5,7 @@ import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
+import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
 import 'package:photography_assistant/features/astronomy/presentation/astronomy_screen.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
@@ -180,6 +181,32 @@ void main() {
     },
   );
 
+  testWidgets('alignment planner preserves fallbacks and solar safety', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const AlignmentScreen()));
+    expect(find.textContaining('never look at the Sun'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Search alignments'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -150));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Search alignments'));
+    await tester.pump();
+    expect(find.text('Search resolution'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('AR'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('AR'));
+    await tester.pump();
+    expect(find.text('AR unavailable'), findsOneWidget);
+    expect(find.textContaining('remain fully usable'), findsOneWidget);
+  });
+
   testWidgets('preferences change result presentation, not calculations', (
     tester,
   ) async {
@@ -311,9 +338,10 @@ void main() {
     await calculateAndSave(const MacroScreen(), 'Calculate macro setup');
     await calculateAndSave(const PanoramaScreen(), 'Plan panorama');
     await calculateAndSave(const AstronomyScreen(), 'Plan night sky');
+    await calculateAndSave(const AlignmentScreen(), 'Search alignments');
 
     final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
-    expect(snapshots, hasLength(8));
+    expect(snapshots, hasLength(9));
     expect(snapshots.map((snapshot) => snapshot.calculatorId).toSet(), <String>{
       'depth_of_field',
       'exposure_comparison',
@@ -323,6 +351,7 @@ void main() {
       'macro',
       'panorama',
       'astronomy',
+      'sun_moon_alignment',
     });
     expect(
       snapshots.every(

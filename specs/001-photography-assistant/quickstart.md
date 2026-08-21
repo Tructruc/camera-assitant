@@ -69,6 +69,12 @@ Expected:
 17. Offline, select Sirius at Greenwich (`51.4779° N, 0° E`) for `2026-01-15 22:00 UTC`; verify
     approximately `20.4°` altitude and `163.7°` true azimuth, UTC rise/transit/set events, a 20.8-second
     500-rule estimate and 10.3-second NPF estimate for 24 mm, f/2.8, 5 µm, plus a saved immutable plan.
+18. Search the Sun at Greenwich on `2026-03-20 UTC` for a 180° true bearing toward a target 800 m above
+    the observer at 1,000 m distance; verify ordered alignment candidates near solar noon, explicit
+    ten-minute/terrain/refraction limitations, and the persistent certified-solar-filter safety warning.
+19. Open numeric, timeline, compass, map, and AR views with camera/orientation/location access unavailable;
+    verify the same plan remains usable, no synthetic heading or live camera is shown, and AR explains its
+    capability requirements without blocking the other views.
 
 ## Platform build gates
 
