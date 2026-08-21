@@ -42,6 +42,13 @@ void main() {
     await tester.tap(find.text('Conventional shutter'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
+      find.text('Magnetic north'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Magnetic north'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
       find.text('Low-light red'),
       300,
       scrollable: find.byType(Scrollable).first,
@@ -64,6 +71,7 @@ void main() {
     expect(saved.lengthDisplay, LengthDisplay.imperial);
     expect(saved.shutterDisplay, ShutterDisplay.conventional);
     expect(saved.themeMode, AppThemeMode.lowLight);
+    expect(saved.northReference, NorthReference.magneticNorth);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

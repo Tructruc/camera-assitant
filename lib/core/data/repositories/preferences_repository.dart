@@ -15,6 +15,8 @@ enum FractionStep { whole, half, third }
 
 enum AppThemeMode { system, light, dark, lowLight }
 
+enum NorthReference { trueNorth, magneticNorth }
+
 extension on AppThemeMode {
   String get storageId => switch (this) {
     AppThemeMode.system => 'system',
@@ -42,6 +44,7 @@ final class AppPreferences {
     this.fractionStep = FractionStep.third,
     this.themeMode = AppThemeMode.system,
     this.favoriteToolIds = const <String>[],
+    this.northReference = NorthReference.trueNorth,
   });
 
   final LengthDisplay lengthDisplay;
@@ -49,6 +52,7 @@ final class AppPreferences {
   final FractionStep fractionStep;
   final AppThemeMode themeMode;
   final List<String> favoriteToolIds;
+  final NorthReference northReference;
 
   AppPreferences copyWith({
     LengthDisplay? lengthDisplay,
@@ -56,12 +60,14 @@ final class AppPreferences {
     FractionStep? fractionStep,
     AppThemeMode? themeMode,
     List<String>? favoriteToolIds,
+    NorthReference? northReference,
   }) => AppPreferences(
     lengthDisplay: lengthDisplay ?? this.lengthDisplay,
     shutterDisplay: shutterDisplay ?? this.shutterDisplay,
     fractionStep: fractionStep ?? this.fractionStep,
     themeMode: themeMode ?? this.themeMode,
     favoriteToolIds: favoriteToolIds ?? this.favoriteToolIds,
+    northReference: northReference ?? this.northReference,
   );
 
   AppPreferences immutable() => AppPreferences(
@@ -70,6 +76,7 @@ final class AppPreferences {
     fractionStep: fractionStep,
     themeMode: themeMode,
     favoriteToolIds: List.unmodifiable(favoriteToolIds),
+    northReference: northReference,
   );
 
   @override
@@ -79,7 +86,8 @@ final class AppPreferences {
       other.shutterDisplay == shutterDisplay &&
       other.fractionStep == fractionStep &&
       other.themeMode == themeMode &&
-      _listEquals(other.favoriteToolIds, favoriteToolIds);
+      _listEquals(other.favoriteToolIds, favoriteToolIds) &&
+      other.northReference == northReference;
 
   @override
   int get hashCode => Object.hash(
@@ -88,6 +96,7 @@ final class AppPreferences {
     fractionStep,
     themeMode,
     Object.hashAll(favoriteToolIds),
+    northReference,
   );
 }
 
@@ -136,6 +145,7 @@ final class PreferencesRepository {
               favoriteToolIds: Value<String>(
                 jsonEncode(immutable.favoriteToolIds),
               ),
+              northReference: Value<String>(immutable.northReference.name),
             ),
           );
     });
@@ -170,6 +180,11 @@ final class PreferencesRepository {
           }
           return value;
         }),
+      ),
+      northReference: _enumByName(
+        NorthReference.values,
+        row.northReference,
+        'northReference',
       ),
     );
   }

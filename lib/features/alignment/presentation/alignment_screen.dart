@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../planning/domain/planning_capabilities.dart';
 import '../../planning/domain/saved_location.dart';
+import '../../planning/presentation/field_checklist.dart';
 import '../../planning/presentation/live_ar_view.dart';
 import '../domain/alignment_calculator.dart';
 
@@ -32,6 +34,12 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   late DateTime _startUtc;
   CalculationResult<AlignmentSearchOutput>? _result;
   Map<String, String> _errors = const {};
+  Map<String, bool> _checklist = {
+    'Verify terrain and weather': false,
+    'Calibrate compass away from metal': false,
+    'Confirm framing before the event': false,
+    'Use certified solar filtration for Sun plans': false,
+  };
 
   @override
   void initState() {
@@ -248,29 +256,18 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         ),
         const SizedBox(height: 12),
         _planningView(output),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Field checklist',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text('□ Verify terrain and weather'),
-                Text('□ Calibrate compass away from metal'),
-                Text('□ Confirm framing before the event'),
-                Text('□ Use certified solar filtration for Sun plans'),
-              ],
-            ),
-          ),
+        FieldChecklist(
+          items: _checklist,
+          onChanged: (items) => setState(() => _checklist = items),
         ),
       ],
     ],
   );
 
   Widget _planningView(AlignmentSearchOutput output) {
+    final northReference =
+        ref.watch(preferencesProvider).valueOrNull?.northReference ??
+        NorthReference.trueNorth;
     if (_view == PlanningView.augmentedReality &&
         widget.capabilities != null &&
         !widget.capabilities!.canShowAr) {
@@ -337,8 +334,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
                   child: const Icon(Icons.navigation, size: 72),
                 ),
                 Text('${best.azimuthDegrees.toStringAsFixed(1)}° true north'),
-                const Text(
-                  'Device heading unavailable — align with a calibrated external compass.',
+                Text(
+                  northReference == NorthReference.magneticNorth
+                      ? 'Magnetic north requested. Local declination is unavailable offline, so this true bearing is retained and clearly identified.'
+                      : 'True north selected. Device magnetic headings require local declination and calibration.',
                 ),
               ],
             ),
@@ -373,6 +372,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             azimuthDegrees: best.azimuthDegrees,
             altitudeDegrees: best.altitudeDegrees,
             isSun: _body == AlignmentBody.sun,
+            northReference: northReference,
           ),
         ),
       ),
@@ -443,12 +443,9 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
               'aboveHorizon': c.aboveHorizon,
             },
         ],
-        'fieldChecklist': [
-          'Verify terrain and weather',
-          'Calibrate compass away from metal',
-          'Confirm framing before the event',
-          'Use certified solar filtration for Sun plans',
-        ],
+        'fieldChecklist': _checklist.entries
+            .map((entry) => {'task': entry.key, 'complete': entry.value})
+            .toList(growable: false),
       },
       displayContext: const {
         'timeZone': 'UTC',

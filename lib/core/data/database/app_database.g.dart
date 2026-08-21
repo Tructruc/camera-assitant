@@ -4231,6 +4231,18 @@ class $UserPreferencesTable extends UserPreferences
     requiredDuringInsert: false,
     defaultValue: const Constant<String>('[]'),
   );
+  static const VerificationMeta _northReferenceMeta = const VerificationMeta(
+    'northReference',
+  );
+  @override
+  late final GeneratedColumn<String> northReference = GeneratedColumn<String>(
+    'north_reference',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant<String>('trueNorth'),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4239,6 +4251,7 @@ class $UserPreferencesTable extends UserPreferences
     fractionStep,
     themeMode,
     favoriteToolIds,
+    northReference,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4297,6 +4310,15 @@ class $UserPreferencesTable extends UserPreferences
         ),
       );
     }
+    if (data.containsKey('north_reference')) {
+      context.handle(
+        _northReferenceMeta,
+        northReference.isAcceptableOrUnknown(
+          data['north_reference']!,
+          _northReferenceMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4330,6 +4352,10 @@ class $UserPreferencesTable extends UserPreferences
         DriftSqlType.string,
         data['${effectivePrefix}favorite_tool_ids'],
       )!,
+      northReference: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}north_reference'],
+      )!,
     );
   }
 
@@ -4346,6 +4372,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
   final String fractionStep;
   final String themeMode;
   final String favoriteToolIds;
+  final String northReference;
   const UserPreference({
     required this.id,
     required this.lengthDisplay,
@@ -4353,6 +4380,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     required this.fractionStep,
     required this.themeMode,
     required this.favoriteToolIds,
+    required this.northReference,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4363,6 +4391,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     map['fraction_step'] = Variable<String>(fractionStep);
     map['theme_mode'] = Variable<String>(themeMode);
     map['favorite_tool_ids'] = Variable<String>(favoriteToolIds);
+    map['north_reference'] = Variable<String>(northReference);
     return map;
   }
 
@@ -4374,6 +4403,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       fractionStep: Value(fractionStep),
       themeMode: Value(themeMode),
       favoriteToolIds: Value(favoriteToolIds),
+      northReference: Value(northReference),
     );
   }
 
@@ -4389,6 +4419,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       fractionStep: serializer.fromJson<String>(json['fractionStep']),
       themeMode: serializer.fromJson<String>(json['themeMode']),
       favoriteToolIds: serializer.fromJson<String>(json['favoriteToolIds']),
+      northReference: serializer.fromJson<String>(json['northReference']),
     );
   }
   @override
@@ -4401,6 +4432,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       'fractionStep': serializer.toJson<String>(fractionStep),
       'themeMode': serializer.toJson<String>(themeMode),
       'favoriteToolIds': serializer.toJson<String>(favoriteToolIds),
+      'northReference': serializer.toJson<String>(northReference),
     };
   }
 
@@ -4411,6 +4443,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     String? fractionStep,
     String? themeMode,
     String? favoriteToolIds,
+    String? northReference,
   }) => UserPreference(
     id: id ?? this.id,
     lengthDisplay: lengthDisplay ?? this.lengthDisplay,
@@ -4418,6 +4451,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     fractionStep: fractionStep ?? this.fractionStep,
     themeMode: themeMode ?? this.themeMode,
     favoriteToolIds: favoriteToolIds ?? this.favoriteToolIds,
+    northReference: northReference ?? this.northReference,
   );
   UserPreference copyWithCompanion(UserPreferencesCompanion data) {
     return UserPreference(
@@ -4435,6 +4469,9 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       favoriteToolIds: data.favoriteToolIds.present
           ? data.favoriteToolIds.value
           : this.favoriteToolIds,
+      northReference: data.northReference.present
+          ? data.northReference.value
+          : this.northReference,
     );
   }
 
@@ -4446,7 +4483,8 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
           ..write('shutterDisplay: $shutterDisplay, ')
           ..write('fractionStep: $fractionStep, ')
           ..write('themeMode: $themeMode, ')
-          ..write('favoriteToolIds: $favoriteToolIds')
+          ..write('favoriteToolIds: $favoriteToolIds, ')
+          ..write('northReference: $northReference')
           ..write(')'))
         .toString();
   }
@@ -4459,6 +4497,7 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     fractionStep,
     themeMode,
     favoriteToolIds,
+    northReference,
   );
   @override
   bool operator ==(Object other) =>
@@ -4469,7 +4508,8 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
           other.shutterDisplay == this.shutterDisplay &&
           other.fractionStep == this.fractionStep &&
           other.themeMode == this.themeMode &&
-          other.favoriteToolIds == this.favoriteToolIds);
+          other.favoriteToolIds == this.favoriteToolIds &&
+          other.northReference == this.northReference);
 }
 
 class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
@@ -4479,6 +4519,7 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
   final Value<String> fractionStep;
   final Value<String> themeMode;
   final Value<String> favoriteToolIds;
+  final Value<String> northReference;
   const UserPreferencesCompanion({
     this.id = const Value.absent(),
     this.lengthDisplay = const Value.absent(),
@@ -4486,6 +4527,7 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     this.fractionStep = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.favoriteToolIds = const Value.absent(),
+    this.northReference = const Value.absent(),
   });
   UserPreferencesCompanion.insert({
     this.id = const Value.absent(),
@@ -4494,6 +4536,7 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     this.fractionStep = const Value.absent(),
     this.themeMode = const Value.absent(),
     this.favoriteToolIds = const Value.absent(),
+    this.northReference = const Value.absent(),
   });
   static Insertable<UserPreference> custom({
     Expression<int>? id,
@@ -4502,6 +4545,7 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     Expression<String>? fractionStep,
     Expression<String>? themeMode,
     Expression<String>? favoriteToolIds,
+    Expression<String>? northReference,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4510,6 +4554,7 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
       if (fractionStep != null) 'fraction_step': fractionStep,
       if (themeMode != null) 'theme_mode': themeMode,
       if (favoriteToolIds != null) 'favorite_tool_ids': favoriteToolIds,
+      if (northReference != null) 'north_reference': northReference,
     });
   }
 
@@ -4520,6 +4565,7 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     Value<String>? fractionStep,
     Value<String>? themeMode,
     Value<String>? favoriteToolIds,
+    Value<String>? northReference,
   }) {
     return UserPreferencesCompanion(
       id: id ?? this.id,
@@ -4528,6 +4574,7 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
       fractionStep: fractionStep ?? this.fractionStep,
       themeMode: themeMode ?? this.themeMode,
       favoriteToolIds: favoriteToolIds ?? this.favoriteToolIds,
+      northReference: northReference ?? this.northReference,
     );
   }
 
@@ -4552,6 +4599,9 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     if (favoriteToolIds.present) {
       map['favorite_tool_ids'] = Variable<String>(favoriteToolIds.value);
     }
+    if (northReference.present) {
+      map['north_reference'] = Variable<String>(northReference.value);
+    }
     return map;
   }
 
@@ -4563,7 +4613,8 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
           ..write('shutterDisplay: $shutterDisplay, ')
           ..write('fractionStep: $fractionStep, ')
           ..write('themeMode: $themeMode, ')
-          ..write('favoriteToolIds: $favoriteToolIds')
+          ..write('favoriteToolIds: $favoriteToolIds, ')
+          ..write('northReference: $northReference')
           ..write(')'))
         .toString();
   }
@@ -7557,6 +7608,7 @@ typedef $$UserPreferencesTableCreateCompanionBuilder =
       Value<String> fractionStep,
       Value<String> themeMode,
       Value<String> favoriteToolIds,
+      Value<String> northReference,
     });
 typedef $$UserPreferencesTableUpdateCompanionBuilder =
     UserPreferencesCompanion Function({
@@ -7566,6 +7618,7 @@ typedef $$UserPreferencesTableUpdateCompanionBuilder =
       Value<String> fractionStep,
       Value<String> themeMode,
       Value<String> favoriteToolIds,
+      Value<String> northReference,
     });
 
 class $$UserPreferencesTableFilterComposer
@@ -7604,6 +7657,11 @@ class $$UserPreferencesTableFilterComposer
 
   ColumnFilters<String> get favoriteToolIds => $composableBuilder(
     column: $table.favoriteToolIds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get northReference => $composableBuilder(
+    column: $table.northReference,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7646,6 +7704,11 @@ class $$UserPreferencesTableOrderingComposer
     column: $table.favoriteToolIds,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get northReference => $composableBuilder(
+    column: $table.northReference,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$UserPreferencesTableAnnotationComposer
@@ -7680,6 +7743,11 @@ class $$UserPreferencesTableAnnotationComposer
 
   GeneratedColumn<String> get favoriteToolIds => $composableBuilder(
     column: $table.favoriteToolIds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get northReference => $composableBuilder(
+    column: $table.northReference,
     builder: (column) => column,
   );
 }
@@ -7727,6 +7795,7 @@ class $$UserPreferencesTableTableManager
                 Value<String> fractionStep = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> favoriteToolIds = const Value.absent(),
+                Value<String> northReference = const Value.absent(),
               }) => UserPreferencesCompanion(
                 id: id,
                 lengthDisplay: lengthDisplay,
@@ -7734,6 +7803,7 @@ class $$UserPreferencesTableTableManager
                 fractionStep: fractionStep,
                 themeMode: themeMode,
                 favoriteToolIds: favoriteToolIds,
+                northReference: northReference,
               ),
           createCompanionCallback:
               ({
@@ -7743,6 +7813,7 @@ class $$UserPreferencesTableTableManager
                 Value<String> fractionStep = const Value.absent(),
                 Value<String> themeMode = const Value.absent(),
                 Value<String> favoriteToolIds = const Value.absent(),
+                Value<String> northReference = const Value.absent(),
               }) => UserPreferencesCompanion.insert(
                 id: id,
                 lengthDisplay: lengthDisplay,
@@ -7750,6 +7821,7 @@ class $$UserPreferencesTableTableManager
                 fractionStep: fractionStep,
                 themeMode: themeMode,
                 favoriteToolIds: favoriteToolIds,
+                northReference: northReference,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

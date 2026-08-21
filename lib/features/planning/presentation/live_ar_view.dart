@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../data/device_planning_service.dart';
 
 class LiveArView extends StatefulWidget {
@@ -8,12 +9,14 @@ class LiveArView extends StatefulWidget {
     required this.azimuthDegrees,
     required this.altitudeDegrees,
     required this.isSun,
+    this.northReference = NorthReference.trueNorth,
     this.service = const DevicePlanningService(),
     super.key,
   });
   final double azimuthDegrees;
   final double altitudeDegrees;
   final bool isSun;
+  final NorthReference northReference;
   final DevicePlanningService service;
   @override
   State<LiveArView> createState() => _LiveArViewState();
@@ -100,7 +103,7 @@ class _LiveArViewState extends State<LiveArView> {
                     child: Text(
                       heading == null
                           ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
-                          : 'Heading ${heading.toStringAsFixed(1)}° magnetic • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true\n${_accuracyLabel(reading!)}',
+                          : 'Heading ${heading.toStringAsFixed(1)}° magnetic • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
@@ -144,6 +147,11 @@ class _LiveArViewState extends State<LiveArView> {
     }
     return 'Calibrated ±${accuracy.toStringAsFixed(0)}°';
   }
+
+  String _referenceLabel() =>
+      widget.northReference == NorthReference.magneticNorth
+      ? 'Magnetic requested; declination unavailable, so target remains true north'
+      : 'True-north target; compare magnetic heading with local declination';
 }
 
 final class _ArOverlayPainter extends CustomPainter {

@@ -320,14 +320,14 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(calculateLabel));
       await tester.pumpAndSettle();
+      final saveButton = find.widgetWithText(FilledButton, 'Save result');
       await tester.scrollUntilVisible(
-        find.text('Save result'),
+        saveButton,
         300,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.drag(find.byType(ListView).first, const Offset(0, -500));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Save result'));
+      await tester.tap(saveButton);
       await tester.pumpAndSettle();
       expect(find.text('Result saved on this device.'), findsOneWidget);
     }

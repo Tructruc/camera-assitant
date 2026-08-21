@@ -21,6 +21,7 @@ void main() {
     expect(preferences.fractionStep, FractionStep.third);
     expect(preferences.themeMode, AppThemeMode.system);
     expect(preferences.favoriteToolIds, isEmpty);
+    expect(preferences.northReference, NorthReference.trueNorth);
   });
 
   test(
@@ -32,6 +33,7 @@ void main() {
         fractionStep: FractionStep.half,
         themeMode: AppThemeMode.lowLight,
         favoriteToolIds: <String>['long-exposure', 'depth-of-field'],
+        northReference: NorthReference.magneticNorth,
       );
 
       await repository.save(updated);

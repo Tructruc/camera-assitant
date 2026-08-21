@@ -124,6 +124,8 @@ class UserPreferences extends Table {
       text().withDefault(const Constant<String>('system'))();
   TextColumn get favoriteToolIds =>
       text().withDefault(const Constant<String>('[]'))();
+  TextColumn get northReference =>
+      text().withDefault(const Constant<String>('trueNorth'))();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
@@ -174,7 +176,7 @@ final class AppDatabase extends _$AppDatabase {
   AppDatabase.inMemory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -221,6 +223,17 @@ final class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE UNIQUE INDEX saved_location_name ON saved_locations(normalized_name)',
         );
+      }
+      if (from < 4) {
+        final preferencesTable = await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user_preferences'",
+        ).getSingleOrNull();
+        if (preferencesTable != null) {
+          await migrator.addColumn(
+            userPreferences,
+            userPreferences.northReference,
+          );
+        }
       }
     },
   );

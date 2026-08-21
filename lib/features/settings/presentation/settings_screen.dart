@@ -61,6 +61,18 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (choice) =>
                 _save(context, ref, value.copyWith(fractionStep: choice)),
           ),
+          _SettingCard<NorthReference>(
+            title: 'North reference',
+            subtitle:
+                'Magnetic bearings require local declination; planners keep true bearings visible when it is unavailable.',
+            value: value.northReference,
+            options: const <(NorthReference, String)>[
+              (NorthReference.trueNorth, 'True north'),
+              (NorthReference.magneticNorth, 'Magnetic north'),
+            ],
+            onChanged: (choice) =>
+                _save(context, ref, value.copyWith(northReference: choice)),
+          ),
           const SizedBox(height: 16),
           Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),

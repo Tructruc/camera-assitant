@@ -295,6 +295,6 @@ story phases, actionable description, and exact file path.
 - [X] T083 [US1] Add searchable, purpose-grouped, favorites-filterable catalog discovery per FR-001 (partial)
 - [ ] T084 [US4] Expand the offline celestial catalog with planets and notable deep-sky targets plus searchable metadata per FR-009 (partial)
 - [ ] T085 [US4] Add target path samples and local-time event presentation with explicit time-zone, north-reference, horizon, freshness, and accuracy context per FR-009 and FR-013 (partial)
-- [ ] T086 [US4] Add a persisted true/magnetic north preference and surface reference/calibration state in compass and AR planning per FR-012 and FR-020 (partial)
+- [X] T086 [US4] Add a persisted true/magnetic north preference and surface reference/calibration state in compass and AR planning per FR-012 and FR-020 (partial)
 - [X] T087 [US4] Add live device-orientation-aware AR positioning and permission/capability fallbacks per FR-011 and FR-012 (partial)
-- [ ] T088 [US7] Extend immutable observation-plan snapshots and editable field checklists across celestial planners per FR-014 (partial)
+- [X] T088 [US7] Extend immutable observation-plan snapshots and editable field checklists across celestial planners per FR-014 (partial)

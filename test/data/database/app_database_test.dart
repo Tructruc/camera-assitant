@@ -20,7 +20,7 @@ void main() {
   tearDown(() => database.close());
 
   test('current schema creates every equipment and snapshot table', () async {
-    expect(database.schemaVersion, 3);
+    expect(database.schemaVersion, 4);
 
     final rows = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -92,7 +92,7 @@ void main() {
     final version = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 3);
+    expect(version.read<int>('user_version'), 4);
   });
 
   test('frozen schema v1 fixture remains readable without data loss', () async {
@@ -241,7 +241,7 @@ void main() {
     final version = await migrated
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 3);
+    expect(version.read<int>('user_version'), 4);
     final tables = await migrated
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
         .get();

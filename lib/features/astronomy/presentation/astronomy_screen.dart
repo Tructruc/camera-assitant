@@ -11,6 +11,7 @@ import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
 import '../../planning/domain/saved_location.dart';
+import '../../planning/presentation/field_checklist.dart';
 import '../domain/astronomy_calculator.dart';
 
 class AstronomyScreen extends ConsumerStatefulWidget {
@@ -33,6 +34,12 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   Lens? _lens;
   CalculationResult<AstronomyOutput>? _result;
   Map<String, String> _errors = const {};
+  Map<String, bool> _checklist = {
+    'Check forecast and cloud cover': false,
+    'Confirm target visibility and terrain': false,
+    'Focus on a bright star': false,
+    'Capture a test frame and inspect stars': false,
+  };
 
   @override
   void initState() {
@@ -264,6 +271,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
               ],
             ),
           ),
+          FieldChecklist(
+            items: _checklist,
+            onChanged: (items) => setState(() => _checklist = items),
+          ),
         ],
       ],
     );
@@ -341,6 +352,9 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
               'instantUtc': event.instantUtc.toIso8601String(),
             },
         ],
+        'fieldChecklist': _checklist.entries
+            .map((entry) => {'task': entry.key, 'complete': entry.value})
+            .toList(growable: false),
       },
       displayContext: const {
         'timeZone': 'UTC',
