@@ -88,6 +88,50 @@ void main() {
     await _disposeSubject(tester);
   });
 
+  testWidgets('renders saved observation plans with an actionable checklist', (
+    tester,
+  ) async {
+    await repository.save(
+      CalculationSnapshot(
+        id: 'plan-1',
+        calculatorId: 'astronomy',
+        formulaVersion: 1,
+        createdAt: DateTime.utc(2026, 8, 20),
+        title: 'Jupiter plan',
+        canonicalInputs: const {
+          'latitudeDegrees': 48.8,
+          'longitudeDegrees': 2.3,
+          'instantUtc': '2026-08-21T20:00:00.000Z',
+        },
+        canonicalOutputs: const {
+          'altitudeDegrees': 30.0,
+          'fieldChecklist': [
+            {'task': 'Focus on a bright star', 'complete': false},
+          ],
+        },
+        displayContext: const {'timeZone': 'UTC+02:00'},
+      ),
+    );
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jupiter plan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Offline observation plan'), findsOneWidget);
+    expect(find.text('Field checklist'), findsOneWidget);
+    final checklistItem = find.widgetWithText(
+      CheckboxListTile,
+      'Focus on a bright star',
+    );
+    await tester.ensureVisible(checklistItem);
+    await tester.pumpAndSettle();
+    await tester.tap(checklistItem);
+    await tester.pump();
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    expect(find.textContaining('fieldChecklist:'), findsNothing);
+    await _disposeSubject(tester);
+  });
+
   testWidgets('keeps corrupt records visible for recovery', (tester) async {
     await database.customStatement('''
       INSERT INTO calculation_snapshots (

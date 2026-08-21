@@ -92,6 +92,11 @@ class SavedCalculationDetailScreen extends ConsumerStatefulWidget {
 class _SavedCalculationDetailScreenState
     extends ConsumerState<SavedCalculationDetailScreen> {
   late CalculationSnapshot _snapshot = widget.snapshot;
+  late final Map<String, bool> _fieldChecklist = _readChecklist();
+
+  bool get _isObservationPlan =>
+      _snapshot.calculatorId == 'astronomy' ||
+      _snapshot.calculatorId == 'sun_moon_alignment';
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -119,9 +124,16 @@ class _SavedCalculationDetailScreenState
           Text(notes),
         ],
         const SizedBox(height: 16),
+        if (_isObservationPlan) _planSummary(context),
         _section(context, 'Original inputs', _snapshot.canonicalInputs),
-        _section(context, 'Original results', _snapshot.canonicalOutputs),
+        _section(
+          context,
+          'Original results',
+          Map<String, Object?>.of(_snapshot.canonicalOutputs)
+            ..remove('fieldChecklist'),
+        ),
         _section(context, 'Display context', _snapshot.displayContext),
+        if (_fieldChecklist.isNotEmpty) _actionableChecklist(context),
         if (_snapshot.equipment.isNotEmpty) ...<Widget>[
           Text(
             'Applied equipment',
@@ -146,6 +158,61 @@ class _SavedCalculationDetailScreenState
       ],
     ),
   );
+
+  Widget _planSummary(BuildContext context) {
+    final inputs = _snapshot.canonicalInputs;
+    final latitude =
+        inputs['observerLatitudeDegrees'] ?? inputs['latitudeDegrees'];
+    final longitude =
+        inputs['observerLongitudeDegrees'] ?? inputs['longitudeDegrees'];
+    final time = inputs['startUtc'] ?? inputs['instantUtc'];
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.event_available_outlined),
+        title: const Text('Offline observation plan'),
+        subtitle: Text(
+          'Location $latitude, $longitude\nTime $time\n${_snapshot.displayContext['timeZone'] ?? 'UTC'} · ${_snapshot.displayContext['northReference'] ?? _snapshot.displayContext['azimuthReference'] ?? 'true north'}',
+        ),
+      ),
+    );
+  }
+
+  Widget _actionableChecklist(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Field checklist',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const Text(
+            'Session progress is temporary; the original saved snapshot remains immutable.',
+          ),
+          for (final entry in _fieldChecklist.entries)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              title: Text(entry.key),
+              value: entry.value,
+              onChanged: (value) =>
+                  setState(() => _fieldChecklist[entry.key] = value ?? false),
+            ),
+        ],
+      ),
+    ),
+  );
+
+  Map<String, bool> _readChecklist() {
+    final raw = _snapshot.canonicalOutputs['fieldChecklist'];
+    if (raw is! List<Object?>) return {};
+    return {
+      for (final item in raw)
+        if (item is Map<Object?, Object?> && item['task'] is String)
+          item['task']! as String: item['complete'] == true,
+    };
+  }
 
   Widget _section(
     BuildContext context,

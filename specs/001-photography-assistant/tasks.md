@@ -312,4 +312,4 @@ story phases, actionable description, and exact file path.
 - [ ] T094 [US4] Apply user-supplied magnetic declination to compass/AR bearings with explicit reference and snapshot context per FR-012, FR-013, and FR-020 (partial)
 - [ ] T095 [US4] Resolve bundled IANA timezone/DST rules offline for saved planning locations per FR-013 and US4/AC1 (partial)
 - [ ] T096 [US4] Incorporate live device pitch into AR vertical target placement with unavailable-sensor fallback per FR-011 and FR-012 (partial)
-- [ ] T097 [US7] Render saved observation plans and field checklists as actionable plan details rather than generic payload rows per FR-014 and US7/AC2 (partial)
+- [X] T097 [US7] Render saved observation plans and field checklists as actionable plan details rather than generic payload rows per FR-014 and US7/AC2 (partial)
