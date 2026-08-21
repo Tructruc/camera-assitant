@@ -30,6 +30,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   final _targetDistance = TextEditingController(text: '1000');
   final _bearing = TextEditingController(text: '180');
   final _tolerance = TextEditingController(text: '3');
+  final _targetLatitude = TextEditingController();
+  final _targetLongitude = TextEditingController();
   var _body = AlignmentBody.sun;
   var _view = PlanningView.numeric;
   late DateTime _startUtc;
@@ -62,6 +64,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       _targetDistance,
       _bearing,
       _tolerance,
+      _targetLatitude,
+      _targetLongitude,
     ]) {
       c.dispose();
     }
@@ -171,6 +175,27 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         label: 'Desired true bearing (degrees)',
         controller: _bearing,
         errorText: _errors['desiredBearingDegrees'],
+      ),
+      ExpansionTile(
+        title: const Text('Target coordinate'),
+        subtitle: const Text(
+          'Derive bearing and distance; manual values remain editable.',
+        ),
+        children: [
+          CalculatorNumberField(
+            label: 'Target latitude (degrees)',
+            controller: _targetLatitude,
+          ),
+          CalculatorNumberField(
+            label: 'Target longitude (degrees)',
+            controller: _targetLongitude,
+          ),
+          OutlinedButton.icon(
+            onPressed: _deriveTargetGeometry,
+            icon: const Icon(Icons.route_outlined),
+            label: const Text('Calculate geometry'),
+          ),
+        ],
       ),
       CalculatorNumberField(
         label: 'Angular tolerance (degrees)',
@@ -412,6 +437,28 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
 
   double _value(TextEditingController c) =>
       double.tryParse(c.text.trim()) ?? double.nan;
+  void _deriveTargetGeometry() {
+    try {
+      final geometry = TargetGeometry.fromCoordinates(
+        observerLatitudeDegrees: _value(_latitude),
+        observerLongitudeDegrees: _value(_longitude),
+        targetLatitudeDegrees: _value(_targetLatitude),
+        targetLongitudeDegrees: _value(_targetLongitude),
+      );
+      setState(() {
+        _bearing.text = geometry.bearingDegrees.toStringAsFixed(3);
+        _targetDistance.text = geometry.distanceMetres.toStringAsFixed(1);
+        _result = null;
+      });
+    } on FormatException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter valid observer and target coordinates.'),
+        ),
+      );
+    }
+  }
+
   void _search() {
     final result = const AlignmentCalculator().search(
       AlignmentSearchInput(
@@ -462,6 +509,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         'targetElevationMetres': _value(_targetElevation),
         'targetDistanceMetres': _value(_targetDistance),
         'desiredBearingDegrees': _value(_bearing),
+        if (_targetLatitude.text.trim().isNotEmpty)
+          'targetLatitudeDegrees': _value(_targetLatitude),
+        if (_targetLongitude.text.trim().isNotEmpty)
+          'targetLongitudeDegrees': _value(_targetLongitude),
         'angularToleranceDegrees': _value(_tolerance),
         'startUtc': _startUtc.toIso8601String(),
         'endUtc': _endUtc.toIso8601String(),
@@ -500,6 +551,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     _targetDistance.text = '1000';
     _bearing.text = '180';
     _tolerance.text = '3';
+    _targetLatitude.clear();
+    _targetLongitude.clear();
     setState(() {
       _body = AlignmentBody.sun;
       _view = PlanningView.numeric;

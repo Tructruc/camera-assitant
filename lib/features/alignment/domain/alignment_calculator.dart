@@ -17,6 +17,50 @@ final class SkyPosition {
   final double altitudeDegrees;
 }
 
+final class TargetGeometry {
+  const TargetGeometry({
+    required this.bearingDegrees,
+    required this.distanceMetres,
+  });
+  final double bearingDegrees;
+  final double distanceMetres;
+
+  static TargetGeometry fromCoordinates({
+    required double observerLatitudeDegrees,
+    required double observerLongitudeDegrees,
+    required double targetLatitudeDegrees,
+    required double targetLongitudeDegrees,
+  }) {
+    if (!_between(observerLatitudeDegrees, -90, 90) ||
+        !_between(targetLatitudeDegrees, -90, 90) ||
+        !_between(observerLongitudeDegrees, -180, 180) ||
+        !_between(targetLongitudeDegrees, -180, 180)) {
+      throw const FormatException('Coordinates must be valid degrees.');
+    }
+    final lat1 = _radians(observerLatitudeDegrees);
+    final lat2 = _radians(targetLatitudeDegrees);
+    final dLat = lat2 - lat1;
+    final dLon = _radians(targetLongitudeDegrees - observerLongitudeDegrees);
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1) *
+            math.cos(lat2) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    final distance = 6371008.8 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final bearing = _normalize(
+      _degrees(
+        math.atan2(
+          math.sin(dLon) * math.cos(lat2),
+          math.cos(lat1) * math.sin(lat2) -
+              math.sin(lat1) * math.cos(lat2) * math.cos(dLon),
+        ),
+      ),
+    );
+    return TargetGeometry(bearingDegrees: bearing, distanceMetres: distance);
+  }
+}
+
 final class AlignmentSearchInput {
   const AlignmentSearchInput({
     required this.body,

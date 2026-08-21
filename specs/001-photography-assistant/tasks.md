@@ -305,3 +305,11 @@ story phases, actionable description, and exact file path.
 - [X] T090 [US5] Add start/end date controls and multi-day candidate grouping to the Sun/Moon alignment UI per FR-010 and US5/AC1 (partial)
 - [X] T091 [US4] Add selectable 500/NPF shutter rules and an explicit sharpness-tolerance choice preserved in saved plans per FR-005 and US4/AC2 (partial)
 - [X] T092 [US4] Replace or calibrate the circular planet model against documented authoritative position/event fixtures and declare supported tolerances per SC-004 and FR-022 (partial)
+
+## Phase 13: Convergence
+
+- [X] T093 [US5] Accept a target coordinate and derive geodesic bearing/distance while preserving manual geometry overrides per FR-010 and US5 (partial)
+- [ ] T094 [US4] Apply user-supplied magnetic declination to compass/AR bearings with explicit reference and snapshot context per FR-012, FR-013, and FR-020 (partial)
+- [ ] T095 [US4] Resolve bundled IANA timezone/DST rules offline for saved planning locations per FR-013 and US4/AC1 (partial)
+- [ ] T096 [US4] Incorporate live device pitch into AR vertical target placement with unavailable-sensor fallback per FR-011 and FR-012 (partial)
+- [ ] T097 [US7] Render saved observation plans and field checklists as actionable plan details rather than generic payload rows per FR-014 and US7/AC2 (partial)

@@ -4,6 +4,17 @@ import 'package:photography_assistant/features/alignment/domain/alignment_calcul
 void main() {
   const ephemeris = SolarLunarEphemeris();
 
+  test('derives geodesic target bearing and distance', () {
+    final geometry = TargetGeometry.fromCoordinates(
+      observerLatitudeDegrees: 48.8566,
+      observerLongitudeDegrees: 2.3522,
+      targetLatitudeDegrees: 51.5074,
+      targetLongitudeDegrees: -0.1278,
+    );
+    expect(geometry.bearingDegrees, closeTo(330.0, 0.2));
+    expect(geometry.distanceMetres / 1000, closeTo(343.6, 1));
+  });
+
   test('March equinox Sun is near south at Greenwich noon', () {
     final position = ephemeris.position(
       body: AlignmentBody.sun,
