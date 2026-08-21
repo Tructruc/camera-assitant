@@ -132,6 +132,30 @@ class UserPreferences extends Table {
   List<String> get customConstraints => const <String>['CHECK (id = 1)'];
 }
 
+class SavedLocations extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().withLength(min: 1)();
+  TextColumn get normalizedName => text().withLength(min: 1)();
+  RealColumn get latitudeDegrees => real().check(
+    latitudeDegrees.isBiggerOrEqualValue(-90) &
+        latitudeDegrees.isSmallerOrEqualValue(90),
+  )();
+  RealColumn get longitudeDegrees => real().check(
+    longitudeDegrees.isBiggerOrEqualValue(-180) &
+        longitudeDegrees.isSmallerOrEqualValue(180),
+  )();
+  RealColumn get elevationMetres => real().nullable()();
+  TextColumn get timeZoneId => text().withLength(min: 1)();
+  TextColumn get source =>
+      text().check(source.isIn(const <String>['manual', 'device']))();
+  RealColumn get accuracyMetres => real().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => <Column<Object>>{id};
+}
+
 @DriftDatabase(
   tables: <Type>[
     CameraBodies,
@@ -141,6 +165,7 @@ class UserPreferences extends Table {
     CalculationSnapshots,
     SnapshotEquipmentReferences,
     UserPreferences,
+    SavedLocations,
   ],
 )
 final class AppDatabase extends _$AppDatabase {
@@ -149,7 +174,7 @@ final class AppDatabase extends _$AppDatabase {
   AppDatabase.inMemory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -175,6 +200,9 @@ final class AppDatabase extends _$AppDatabase {
         'ON optical_accessories(normalized_name) WHERE archived_at IS NULL',
       );
       await into(userPreferences).insert(const UserPreferencesCompanion());
+      await customStatement(
+        'CREATE UNIQUE INDEX saved_location_name ON saved_locations(normalized_name)',
+      );
     },
     onUpgrade: (Migrator migrator, int from, int to) async {
       if (from < 1) {
@@ -186,6 +214,12 @@ final class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE UNIQUE INDEX active_optical_accessory_name '
           'ON optical_accessories(normalized_name) WHERE archived_at IS NULL',
+        );
+      }
+      if (from < 3) {
+        await migrator.createTable(savedLocations);
+        await customStatement(
+          'CREATE UNIQUE INDEX saved_location_name ON saved_locations(normalized_name)',
         );
       }
     },

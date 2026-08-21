@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/providers.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../planning/domain/planning_capabilities.dart';
+import '../../planning/domain/saved_location.dart';
+import '../../planning/presentation/live_ar_view.dart';
 import '../domain/alignment_calculator.dart';
 
 class AlignmentScreen extends ConsumerStatefulWidget {
-  const AlignmentScreen({
-    this.capabilities = const PlanningCapabilities.fallback(),
-    super.key,
-  });
-  final PlanningCapabilities capabilities;
+  const AlignmentScreen({this.capabilities, super.key});
+  final PlanningCapabilities? capabilities;
   @override
   ConsumerState<AlignmentScreen> createState() => _AlignmentScreenState();
 }
@@ -66,6 +66,29 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       const SizedBox(height: 8),
       const Text(
         'Search one UTC day for the closest bearing and elevation match. All calculations run offline.',
+      ),
+      const SizedBox(height: 12),
+      DropdownButtonFormField<SavedLocation>(
+        decoration: const InputDecoration(
+          labelText: 'Saved location (optional)',
+        ),
+        items: [
+          for (final location
+              in ref.watch(savedLocationsProvider).valueOrNull ??
+                  const <SavedLocation>[])
+            DropdownMenuItem(value: location, child: Text(location.name)),
+        ],
+        onChanged: (location) {
+          if (location == null) return;
+          setState(() {
+            _latitude.text = location.latitudeDegrees.toString();
+            _longitude.text = location.longitudeDegrees.toString();
+            if (location.elevationMetres != null) {
+              _observerElevation.text = location.elevationMetres.toString();
+            }
+            _result = null;
+          });
+        },
       ),
       const SizedBox(height: 12),
       SegmentedButton<AlignmentBody>(
@@ -225,13 +248,32 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         ),
         const SizedBox(height: 12),
         _planningView(output),
+        const Card(
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Field checklist',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text('□ Verify terrain and weather'),
+                Text('□ Calibrate compass away from metal'),
+                Text('□ Confirm framing before the event'),
+                Text('□ Use certified solar filtration for Sun plans'),
+              ],
+            ),
+          ),
+        ),
       ],
     ],
   );
 
   Widget _planningView(AlignmentSearchOutput output) {
     if (_view == PlanningView.augmentedReality &&
-        !widget.capabilities.canShowAr) {
+        widget.capabilities != null &&
+        !widget.capabilities!.canShowAr) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -326,17 +368,11 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       ),
       PlanningView.augmentedReality => Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              const Text('Live AR alignment'),
-              Text(
-                'Calibration: required • Expected accuracy: ±${_tolerance.text}°',
-              ),
-              Text(
-                'Overlay ${best.azimuthDegrees.toStringAsFixed(1)}° az / ${best.altitudeDegrees.toStringAsFixed(1)}° alt',
-              ),
-            ],
+          padding: const EdgeInsets.all(8),
+          child: LiveArView(
+            azimuthDegrees: best.azimuthDegrees,
+            altitudeDegrees: best.altitudeDegrees,
+            isSun: _body == AlignmentBody.sun,
           ),
         ),
       ),
@@ -406,6 +442,12 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
               'angularErrorDegrees': c.angularErrorDegrees,
               'aboveHorizon': c.aboveHorizon,
             },
+        ],
+        'fieldChecklist': [
+          'Verify terrain and weather',
+          'Calibrate compass away from metal',
+          'Confirm framing before the event',
+          'Use certified solar filtration for Sun plans',
         ],
       },
       displayContext: const {

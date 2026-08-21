@@ -255,3 +255,14 @@ permission at app startup.
 
 **Rationale**: This preserves the complete offline workflow on unsupported or denied devices and provides
 an honest seam for platform camera/sensor adapters. A visual placeholder is never reported as live AR.
+
+**Implementation**: The official Flutter `camera` plugin provides the live preview, Geolocator provides an
+explicitly requested current-position reading, and `flutter_compass` supplies heading events. No permission
+is requested during startup or ordinary numeric planning. The overlay labels magnetic device heading
+separately from true-north astronomical bearings; users must calibrate and account for declination rather
+than receiving a silently corrected or fabricated heading. Packages are pinned in the lockfile; camera is
+BSD-3-Clause, Geolocator and flutter_compass use their published permissive licenses.
+
+**References**: [Flutter camera plugin](https://pub.dev/packages/camera),
+[Geolocator](https://pub.dev/packages/geolocator), and
+[flutter_compass](https://pub.dev/packages/flutter_compass).

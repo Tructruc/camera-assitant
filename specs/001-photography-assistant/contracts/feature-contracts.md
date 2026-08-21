@@ -147,6 +147,19 @@ Planning view capability states are `available`, `permissionRequired`, `denied`,
 requires camera, orientation, and AR support simultaneously. Any missing capability leaves numeric,
 timeline, compass-fallback, and offline schematic-map views usable without fabricating sensor readings.
 
+## Saved-location and live-planning contract
+
+Users can create, edit, list, and delete uniquely named coordinates offline or explicitly request one
+device reading. Device-derived records retain reported accuracy and source. Location permission is never
+requested until “Use current location” is activated; denial or disabled services return a manual-entry
+recovery path. Astronomy and alignment screens apply saved coordinates without mutating the record.
+
+Opening live AR is the only action that initializes a camera preview. Camera denial/no hardware produces
+the same non-AR recovery path. The overlay consumes the saved candidate azimuth/altitude and live compass
+heading, visibly distinguishes magnetic heading from true-north target bearing, displays calibration and
+accuracy limitations, and preserves the solar safety banner. Saved observation plans include a field
+checklist inside their immutable canonical payload.
+
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine

@@ -4569,6 +4569,704 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
   }
 }
 
+class $SavedLocationsTable extends SavedLocations
+    with TableInfo<$SavedLocationsTable, SavedLocation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SavedLocationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _normalizedNameMeta = const VerificationMeta(
+    'normalizedName',
+  );
+  @override
+  late final GeneratedColumn<String> normalizedName = GeneratedColumn<String>(
+    'normalized_name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _latitudeDegreesMeta = const VerificationMeta(
+    'latitudeDegrees',
+  );
+  @override
+  late final GeneratedColumn<double> latitudeDegrees = GeneratedColumn<double>(
+    'latitude_degrees',
+    aliasedName,
+    false,
+    check: () =>
+        ComparableExpr(latitudeDegrees).isBiggerOrEqualValue(-90) &
+        ComparableExpr(latitudeDegrees).isSmallerOrEqualValue(90),
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _longitudeDegreesMeta = const VerificationMeta(
+    'longitudeDegrees',
+  );
+  @override
+  late final GeneratedColumn<double> longitudeDegrees = GeneratedColumn<double>(
+    'longitude_degrees',
+    aliasedName,
+    false,
+    check: () =>
+        ComparableExpr(longitudeDegrees).isBiggerOrEqualValue(-180) &
+        ComparableExpr(longitudeDegrees).isSmallerOrEqualValue(180),
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _elevationMetresMeta = const VerificationMeta(
+    'elevationMetres',
+  );
+  @override
+  late final GeneratedColumn<double> elevationMetres = GeneratedColumn<double>(
+    'elevation_metres',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _timeZoneIdMeta = const VerificationMeta(
+    'timeZoneId',
+  );
+  @override
+  late final GeneratedColumn<String> timeZoneId = GeneratedColumn<String>(
+    'time_zone_id',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(minTextLength: 1),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceMeta = const VerificationMeta('source');
+  @override
+  late final GeneratedColumn<String> source = GeneratedColumn<String>(
+    'source',
+    aliasedName,
+    false,
+    check: () => source.isIn(const <String>['manual', 'device']),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accuracyMetresMeta = const VerificationMeta(
+    'accuracyMetres',
+  );
+  @override
+  late final GeneratedColumn<double> accuracyMetres = GeneratedColumn<double>(
+    'accuracy_metres',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    normalizedName,
+    latitudeDegrees,
+    longitudeDegrees,
+    elevationMetres,
+    timeZoneId,
+    source,
+    accuracyMetres,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'saved_locations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SavedLocation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('normalized_name')) {
+      context.handle(
+        _normalizedNameMeta,
+        normalizedName.isAcceptableOrUnknown(
+          data['normalized_name']!,
+          _normalizedNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_normalizedNameMeta);
+    }
+    if (data.containsKey('latitude_degrees')) {
+      context.handle(
+        _latitudeDegreesMeta,
+        latitudeDegrees.isAcceptableOrUnknown(
+          data['latitude_degrees']!,
+          _latitudeDegreesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_latitudeDegreesMeta);
+    }
+    if (data.containsKey('longitude_degrees')) {
+      context.handle(
+        _longitudeDegreesMeta,
+        longitudeDegrees.isAcceptableOrUnknown(
+          data['longitude_degrees']!,
+          _longitudeDegreesMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_longitudeDegreesMeta);
+    }
+    if (data.containsKey('elevation_metres')) {
+      context.handle(
+        _elevationMetresMeta,
+        elevationMetres.isAcceptableOrUnknown(
+          data['elevation_metres']!,
+          _elevationMetresMeta,
+        ),
+      );
+    }
+    if (data.containsKey('time_zone_id')) {
+      context.handle(
+        _timeZoneIdMeta,
+        timeZoneId.isAcceptableOrUnknown(
+          data['time_zone_id']!,
+          _timeZoneIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_timeZoneIdMeta);
+    }
+    if (data.containsKey('source')) {
+      context.handle(
+        _sourceMeta,
+        source.isAcceptableOrUnknown(data['source']!, _sourceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceMeta);
+    }
+    if (data.containsKey('accuracy_metres')) {
+      context.handle(
+        _accuracyMetresMeta,
+        accuracyMetres.isAcceptableOrUnknown(
+          data['accuracy_metres']!,
+          _accuracyMetresMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SavedLocation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SavedLocation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      normalizedName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}normalized_name'],
+      )!,
+      latitudeDegrees: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}latitude_degrees'],
+      )!,
+      longitudeDegrees: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}longitude_degrees'],
+      )!,
+      elevationMetres: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}elevation_metres'],
+      ),
+      timeZoneId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}time_zone_id'],
+      )!,
+      source: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source'],
+      )!,
+      accuracyMetres: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}accuracy_metres'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SavedLocationsTable createAlias(String alias) {
+    return $SavedLocationsTable(attachedDatabase, alias);
+  }
+}
+
+class SavedLocation extends DataClass implements Insertable<SavedLocation> {
+  final String id;
+  final String name;
+  final String normalizedName;
+  final double latitudeDegrees;
+  final double longitudeDegrees;
+  final double? elevationMetres;
+  final String timeZoneId;
+  final String source;
+  final double? accuracyMetres;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const SavedLocation({
+    required this.id,
+    required this.name,
+    required this.normalizedName,
+    required this.latitudeDegrees,
+    required this.longitudeDegrees,
+    this.elevationMetres,
+    required this.timeZoneId,
+    required this.source,
+    this.accuracyMetres,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    map['normalized_name'] = Variable<String>(normalizedName);
+    map['latitude_degrees'] = Variable<double>(latitudeDegrees);
+    map['longitude_degrees'] = Variable<double>(longitudeDegrees);
+    if (!nullToAbsent || elevationMetres != null) {
+      map['elevation_metres'] = Variable<double>(elevationMetres);
+    }
+    map['time_zone_id'] = Variable<String>(timeZoneId);
+    map['source'] = Variable<String>(source);
+    if (!nullToAbsent || accuracyMetres != null) {
+      map['accuracy_metres'] = Variable<double>(accuracyMetres);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SavedLocationsCompanion toCompanion(bool nullToAbsent) {
+    return SavedLocationsCompanion(
+      id: Value(id),
+      name: Value(name),
+      normalizedName: Value(normalizedName),
+      latitudeDegrees: Value(latitudeDegrees),
+      longitudeDegrees: Value(longitudeDegrees),
+      elevationMetres: elevationMetres == null && nullToAbsent
+          ? const Value.absent()
+          : Value(elevationMetres),
+      timeZoneId: Value(timeZoneId),
+      source: Value(source),
+      accuracyMetres: accuracyMetres == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accuracyMetres),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SavedLocation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SavedLocation(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      normalizedName: serializer.fromJson<String>(json['normalizedName']),
+      latitudeDegrees: serializer.fromJson<double>(json['latitudeDegrees']),
+      longitudeDegrees: serializer.fromJson<double>(json['longitudeDegrees']),
+      elevationMetres: serializer.fromJson<double?>(json['elevationMetres']),
+      timeZoneId: serializer.fromJson<String>(json['timeZoneId']),
+      source: serializer.fromJson<String>(json['source']),
+      accuracyMetres: serializer.fromJson<double?>(json['accuracyMetres']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'normalizedName': serializer.toJson<String>(normalizedName),
+      'latitudeDegrees': serializer.toJson<double>(latitudeDegrees),
+      'longitudeDegrees': serializer.toJson<double>(longitudeDegrees),
+      'elevationMetres': serializer.toJson<double?>(elevationMetres),
+      'timeZoneId': serializer.toJson<String>(timeZoneId),
+      'source': serializer.toJson<String>(source),
+      'accuracyMetres': serializer.toJson<double?>(accuracyMetres),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  SavedLocation copyWith({
+    String? id,
+    String? name,
+    String? normalizedName,
+    double? latitudeDegrees,
+    double? longitudeDegrees,
+    Value<double?> elevationMetres = const Value.absent(),
+    String? timeZoneId,
+    String? source,
+    Value<double?> accuracyMetres = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => SavedLocation(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    normalizedName: normalizedName ?? this.normalizedName,
+    latitudeDegrees: latitudeDegrees ?? this.latitudeDegrees,
+    longitudeDegrees: longitudeDegrees ?? this.longitudeDegrees,
+    elevationMetres: elevationMetres.present
+        ? elevationMetres.value
+        : this.elevationMetres,
+    timeZoneId: timeZoneId ?? this.timeZoneId,
+    source: source ?? this.source,
+    accuracyMetres: accuracyMetres.present
+        ? accuracyMetres.value
+        : this.accuracyMetres,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  SavedLocation copyWithCompanion(SavedLocationsCompanion data) {
+    return SavedLocation(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      normalizedName: data.normalizedName.present
+          ? data.normalizedName.value
+          : this.normalizedName,
+      latitudeDegrees: data.latitudeDegrees.present
+          ? data.latitudeDegrees.value
+          : this.latitudeDegrees,
+      longitudeDegrees: data.longitudeDegrees.present
+          ? data.longitudeDegrees.value
+          : this.longitudeDegrees,
+      elevationMetres: data.elevationMetres.present
+          ? data.elevationMetres.value
+          : this.elevationMetres,
+      timeZoneId: data.timeZoneId.present
+          ? data.timeZoneId.value
+          : this.timeZoneId,
+      source: data.source.present ? data.source.value : this.source,
+      accuracyMetres: data.accuracyMetres.present
+          ? data.accuracyMetres.value
+          : this.accuracyMetres,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedLocation(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('normalizedName: $normalizedName, ')
+          ..write('latitudeDegrees: $latitudeDegrees, ')
+          ..write('longitudeDegrees: $longitudeDegrees, ')
+          ..write('elevationMetres: $elevationMetres, ')
+          ..write('timeZoneId: $timeZoneId, ')
+          ..write('source: $source, ')
+          ..write('accuracyMetres: $accuracyMetres, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    normalizedName,
+    latitudeDegrees,
+    longitudeDegrees,
+    elevationMetres,
+    timeZoneId,
+    source,
+    accuracyMetres,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SavedLocation &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.normalizedName == this.normalizedName &&
+          other.latitudeDegrees == this.latitudeDegrees &&
+          other.longitudeDegrees == this.longitudeDegrees &&
+          other.elevationMetres == this.elevationMetres &&
+          other.timeZoneId == this.timeZoneId &&
+          other.source == this.source &&
+          other.accuracyMetres == this.accuracyMetres &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SavedLocationsCompanion extends UpdateCompanion<SavedLocation> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String> normalizedName;
+  final Value<double> latitudeDegrees;
+  final Value<double> longitudeDegrees;
+  final Value<double?> elevationMetres;
+  final Value<String> timeZoneId;
+  final Value<String> source;
+  final Value<double?> accuracyMetres;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const SavedLocationsCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.normalizedName = const Value.absent(),
+    this.latitudeDegrees = const Value.absent(),
+    this.longitudeDegrees = const Value.absent(),
+    this.elevationMetres = const Value.absent(),
+    this.timeZoneId = const Value.absent(),
+    this.source = const Value.absent(),
+    this.accuracyMetres = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SavedLocationsCompanion.insert({
+    required String id,
+    required String name,
+    required String normalizedName,
+    required double latitudeDegrees,
+    required double longitudeDegrees,
+    this.elevationMetres = const Value.absent(),
+    required String timeZoneId,
+    required String source,
+    this.accuracyMetres = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       name = Value(name),
+       normalizedName = Value(normalizedName),
+       latitudeDegrees = Value(latitudeDegrees),
+       longitudeDegrees = Value(longitudeDegrees),
+       timeZoneId = Value(timeZoneId),
+       source = Value(source),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<SavedLocation> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? normalizedName,
+    Expression<double>? latitudeDegrees,
+    Expression<double>? longitudeDegrees,
+    Expression<double>? elevationMetres,
+    Expression<String>? timeZoneId,
+    Expression<String>? source,
+    Expression<double>? accuracyMetres,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (normalizedName != null) 'normalized_name': normalizedName,
+      if (latitudeDegrees != null) 'latitude_degrees': latitudeDegrees,
+      if (longitudeDegrees != null) 'longitude_degrees': longitudeDegrees,
+      if (elevationMetres != null) 'elevation_metres': elevationMetres,
+      if (timeZoneId != null) 'time_zone_id': timeZoneId,
+      if (source != null) 'source': source,
+      if (accuracyMetres != null) 'accuracy_metres': accuracyMetres,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SavedLocationsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String>? normalizedName,
+    Value<double>? latitudeDegrees,
+    Value<double>? longitudeDegrees,
+    Value<double?>? elevationMetres,
+    Value<String>? timeZoneId,
+    Value<String>? source,
+    Value<double?>? accuracyMetres,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return SavedLocationsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      normalizedName: normalizedName ?? this.normalizedName,
+      latitudeDegrees: latitudeDegrees ?? this.latitudeDegrees,
+      longitudeDegrees: longitudeDegrees ?? this.longitudeDegrees,
+      elevationMetres: elevationMetres ?? this.elevationMetres,
+      timeZoneId: timeZoneId ?? this.timeZoneId,
+      source: source ?? this.source,
+      accuracyMetres: accuracyMetres ?? this.accuracyMetres,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (normalizedName.present) {
+      map['normalized_name'] = Variable<String>(normalizedName.value);
+    }
+    if (latitudeDegrees.present) {
+      map['latitude_degrees'] = Variable<double>(latitudeDegrees.value);
+    }
+    if (longitudeDegrees.present) {
+      map['longitude_degrees'] = Variable<double>(longitudeDegrees.value);
+    }
+    if (elevationMetres.present) {
+      map['elevation_metres'] = Variable<double>(elevationMetres.value);
+    }
+    if (timeZoneId.present) {
+      map['time_zone_id'] = Variable<String>(timeZoneId.value);
+    }
+    if (source.present) {
+      map['source'] = Variable<String>(source.value);
+    }
+    if (accuracyMetres.present) {
+      map['accuracy_metres'] = Variable<double>(accuracyMetres.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SavedLocationsCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('normalizedName: $normalizedName, ')
+          ..write('latitudeDegrees: $latitudeDegrees, ')
+          ..write('longitudeDegrees: $longitudeDegrees, ')
+          ..write('elevationMetres: $elevationMetres, ')
+          ..write('timeZoneId: $timeZoneId, ')
+          ..write('source: $source, ')
+          ..write('accuracyMetres: $accuracyMetres, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4584,6 +5282,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $UserPreferencesTable userPreferences = $UserPreferencesTable(
     this,
   );
+  late final $SavedLocationsTable savedLocations = $SavedLocationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4596,6 +5295,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     calculationSnapshots,
     snapshotEquipmentReferences,
     userPreferences,
+    savedLocations,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -7076,6 +7776,334 @@ typedef $$UserPreferencesTableProcessedTableManager =
       UserPreference,
       PrefetchHooks Function()
     >;
+typedef $$SavedLocationsTableCreateCompanionBuilder =
+    SavedLocationsCompanion Function({
+      required String id,
+      required String name,
+      required String normalizedName,
+      required double latitudeDegrees,
+      required double longitudeDegrees,
+      Value<double?> elevationMetres,
+      required String timeZoneId,
+      required String source,
+      Value<double?> accuracyMetres,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$SavedLocationsTableUpdateCompanionBuilder =
+    SavedLocationsCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String> normalizedName,
+      Value<double> latitudeDegrees,
+      Value<double> longitudeDegrees,
+      Value<double?> elevationMetres,
+      Value<String> timeZoneId,
+      Value<String> source,
+      Value<double?> accuracyMetres,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$SavedLocationsTableFilterComposer
+    extends Composer<_$AppDatabase, $SavedLocationsTable> {
+  $$SavedLocationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get normalizedName => $composableBuilder(
+    column: $table.normalizedName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get latitudeDegrees => $composableBuilder(
+    column: $table.latitudeDegrees,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get longitudeDegrees => $composableBuilder(
+    column: $table.longitudeDegrees,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get elevationMetres => $composableBuilder(
+    column: $table.elevationMetres,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get timeZoneId => $composableBuilder(
+    column: $table.timeZoneId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get accuracyMetres => $composableBuilder(
+    column: $table.accuracyMetres,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SavedLocationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SavedLocationsTable> {
+  $$SavedLocationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get normalizedName => $composableBuilder(
+    column: $table.normalizedName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get latitudeDegrees => $composableBuilder(
+    column: $table.latitudeDegrees,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get longitudeDegrees => $composableBuilder(
+    column: $table.longitudeDegrees,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get elevationMetres => $composableBuilder(
+    column: $table.elevationMetres,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get timeZoneId => $composableBuilder(
+    column: $table.timeZoneId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get source => $composableBuilder(
+    column: $table.source,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get accuracyMetres => $composableBuilder(
+    column: $table.accuracyMetres,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SavedLocationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SavedLocationsTable> {
+  $$SavedLocationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get normalizedName => $composableBuilder(
+    column: $table.normalizedName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get latitudeDegrees => $composableBuilder(
+    column: $table.latitudeDegrees,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get longitudeDegrees => $composableBuilder(
+    column: $table.longitudeDegrees,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get elevationMetres => $composableBuilder(
+    column: $table.elevationMetres,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get timeZoneId => $composableBuilder(
+    column: $table.timeZoneId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get source =>
+      $composableBuilder(column: $table.source, builder: (column) => column);
+
+  GeneratedColumn<double> get accuracyMetres => $composableBuilder(
+    column: $table.accuracyMetres,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$SavedLocationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SavedLocationsTable,
+          SavedLocation,
+          $$SavedLocationsTableFilterComposer,
+          $$SavedLocationsTableOrderingComposer,
+          $$SavedLocationsTableAnnotationComposer,
+          $$SavedLocationsTableCreateCompanionBuilder,
+          $$SavedLocationsTableUpdateCompanionBuilder,
+          (
+            SavedLocation,
+            BaseReferences<_$AppDatabase, $SavedLocationsTable, SavedLocation>,
+          ),
+          SavedLocation,
+          PrefetchHooks Function()
+        > {
+  $$SavedLocationsTableTableManager(
+    _$AppDatabase db,
+    $SavedLocationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SavedLocationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SavedLocationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SavedLocationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> normalizedName = const Value.absent(),
+                Value<double> latitudeDegrees = const Value.absent(),
+                Value<double> longitudeDegrees = const Value.absent(),
+                Value<double?> elevationMetres = const Value.absent(),
+                Value<String> timeZoneId = const Value.absent(),
+                Value<String> source = const Value.absent(),
+                Value<double?> accuracyMetres = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SavedLocationsCompanion(
+                id: id,
+                name: name,
+                normalizedName: normalizedName,
+                latitudeDegrees: latitudeDegrees,
+                longitudeDegrees: longitudeDegrees,
+                elevationMetres: elevationMetres,
+                timeZoneId: timeZoneId,
+                source: source,
+                accuracyMetres: accuracyMetres,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String name,
+                required String normalizedName,
+                required double latitudeDegrees,
+                required double longitudeDegrees,
+                Value<double?> elevationMetres = const Value.absent(),
+                required String timeZoneId,
+                required String source,
+                Value<double?> accuracyMetres = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SavedLocationsCompanion.insert(
+                id: id,
+                name: name,
+                normalizedName: normalizedName,
+                latitudeDegrees: latitudeDegrees,
+                longitudeDegrees: longitudeDegrees,
+                elevationMetres: elevationMetres,
+                timeZoneId: timeZoneId,
+                source: source,
+                accuracyMetres: accuracyMetres,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SavedLocationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SavedLocationsTable,
+      SavedLocation,
+      $$SavedLocationsTableFilterComposer,
+      $$SavedLocationsTableOrderingComposer,
+      $$SavedLocationsTableAnnotationComposer,
+      $$SavedLocationsTableCreateCompanionBuilder,
+      $$SavedLocationsTableUpdateCompanionBuilder,
+      (
+        SavedLocation,
+        BaseReferences<_$AppDatabase, $SavedLocationsTable, SavedLocation>,
+      ),
+      SavedLocation,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7098,4 +8126,6 @@ class $AppDatabaseManager {
       );
   $$UserPreferencesTableTableManager get userPreferences =>
       $$UserPreferencesTableTableManager(_db, _db.userPreferences);
+  $$SavedLocationsTableTableManager get savedLocations =>
+      $$SavedLocationsTableTableManager(_db, _db.savedLocations);
 }

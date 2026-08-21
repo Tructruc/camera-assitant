@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/providers.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
@@ -9,6 +10,7 @@ import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
+import '../../planning/domain/saved_location.dart';
 import '../domain/astronomy_calculator.dart';
 
 class AstronomyScreen extends ConsumerStatefulWidget {
@@ -79,6 +81,26 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           'Plan a fixed celestial target entirely offline. Times use UTC and bearings use true north.',
         ),
         const SizedBox(height: 16),
+        DropdownButtonFormField<SavedLocation>(
+          decoration: const InputDecoration(
+            labelText: 'Saved location (optional)',
+          ),
+          items: [
+            for (final location
+                in ref.watch(savedLocationsProvider).valueOrNull ??
+                    const <SavedLocation>[])
+              DropdownMenuItem(value: location, child: Text(location.name)),
+          ],
+          onChanged: (location) {
+            if (location == null) return;
+            setState(() {
+              _latitude.text = location.latitudeDegrees.toString();
+              _longitude.text = location.longitudeDegrees.toString();
+              _result = null;
+            });
+          },
+        ),
+        const SizedBox(height: 12),
         DropdownButtonFormField<CelestialTarget>(
           decoration: const InputDecoration(labelText: 'Celestial target'),
           initialValue: _target,

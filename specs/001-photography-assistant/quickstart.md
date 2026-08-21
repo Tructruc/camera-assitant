@@ -75,6 +75,13 @@ Expected:
 19. Open numeric, timeline, compass, map, and AR views with camera/orientation/location access unavailable;
     verify the same plan remains usable, no synthetic heading or live camera is shown, and AR explains its
     capability requirements without blocking the other views.
+20. Add a manual saved location with elevation and time zone, restart offline, and apply it in both the
+    night-sky and alignment planners. Edit the location and verify an already saved plan retains its
+    original coordinates, candidate list, assumptions, and field checklist.
+21. On a supported phone, explicitly open live AR, grant camera access, and verify the camera preview and
+    target reticle respond to compass heading. Confirm magnetic heading and true target bearing are labeled
+    separately, calibration limitations remain visible, and denying camera/location returns to the full
+    numeric/timeline/compass/map plan.
 
 ## Platform build gates
 

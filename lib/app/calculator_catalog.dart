@@ -11,10 +11,17 @@ import '../features/long_exposure/presentation/long_exposure_screen.dart';
 import '../features/macro/presentation/macro_screen.dart';
 import '../features/optics/presentation/optics_screens.dart';
 import '../features/panorama/presentation/panorama_screen.dart';
+import '../features/planning/presentation/saved_locations_screen.dart';
 import '../features/timelapse/presentation/timelapse_screen.dart';
 import 'providers.dart';
 
 enum CalculatorDestination {
+  savedLocations(
+    id: 'saved_locations',
+    label: 'Saved locations',
+    description: 'Reusable offline coordinates and elevations',
+    icon: Icons.location_on_outlined,
+  ),
   alignment(
     id: 'sun_moon_alignment',
     label: 'Sun & Moon alignment',
@@ -101,6 +108,7 @@ enum CalculatorDestination {
   final IconData icon;
 
   Widget screen() => switch (this) {
+    savedLocations => const SavedLocationsScreen(),
     alignment => const AlignmentScreen(),
     astronomy => const AstronomyScreen(),
     depthOfField => const DepthOfFieldScreen(),

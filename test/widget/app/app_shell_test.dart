@@ -78,8 +78,18 @@ void main() {
 
     expect(find.text('Depth of field'), findsOneWidget);
     expect(find.text('Exposure comparison'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Long exposure / ND'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Long exposure / ND'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.text('Depth of field'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Depth of field'));
     await tester.pumpAndSettle();
     expect(find.text('Focal length (mm)'), findsOneWidget);

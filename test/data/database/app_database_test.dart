@@ -20,7 +20,7 @@ void main() {
   tearDown(() => database.close());
 
   test('current schema creates every equipment and snapshot table', () async {
-    expect(database.schemaVersion, 2);
+    expect(database.schemaVersion, 3);
 
     final rows = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -37,6 +37,7 @@ void main() {
         'calculation_snapshots',
         'snapshot_equipment_references',
         'user_preferences',
+        'saved_locations',
       }),
     );
   });
@@ -91,7 +92,7 @@ void main() {
     final version = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 2);
+    expect(version.read<int>('user_version'), 3);
   });
 
   test('frozen schema v1 fixture remains readable without data loss', () async {
@@ -240,13 +241,17 @@ void main() {
     final version = await migrated
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 2);
+    expect(version.read<int>('user_version'), 3);
     final tables = await migrated
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
         .get();
     expect(
       tables.map((row) => row.read<String>('name')),
       contains('optical_accessories'),
+    );
+    expect(
+      tables.map((row) => row.read<String>('name')),
+      contains('saved_locations'),
     );
   });
 }

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
-import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/core/data/database/app_database.dart'
+    hide SavedLocation;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
 import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
@@ -15,6 +16,8 @@ import 'package:photography_assistant/features/flash_exposure/presentation/flash
 import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
 import 'package:photography_assistant/features/macro/presentation/macro_screen.dart';
 import 'package:photography_assistant/features/panorama/presentation/panorama_screen.dart';
+import 'package:photography_assistant/features/planning/domain/planning_capabilities.dart';
+import 'package:photography_assistant/features/planning/domain/saved_location.dart';
 import 'package:photography_assistant/features/timelapse/presentation/timelapse_screen.dart';
 
 void main() {
@@ -36,6 +39,9 @@ void main() {
       ),
       equipmentRepositoryProvider.overrideWithValue(
         DriftEquipmentRepository(database),
+      ),
+      savedLocationsProvider.overrideWith(
+        (ref) => Stream<List<SavedLocation>>.value(const []),
       ),
     ],
     child: MaterialApp(
@@ -184,7 +190,9 @@ void main() {
   testWidgets('alignment planner preserves fallbacks and solar safety', (
     tester,
   ) async {
-    await tester.pumpWidget(app(const AlignmentScreen()));
+    await tester.pumpWidget(
+      app(const AlignmentScreen(capabilities: PlanningCapabilities.fallback())),
+    );
     expect(find.textContaining('never look at the Sun'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Search alignments'),

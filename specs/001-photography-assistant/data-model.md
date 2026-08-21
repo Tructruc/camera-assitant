@@ -92,6 +92,13 @@ distance, desired true bearing, derived target altitude, UTC range, angular tole
 and ordered candidates. Each candidate records UTC instant, true azimuth, altitude, angular error, and
 horizon state. Numeric, timeline, compass, map, and AR-capability views consume this same result.
 
+## Saved Location
+
+A mutable reusable local record with stable ID, normalized unique name, latitude, longitude, optional
+elevation, IANA-style time-zone identifier, manual/device source, optional device accuracy, and UTC
+creation/update timestamps. Schema version 3 adds `saved_locations`; calculation and observation-plan
+snapshots embed coordinates and context so later location edits cannot rewrite a saved plan.
+
 ## User Preferences
 
 Singleton local settings record.
