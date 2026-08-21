@@ -96,6 +96,14 @@ void main() {
     expect(first.$2, inInclusiveRange(-90, 90));
   });
 
+  test('Jupiter agrees with the documented JPL Horizons fixture', () {
+    final coordinates = CelestialTarget.jupiter.equatorialAt(
+      DateTime.utc(2026, 1, 1),
+    );
+    expect(coordinates.$1, closeTo(112.72933, 0.25));
+    expect(coordinates.$2, closeTo(22.03458, 0.25));
+  });
+
   test('rejects invalid location, optics, and trail inputs', () {
     final result = calculator.calculate(
       AstronomyInput(

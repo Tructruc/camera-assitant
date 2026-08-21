@@ -217,12 +217,16 @@ sources only and are not contacted at runtime. Fixture provenance and tolerances
 **Accuracy boundary**: Fixed-target positions are planning-grade, with a declared 0.25° fixture tolerance
 and two-minute event tolerance. Proper motion, precession/nutation, polar motion, UT1 corrections,
 atmospheric refraction, terrain, and local horizon obstruction are excluded and displayed as limitations.
-Solar-system moving-body ephemerides are a separate alignment increment and must receive their own
-accuracy fixtures before release.
+Planet positions use JPL's published 1800-2050 approximate Keplerian elements and rates, solving
+Kepler's equation before converting heliocentric ecliptic vectors to geocentric J2000 equatorial
+coordinates. JPL documents nominal heliocentric errors from arcseconds to ten arcminutes depending on
+planet; the app declares a conservative 0.25° geocentric planning tolerance and excludes light-time,
+aberration, precession/nutation, and topocentric parallax. A Jupiter fixture is audited against Horizons.
 
 **References**: [USNO approximate sidereal time](https://aa.usno.navy.mil/faq/GAST),
 [IAU SOFA standards service](https://www.iau.org/WG191/WG191/Home.aspx),
 [NASA JPL Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html), and
+[NASA JPL approximate planetary positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html), and
 [SIMBAD Sirius record](https://simbad.cds.unistra.fr/simbad/sim-basic?Ident=Sirius).
 
 ## Sun/Moon alignment search

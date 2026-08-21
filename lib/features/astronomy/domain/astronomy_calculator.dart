@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/validation/validation.dart';
+import 'planetary_ephemeris.dart';
 
 enum CelestialTarget {
   milkyWayCore('Milky Way core', TargetCategory.milkyWay, 266.41683, -29.00781),
@@ -61,29 +62,9 @@ enum CelestialTarget {
 
   (double, double) equatorialAt(DateTime instantUtc) {
     if (!isMoving) return (rightAscensionDegrees, declinationDegrees);
-    final days =
-        instantUtc.difference(DateTime.utc(2000, 1, 1, 12)).inSeconds /
-        Duration.secondsPerDay;
-    final planetLongitude = _radians(
-      _normalize(longitudeAtEpochDegrees! + 360 * days / orbitalPeriodDays!),
-    );
-    final earthLongitude = _radians(_normalize(100.464 + 360 * days / 365.256));
-    final x =
-        orbitalRadiusAu! * math.cos(planetLongitude) - math.cos(earthLongitude);
-    final y =
-        orbitalRadiusAu! * math.sin(planetLongitude) - math.sin(earthLongitude);
-    final longitude = math.atan2(y, x);
-    final obliquity = _radians(23.4393);
-    return (
-      _normalize(
-        _degrees(
-          math.atan2(
-            math.sin(longitude) * math.cos(obliquity),
-            math.cos(longitude),
-          ),
-        ),
-      ),
-      _degrees(math.asin(math.sin(longitude) * math.sin(obliquity))),
+    return const PlanetaryEphemeris().equatorial(
+      PlanetId.values[index - CelestialTarget.mercury.index],
+      instantUtc,
     );
   }
 }
