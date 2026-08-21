@@ -99,25 +99,32 @@ class _LiveArViewState extends State<LiveArView> {
                       widget.magneticDeclinationDegrees,
                     )
                   : widget.azimuthDegrees;
-              return CustomPaint(
-                painter: _ArOverlayPainter(
-                  targetAzimuth: targetBearing,
-                  targetAltitude: widget.altitudeDegrees,
-                  heading: heading,
-                ),
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    color: Colors.black87,
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      heading == null
-                          ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
-                          : 'Heading ${heading.toStringAsFixed(1)}° magnetic • target ${targetBearing.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'}\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
-                      style: const TextStyle(color: Colors.white),
+              return StreamBuilder<double>(
+                stream: widget.service.cameraPitchStream(),
+                builder: (context, pitchSnapshot) {
+                  final pitch = pitchSnapshot.data;
+                  return CustomPaint(
+                    painter: _ArOverlayPainter(
+                      targetAzimuth: targetBearing,
+                      targetAltitude: widget.altitudeDegrees,
+                      heading: heading,
+                      pitch: pitch,
                     ),
-                  ),
-                ),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Container(
+                        color: Colors.black87,
+                        padding: const EdgeInsets.all(8),
+                        child: Text(
+                          heading == null
+                              ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
+                              : 'Heading ${heading.toStringAsFixed(1)}° magnetic • pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°\nTarget ${targetBearing.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'} / ${widget.altitudeDegrees.toStringAsFixed(1)}° altitude\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -169,10 +176,12 @@ final class _ArOverlayPainter extends CustomPainter {
     required this.targetAzimuth,
     required this.targetAltitude,
     required this.heading,
+    required this.pitch,
   });
   final double targetAzimuth;
   final double targetAltitude;
   final double? heading;
+  final double? pitch;
   @override
   void paint(Canvas canvas, Size size) {
     final difference = heading == null
@@ -182,7 +191,10 @@ final class _ArOverlayPainter extends CustomPainter {
       24.0,
       size.width - 24,
     );
-    final y = (size.height / 2 - targetAltitude / 90 * size.height / 2).clamp(
+    final altitudeDifference = pitch == null
+        ? targetAltitude
+        : targetAltitude - pitch!;
+    final y = (size.height / 2 - altitudeDifference / 60 * size.height).clamp(
       24.0,
       size.height - 24,
     );
@@ -199,5 +211,6 @@ final class _ArOverlayPainter extends CustomPainter {
   bool shouldRepaint(_ArOverlayPainter old) =>
       old.targetAzimuth != targetAzimuth ||
       old.targetAltitude != targetAltitude ||
-      old.heading != heading;
+      old.heading != heading ||
+      old.pitch != pitch;
 }

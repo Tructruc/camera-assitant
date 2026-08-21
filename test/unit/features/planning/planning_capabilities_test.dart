@@ -21,6 +21,12 @@ void main() {
       isTrue,
     );
   });
+
+  test('camera pitch derives vertical angle from gravity', () {
+    expect(cameraPitchDegrees(0, 9.81, 0), closeTo(0, 0.01));
+    expect(cameraPitchDegrees(0, 0, -9.81), closeTo(90, 0.01));
+    expect(cameraPitchDegrees(0, 0, 9.81), closeTo(-90, 0.01));
+  });
   test('AR requires camera, orientation, and AR support', () {
     expect(const PlanningCapabilities.fallback().canShowAr, isFalse);
     expect(

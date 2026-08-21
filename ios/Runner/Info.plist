@@ -6,6 +6,8 @@
 	<string>Camera access overlays a saved sky plan in the optional live AR view.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location access fills observer coordinates only when you request the current position.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Motion access aligns target altitude only while an optional live AR view is open.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

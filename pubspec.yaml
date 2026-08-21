@@ -18,6 +18,7 @@ dependencies:
   flutter_compass: ^0.8.1
   geolocator: ^14.0.3
   intl: ^0.20.3
+  sensors_plus: ^7.1.0
   timezone: ^0.10.1
   uuid: ^4.6.0
 

@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 import '../domain/planning_capabilities.dart';
 
@@ -70,6 +73,10 @@ final class DevicePlanningService {
         ),
       ) ??
       const Stream<DeviceHeadingReading>.empty();
+
+  Stream<double> cameraPitchStream() => accelerometerEventStream(
+    samplingPeriod: SensorInterval.normalInterval,
+  ).map((event) => cameraPitchDegrees(event.x, event.y, event.z));
   Future<CapabilityStatus> locationStatus() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       return CapabilityStatus.unsupported;
@@ -82,3 +89,6 @@ final class DevicePlanningService {
     };
   }
 }
+
+double cameraPitchDegrees(double x, double y, double z) =>
+    math.atan2(-z, math.sqrt(x * x + y * y)) * 180 / math.pi;
