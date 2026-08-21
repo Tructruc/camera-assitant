@@ -44,6 +44,19 @@ void main() {
     expect(output.rule500Seconds, closeTo(20.833, 0.001));
     expect(output.npfSeconds, closeTo(10.333, 0.001));
     expect(output.trailDurationSeconds, closeTo(7180.34, 0.1));
+    expect(output.path, hasLength(7));
+    expect(
+      output.path[3].altitudeDegrees,
+      closeTo(output.altitudeDegrees, 0.001),
+    );
+  });
+
+  test('ships a categorized offline deep-sky catalog', () {
+    expect(CelestialTarget.values.length, greaterThanOrEqualTo(12));
+    expect(
+      CelestialTarget.values.map((target) => target.category).toSet(),
+      containsAll(TargetCategory.values),
+    );
   });
 
   test('rejects invalid location, optics, and trail inputs', () {

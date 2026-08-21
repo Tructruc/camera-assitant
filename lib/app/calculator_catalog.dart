@@ -107,6 +107,19 @@ enum CalculatorDestination {
   final String description;
   final IconData icon;
 
+  CalculatorPurpose get purpose => switch (this) {
+    savedLocations || alignment || astronomy => CalculatorPurpose.planning,
+    depthOfField ||
+    fieldOfView ||
+    diffraction ||
+    focusStacking => CalculatorPurpose.focusAndOptics,
+    exposureComparison ||
+    longExposure ||
+    flashExposure => CalculatorPurpose.exposureAndLight,
+    timelapse || panorama => CalculatorPurpose.capturePlanning,
+    macro => CalculatorPurpose.macro,
+  };
+
   Widget screen() => switch (this) {
     savedLocations => const SavedLocationsScreen(),
     alignment => const AlignmentScreen(),
@@ -124,22 +137,52 @@ enum CalculatorDestination {
   };
 }
 
-class CalculatorCatalogScreen extends ConsumerWidget {
+enum CalculatorPurpose {
+  planning('Location & sky planning'),
+  focusAndOptics('Focus & optics'),
+  exposureAndLight('Exposure & light'),
+  capturePlanning('Capture planning'),
+  macro('Macro');
+
+  const CalculatorPurpose(this.label);
+  final String label;
+}
+
+class CalculatorCatalogScreen extends ConsumerStatefulWidget {
   const CalculatorCatalogScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CalculatorCatalogScreen> createState() =>
+      _CalculatorCatalogScreenState();
+}
+
+class _CalculatorCatalogScreenState
+    extends ConsumerState<CalculatorCatalogScreen> {
+  var _query = '';
+  var _favoritesOnly = false;
+
+  @override
+  Widget build(BuildContext context) {
     final preferences = ref.watch(preferencesProvider).valueOrNull;
     final favorites = preferences?.favoriteToolIds ?? const <String>[];
-    final calculators = [...CalculatorDestination.values]
-      ..sort((left, right) {
-        final leftFavorite = favorites.contains(left.id);
-        final rightFavorite = favorites.contains(right.id);
-        if (leftFavorite == rightFavorite) {
-          return left.index.compareTo(right.index);
-        }
-        return leftFavorite ? -1 : 1;
-      });
+    final normalizedQuery = _query.trim().toLowerCase();
+    final calculators =
+        CalculatorDestination.values.where((calculator) {
+          if (_favoritesOnly && !favorites.contains(calculator.id)) {
+            return false;
+          }
+          return normalizedQuery.isEmpty ||
+              calculator.label.toLowerCase().contains(normalizedQuery) ||
+              calculator.description.toLowerCase().contains(normalizedQuery) ||
+              calculator.purpose.label.toLowerCase().contains(normalizedQuery);
+        }).toList()..sort((left, right) {
+          final leftFavorite = favorites.contains(left.id);
+          final rightFavorite = favorites.contains(right.id);
+          if (leftFavorite == rightFavorite) {
+            return left.index.compareTo(right.index);
+          }
+          return leftFavorite ? -1 : 1;
+        });
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
@@ -151,36 +194,70 @@ class CalculatorCatalogScreen extends ConsumerWidget {
         const Text(
           'All calculations work offline and preserve raw physical values.',
         ),
-        const SizedBox(height: 16),
-        for (final calculator in calculators)
-          Card(
-            child: ListTile(
-              leading: Icon(calculator.icon),
-              title: Text(calculator.label),
-              subtitle: Text(calculator.description),
-              trailing: IconButton(
-                tooltip: favorites.contains(calculator.id)
-                    ? 'Remove ${calculator.label} from favorites'
-                    : 'Add ${calculator.label} to favorites',
-                onPressed: preferences == null
-                    ? null
-                    : () => _toggleFavorite(ref, preferences, calculator.id),
-                icon: Icon(
-                  favorites.contains(calculator.id)
-                      ? Icons.star
-                      : Icons.star_border,
-                ),
-              ),
-              onTap: () => Navigator.of(context).push<void>(
-                MaterialPageRoute<void>(
-                  builder: (context) => Scaffold(
-                    appBar: AppBar(title: Text(calculator.label)),
-                    body: SafeArea(child: calculator.screen()),
-                  ),
-                ),
+        const SizedBox(height: 12),
+        SearchBar(
+          hintText: 'Search calculators and planners',
+          leading: const Icon(Icons.search),
+          onChanged: (value) => setState(() => _query = value),
+        ),
+        const SizedBox(height: 8),
+        FilterChip(
+          avatar: const Icon(Icons.star_outline),
+          label: const Text('Favorites only'),
+          selected: _favoritesOnly,
+          onSelected: (value) => setState(() => _favoritesOnly = value),
+        ),
+        if (calculators.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: Text(
+                'No matching tools. Clear the search or favorites filter.',
               ),
             ),
           ),
+        for (final purpose in CalculatorPurpose.values)
+          if (calculators.any((item) => item.purpose == purpose)) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 20, 0, 4),
+              child: Text(
+                purpose.label,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            for (final calculator in calculators.where(
+              (item) => item.purpose == purpose,
+            ))
+              Card(
+                child: ListTile(
+                  leading: Icon(calculator.icon),
+                  title: Text(calculator.label),
+                  subtitle: Text(calculator.description),
+                  trailing: IconButton(
+                    tooltip: favorites.contains(calculator.id)
+                        ? 'Remove ${calculator.label} from favorites'
+                        : 'Add ${calculator.label} to favorites',
+                    onPressed: preferences == null
+                        ? null
+                        : () =>
+                              _toggleFavorite(ref, preferences, calculator.id),
+                    icon: Icon(
+                      favorites.contains(calculator.id)
+                          ? Icons.star
+                          : Icons.star_border,
+                    ),
+                  ),
+                  onTap: () => Navigator.of(context).push<void>(
+                    MaterialPageRoute<void>(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(title: Text(calculator.label)),
+                        body: SafeArea(child: calculator.screen()),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
       ],
     );
   }

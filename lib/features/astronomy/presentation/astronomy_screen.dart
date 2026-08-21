@@ -101,14 +101,20 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           },
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<CelestialTarget>(
-          decoration: const InputDecoration(labelText: 'Celestial target'),
-          initialValue: _target,
-          items: [
+        DropdownMenu<CelestialTarget>(
+          label: const Text('Search celestial targets'),
+          enableFilter: true,
+          enableSearch: true,
+          initialSelection: _target,
+          expandedInsets: EdgeInsets.zero,
+          dropdownMenuEntries: [
             for (final target in CelestialTarget.values)
-              DropdownMenuItem(value: target, child: Text(target.label)),
+              DropdownMenuEntry(
+                value: target,
+                label: '${target.label} · ${_category(target.category)}',
+              ),
           ],
-          onChanged: (value) => setState(() {
+          onSelected: (value) => setState(() {
             _target = value ?? _target;
             _result = null;
           }),
@@ -236,6 +242,28 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             Text(
               '${event.type.name}: ${DateFormat("yyyy-MM-dd HH:mm 'UTC'").format(event.instantUtc)}',
             ),
+          const SizedBox(height: 12),
+          Text(
+            '12-hour sky path',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const Text('Two-hour samples · altitude / azimuth true north'),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final sample in output.path)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8, top: 8),
+                    child: Chip(
+                      label: Text(
+                        '${DateFormat('HH:mm').format(sample.instantUtc)} UTC\n${sample.altitudeDegrees.toStringAsFixed(0)}° / ${sample.azimuthDegrees.toStringAsFixed(0)}°',
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ],
     );
@@ -350,6 +378,13 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     VisibilityCycle.risesAndSets => 'Rises and sets',
     VisibilityCycle.circumpolar => 'Circumpolar',
     VisibilityCycle.neverRises => 'Never rises',
+  };
+  String _category(TargetCategory category) => switch (category) {
+    TargetCategory.milkyWay => 'Milky Way',
+    TargetCategory.star => 'Star',
+    TargetCategory.nebula => 'Nebula',
+    TargetCategory.galaxy => 'Galaxy',
+    TargetCategory.cluster => 'Cluster',
   };
   String _duration(double seconds) {
     final duration = Duration(seconds: seconds.round());

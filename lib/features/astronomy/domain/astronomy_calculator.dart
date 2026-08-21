@@ -7,21 +7,47 @@ import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/validation/validation.dart';
 
 enum CelestialTarget {
-  milkyWayCore('Milky Way core', 266.41683, -29.00781),
-  polaris('Polaris', 37.95456, 89.26411),
-  sirius('Sirius', 101.28716, -16.71612),
-  orionNebula('Orion Nebula (M42)', 83.82208, -5.39111),
-  andromedaGalaxy('Andromeda Galaxy (M31)', 10.68471, 41.26875);
+  milkyWayCore('Milky Way core', TargetCategory.milkyWay, 266.41683, -29.00781),
+  polaris('Polaris', TargetCategory.star, 37.95456, 89.26411),
+  sirius('Sirius', TargetCategory.star, 101.28716, -16.71612),
+  orionNebula('Orion Nebula (M42)', TargetCategory.nebula, 83.82208, -5.39111),
+  lagoonNebula('Lagoon Nebula (M8)', TargetCategory.nebula, 270.925, -24.375),
+  eagleNebula('Eagle Nebula (M16)', TargetCategory.nebula, 274.7, -13.807),
+  andromedaGalaxy(
+    'Andromeda Galaxy (M31)',
+    TargetCategory.galaxy,
+    10.68471,
+    41.26875,
+  ),
+  triangulumGalaxy(
+    'Triangulum Galaxy (M33)',
+    TargetCategory.galaxy,
+    23.4621,
+    30.6599,
+  ),
+  bodeGalaxy('Bode’s Galaxy (M81)', TargetCategory.galaxy, 148.8882, 69.0653),
+  pleiades('Pleiades (M45)', TargetCategory.cluster, 56.75, 24.1167),
+  herculesCluster(
+    'Hercules Cluster (M13)',
+    TargetCategory.cluster,
+    250.4235,
+    36.4613,
+  ),
+  omegaCentauri('Omega Centauri', TargetCategory.cluster, 201.697, -47.4795);
 
   const CelestialTarget(
     this.label,
+    this.category,
     this.rightAscensionDegrees,
     this.declinationDegrees,
   );
   final String label;
+  final TargetCategory category;
   final double rightAscensionDegrees;
   final double declinationDegrees;
 }
+
+enum TargetCategory { milkyWay, star, nebula, galaxy, cluster }
 
 enum CelestialEventType { rise, transit, set }
 
@@ -63,6 +89,7 @@ final class AstronomyOutput {
     required this.isAboveHorizon,
     required this.visibilityCycle,
     required this.events,
+    required this.path,
     required this.rule500Seconds,
     required this.npfSeconds,
     required this.trailDurationSeconds,
@@ -73,10 +100,22 @@ final class AstronomyOutput {
   final bool isAboveHorizon;
   final VisibilityCycle visibilityCycle;
   final List<CelestialEvent> events;
+  final List<SkyPositionSample> path;
   final double rule500Seconds;
   final double npfSeconds;
   final double trailDurationSeconds;
   final double trailRotationDegreesPerHour;
+}
+
+final class SkyPositionSample {
+  const SkyPositionSample({
+    required this.instantUtc,
+    required this.altitudeDegrees,
+    required this.azimuthDegrees,
+  });
+  final DateTime instantUtc;
+  final double altitudeDegrees;
+  final double azimuthDegrees;
 }
 
 final class AstronomyCalculator {
@@ -146,6 +185,10 @@ final class AstronomyCalculator {
           180,
     );
     final eventPlan = _events(input, localSidereal, latitude, declination);
+    final path = <SkyPositionSample>[
+      for (var offset = -6; offset <= 6; offset += 2)
+        _positionSample(input, input.instantUtc.add(Duration(hours: offset))),
+    ];
 
     return CalculationResult.valid(
       calculatorId: id,
@@ -156,6 +199,7 @@ final class AstronomyCalculator {
         isAboveHorizon: altitude > 0,
         visibilityCycle: eventPlan.$1,
         events: eventPlan.$2,
+        path: List.unmodifiable(path),
         rule500Seconds: 500 / (input.focalLengthMm * input.cropFactor),
         npfSeconds:
             (35 * input.aperture + 30 * input.pixelPitchMicrometres) /
@@ -184,6 +228,37 @@ final class AstronomyCalculator {
           messageKey: 'astronomy.warning.planningOnly',
         ),
       ],
+    );
+  }
+
+  SkyPositionSample _positionSample(AstronomyInput input, DateTime instantUtc) {
+    final latitude = _radians(input.observerLatitudeDegrees);
+    final declination = _radians(input.target.declinationDegrees);
+    final hourAngle = _radians(
+      _signed(
+        _greenwichSiderealDegrees(instantUtc) +
+            input.observerLongitudeDegrees -
+            input.target.rightAscensionDegrees,
+      ),
+    );
+    final altitude = math.asin(
+      math.sin(latitude) * math.sin(declination) +
+          math.cos(latitude) * math.cos(declination) * math.cos(hourAngle),
+    );
+    final azimuth = _normalize(
+      _degrees(
+            math.atan2(
+              math.sin(hourAngle),
+              math.cos(hourAngle) * math.sin(latitude) -
+                  math.tan(declination) * math.cos(latitude),
+            ),
+          ) +
+          180,
+    );
+    return SkyPositionSample(
+      instantUtc: instantUtc,
+      altitudeDegrees: _degrees(altitude),
+      azimuthDegrees: azimuth,
     );
   }
 

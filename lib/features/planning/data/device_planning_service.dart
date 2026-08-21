@@ -16,6 +16,19 @@ final class DeviceLocationReading {
   final double accuracyMetres;
 }
 
+final class DeviceHeadingReading {
+  const DeviceHeadingReading({
+    required this.headingDegrees,
+    required this.cameraHeadingDegrees,
+    required this.accuracyDegrees,
+  });
+  final double? headingDegrees;
+  final double? cameraHeadingDegrees;
+  final double? accuracyDegrees;
+
+  bool get needsCalibration => accuracyDegrees == null || accuracyDegrees! > 15;
+}
+
 final class DevicePlanningService {
   const DevicePlanningService();
   Future<DeviceLocationReading> requestCurrentLocation() async {
@@ -48,9 +61,15 @@ final class DevicePlanningService {
     );
   }
 
-  Stream<double?> headingStream() =>
-      FlutterCompass.events?.map((event) => event.heading) ??
-      const Stream<double?>.empty();
+  Stream<DeviceHeadingReading> headingStream() =>
+      FlutterCompass.events?.map(
+        (event) => DeviceHeadingReading(
+          headingDegrees: event.heading,
+          cameraHeadingDegrees: event.headingForCameraMode,
+          accuracyDegrees: event.accuracy,
+        ),
+      ) ??
+      const Stream<DeviceHeadingReading>.empty();
   Future<CapabilityStatus> locationStatus() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
       return CapabilityStatus.unsupported;

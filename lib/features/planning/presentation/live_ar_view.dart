@@ -80,10 +80,12 @@ class _LiveArViewState extends State<LiveArView> {
         fit: StackFit.expand,
         children: [
           CameraPreview(controller),
-          StreamBuilder<double?>(
+          StreamBuilder<DeviceHeadingReading>(
             stream: widget.service.headingStream(),
             builder: (context, snapshot) {
-              final heading = snapshot.data;
+              final reading = snapshot.data;
+              final heading =
+                  reading?.cameraHeadingDegrees ?? reading?.headingDegrees;
               return CustomPaint(
                 painter: _ArOverlayPainter(
                   targetAzimuth: widget.azimuthDegrees,
@@ -98,7 +100,7 @@ class _LiveArViewState extends State<LiveArView> {
                     child: Text(
                       heading == null
                           ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
-                          : 'Heading ${heading.toStringAsFixed(1)}° magnetic • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true',
+                          : 'Heading ${heading.toStringAsFixed(1)}° magnetic • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true\n${_accuracyLabel(reading!)}',
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
@@ -131,6 +133,17 @@ class _LiveArViewState extends State<LiveArView> {
   Widget _fallback(String message) => Card(
     child: Padding(padding: const EdgeInsets.all(16), child: Text(message)),
   );
+
+  String _accuracyLabel(DeviceHeadingReading reading) {
+    final accuracy = reading.accuracyDegrees;
+    if (accuracy == null) {
+      return 'Accuracy unavailable • calibrate and verify with numeric view';
+    }
+    if (reading.needsCalibration) {
+      return 'Low accuracy ±${accuracy.toStringAsFixed(0)}° • move away from metal and calibrate';
+    }
+    return 'Calibrated ±${accuracy.toStringAsFixed(0)}°';
+  }
 }
 
 final class _ArOverlayPainter extends CustomPainter {

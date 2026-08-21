@@ -76,7 +76,17 @@ void main() {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Depth of field'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Depth of field'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Exposure comparison'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Exposure comparison'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Long exposure / ND'),
@@ -94,6 +104,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Focal length (mm)'), findsOneWidget);
     expect(find.textContaining('connect'), findsNothing);
+  });
+
+  testWidgets('catalog searches and groups tools by photographic purpose', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Location & sky planning'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Focus & optics'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Focus & optics'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byType(SearchBar),
+      -250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.byType(SearchBar), 'star trails');
+    await tester.pump();
+
+    expect(find.text('Night-sky planner'), findsOneWidget);
+    expect(find.text('Depth of field'), findsNothing);
   });
 
   testWidgets('settings exposes units, shutter, theme, and privacy guidance', (

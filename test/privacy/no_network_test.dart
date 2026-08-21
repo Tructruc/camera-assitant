@@ -34,6 +34,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Depth of field'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Depth of field'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
