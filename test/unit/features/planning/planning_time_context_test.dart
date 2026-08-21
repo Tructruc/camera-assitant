@@ -14,10 +14,24 @@ void main() {
     );
   });
 
-  test('retains UTC and identifies unsupported IANA conversion', () {
+  test('applies bundled IANA daylight-saving rules offline', () {
     final context = PlanningTimeContext.parse('Europe/Paris');
+    expect(context.canConvertOffline, isTrue);
+    expect(
+      context.format(DateTime.utc(2026, 1, 21, 20, 30)),
+      '2026-01-21 21:30 Europe/Paris',
+    );
+    expect(
+      context.format(DateTime.utc(2026, 8, 21, 20, 30)),
+      '2026-08-21 22:30 Europe/Paris',
+    );
+    expect(context.confidenceLabel, contains('daylight-saving'));
+  });
+
+  test('retains UTC and identifies unknown timezone identifiers', () {
+    final context = PlanningTimeContext.parse('Mars/Olympus');
     expect(context.canConvertOffline, isFalse);
     expect(context.format(DateTime.utc(2026, 8, 21, 20, 30)), contains('UTC'));
-    expect(context.confidenceLabel, contains('unavailable'));
+    expect(context.confidenceLabel, contains('unsupported'));
   });
 }
