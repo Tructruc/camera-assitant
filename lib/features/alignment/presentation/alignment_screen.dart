@@ -8,6 +8,7 @@ import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
+import '../../planning/domain/north_reference.dart';
 import '../../planning/domain/planning_capabilities.dart';
 import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
@@ -32,6 +33,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   final _tolerance = TextEditingController(text: '3');
   final _targetLatitude = TextEditingController();
   final _targetLongitude = TextEditingController();
+  final _magneticDeclination = TextEditingController(text: '0');
   var _body = AlignmentBody.sun;
   var _view = PlanningView.numeric;
   late DateTime _startUtc;
@@ -66,6 +68,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       _tolerance,
       _targetLatitude,
       _targetLongitude,
+      _magneticDeclination,
     ]) {
       c.dispose();
     }
@@ -201,6 +204,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         label: 'Angular tolerance (degrees)',
         controller: _tolerance,
         errorText: _errors['angularToleranceDegrees'],
+      ),
+      CalculatorNumberField(
+        label: 'Magnetic declination, east positive (degrees)',
+        controller: _magneticDeclination,
       ),
       InputDecorator(
         decoration: const InputDecoration(labelText: 'Start date (UTC)'),
@@ -350,6 +357,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       return const Text('No candidate positions to display.');
     }
     final best = output.candidates.first;
+    final magneticBearing = NorthReferenceBearing.trueToMagnetic(
+      best.azimuthDegrees,
+      _value(_magneticDeclination),
+    );
     return switch (_view) {
       PlanningView.numeric => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -392,7 +403,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
                 Text('${best.azimuthDegrees.toStringAsFixed(1)}° true north'),
                 Text(
                   northReference == NorthReference.magneticNorth
-                      ? 'Magnetic north requested. Local declination is unavailable offline, so this true bearing is retained and clearly identified.'
+                      ? '${magneticBearing.toStringAsFixed(1)}° magnetic using ${_value(_magneticDeclination).toStringAsFixed(1)}° east declination.'
                       : 'True north selected. Device magnetic headings require local declination and calibration.',
                 ),
               ],
@@ -429,6 +440,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             altitudeDegrees: best.altitudeDegrees,
             isSun: _body == AlignmentBody.sun,
             northReference: northReference,
+            magneticDeclinationDegrees: _value(_magneticDeclination),
           ),
         ),
       ),
@@ -514,6 +526,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         if (_targetLongitude.text.trim().isNotEmpty)
           'targetLongitudeDegrees': _value(_targetLongitude),
         'angularToleranceDegrees': _value(_tolerance),
+        'magneticDeclinationDegrees': _value(_magneticDeclination),
         'startUtc': _startUtc.toIso8601String(),
         'endUtc': _endUtc.toIso8601String(),
       },
@@ -537,6 +550,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       displayContext: {
         'timeZone': _timeZoneId,
         'northReference': 'true',
+        'requestedNorthReference':
+            ref.read(preferencesProvider).valueOrNull?.northReference.name ??
+            NorthReference.trueNorth.name,
+        'magneticDeclinationDegrees': _value(_magneticDeclination),
         'mapMode': 'offlineSchematic',
       },
       assumptions: _result!.assumptions,
@@ -553,6 +570,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     _tolerance.text = '3';
     _targetLatitude.clear();
     _targetLongitude.clear();
+    _magneticDeclination.text = '0';
     setState(() {
       _body = AlignmentBody.sun;
       _view = PlanningView.numeric;

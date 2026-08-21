@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/data/repositories/preferences_repository.dart';
 import '../data/device_planning_service.dart';
+import '../domain/north_reference.dart';
 
 class LiveArView extends StatefulWidget {
   const LiveArView({
@@ -10,6 +11,7 @@ class LiveArView extends StatefulWidget {
     required this.altitudeDegrees,
     required this.isSun,
     this.northReference = NorthReference.trueNorth,
+    this.magneticDeclinationDegrees = 0,
     this.service = const DevicePlanningService(),
     super.key,
   });
@@ -17,6 +19,7 @@ class LiveArView extends StatefulWidget {
   final double altitudeDegrees;
   final bool isSun;
   final NorthReference northReference;
+  final double magneticDeclinationDegrees;
   final DevicePlanningService service;
   @override
   State<LiveArView> createState() => _LiveArViewState();
@@ -89,9 +92,16 @@ class _LiveArViewState extends State<LiveArView> {
               final reading = snapshot.data;
               final heading =
                   reading?.cameraHeadingDegrees ?? reading?.headingDegrees;
+              final targetBearing =
+                  widget.northReference == NorthReference.magneticNorth
+                  ? NorthReferenceBearing.trueToMagnetic(
+                      widget.azimuthDegrees,
+                      widget.magneticDeclinationDegrees,
+                    )
+                  : widget.azimuthDegrees;
               return CustomPaint(
                 painter: _ArOverlayPainter(
-                  targetAzimuth: widget.azimuthDegrees,
+                  targetAzimuth: targetBearing,
                   targetAltitude: widget.altitudeDegrees,
                   heading: heading,
                 ),
@@ -103,7 +113,7 @@ class _LiveArViewState extends State<LiveArView> {
                     child: Text(
                       heading == null
                           ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
-                          : 'Heading ${heading.toStringAsFixed(1)}° magnetic • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
+                          : 'Heading ${heading.toStringAsFixed(1)}° magnetic • target ${targetBearing.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'}\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
@@ -150,7 +160,7 @@ class _LiveArViewState extends State<LiveArView> {
 
   String _referenceLabel() =>
       widget.northReference == NorthReference.magneticNorth
-      ? 'Magnetic requested; declination unavailable, so target remains true north'
+      ? 'Declination ${widget.magneticDeclinationDegrees.toStringAsFixed(1)}° east applied'
       : 'True-north target; compare magnetic heading with local declination';
 }
 
