@@ -5,6 +5,7 @@ import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
+import 'package:photography_assistant/features/astronomy/presentation/astronomy_screen.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 import 'package:photography_assistant/features/equipment/domain/equipment.dart';
@@ -154,6 +155,31 @@ void main() {
     expect(find.textContaining('lens distortion'), findsOneWidget);
   });
 
+  testWidgets(
+    'night-sky planner provides position, events, and exposure rules',
+    (tester) async {
+      await tester.pumpWidget(app(const AstronomyScreen()));
+      await tester.scrollUntilVisible(
+        find.text('Plan night sky'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(ListView).first, const Offset(0, -150));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Plan night sky'));
+      await tester.pump();
+      expect(find.text('500 rule'), findsOneWidget);
+      expect(find.text('NPF rule'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Next events'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Next events'), findsOneWidget);
+      expect(find.textContaining('true'), findsOneWidget);
+    },
+  );
+
   testWidgets('preferences change result presentation, not calculations', (
     tester,
   ) async {
@@ -255,6 +281,8 @@ void main() {
         300,
         scrollable: find.byType(Scrollable).first,
       );
+      await tester.drag(find.byType(ListView).first, const Offset(0, -150));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(calculateLabel));
       await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
@@ -282,9 +310,10 @@ void main() {
     await calculateAndSave(const TimelapseScreen(), 'Plan timelapse');
     await calculateAndSave(const MacroScreen(), 'Calculate macro setup');
     await calculateAndSave(const PanoramaScreen(), 'Plan panorama');
+    await calculateAndSave(const AstronomyScreen(), 'Plan night sky');
 
     final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
-    expect(snapshots, hasLength(7));
+    expect(snapshots, hasLength(8));
     expect(snapshots.map((snapshot) => snapshot.calculatorId).toSet(), <String>{
       'depth_of_field',
       'exposure_comparison',
@@ -293,6 +322,7 @@ void main() {
       'timelapse',
       'macro',
       'panorama',
+      'astronomy',
     });
     expect(
       snapshots.every(

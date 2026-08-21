@@ -198,3 +198,29 @@ serpentine order avoids an unnecessary full-width return between rows.
 **Limitations**: The planner intentionally does not claim lens-specific distortion, stitched-image crop,
 projection, leveling, or parallax precision. It tells users to rotate near the entrance pupil and retain
 extra crop margin; exact nodal setup and distortion correction require the actual lens and stitching tool.
+
+## Offline astronomy engine and fixture licensing
+
+**Decision**: Fixed ICRS/J2000 coordinates are converted to local altitude and north-clockwise azimuth with
+the standard spherical hour-angle transform. Approximate Greenwich mean sidereal time follows the US Naval
+Observatory convention; rise, transit, and set use the airless geometric horizon and sidereal-day rotation.
+The bundled v1 catalog covers the Milky Way core, Polaris, Sirius, M42, and M31. Sharp-star guidance exposes
+both the common 500 rule and the NPF estimate `(35 × aperture + 30 × pixel pitch µm) / focal length mm`;
+star-trail duration uses Earth's 86,164.0905-second sidereal day.
+
+**Licensing and provenance**: The implementation is original Dart code based on published formulas. It
+does not redistribute IAU SOFA or JPL software. Target coordinates are factual ICRS/J2000 values recorded
+from SIMBAD/CDS. NASA JPL Horizons observer tables and USNO sidereal-time services are fixture/reference
+sources only and are not contacted at runtime. Fixture provenance and tolerances live in
+`test/fixtures/astronomy/README.md`.
+
+**Accuracy boundary**: Fixed-target positions are planning-grade, with a declared 0.25° fixture tolerance
+and two-minute event tolerance. Proper motion, precession/nutation, polar motion, UT1 corrections,
+atmospheric refraction, terrain, and local horizon obstruction are excluded and displayed as limitations.
+Solar-system moving-body ephemerides are a separate alignment increment and must receive their own
+accuracy fixtures before release.
+
+**References**: [USNO approximate sidereal time](https://aa.usno.navy.mil/faq/GAST),
+[IAU SOFA standards service](https://www.iau.org/WG191/WG191/Home.aspx),
+[NASA JPL Horizons manual](https://ssd.jpl.nasa.gov/horizons/manual.html), and
+[SIMBAD Sirius record](https://simbad.cds.unistra.fr/simbad/sim-basic?Ident=Sirius).

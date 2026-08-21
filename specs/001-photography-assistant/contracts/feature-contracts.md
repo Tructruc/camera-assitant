@@ -126,6 +126,15 @@ count, and centered positions in serpentine capture order. Coverage never falls 
 portrait orientation swaps sensor axes, and a bound within one frame returns one centered position.
 Snapshots retain every position and applied camera/lens provenance.
 
+## Fixed-target astronomy contract
+
+Latitude in `[-90, 90]`, east-positive longitude in `[-180, 180]`, a UTC instant, bundled ICRS/J2000
+target, positive optics, and desired trail arc in `(0, 360]` produce airless altitude, true-north azimuth,
+horizon visibility, visibility cycle, and next geometric events. Circumpolar and never-rising targets omit
+rise/set rather than inventing times. The same result includes 500-rule and NPF shutter estimates and the
+sidereal duration for a requested trail arc. Calculations remain offline, disclose exclusions and UTC
+context, and snapshots preserve target coordinates, event times, and equipment provenance.
+
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine

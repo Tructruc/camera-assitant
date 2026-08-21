@@ -207,8 +207,8 @@ requested overlap and correct orientation.
 **Independent Test**: Compare positions, events, and alignment candidates for known coordinates and times,
 then repeat offline and with every location/camera/sensor permission denied.
 
-- [ ] T079 [P] [US4] Select, license, document, and fixture-test astronomical algorithms and offline data in `specs/001-photography-assistant/research.md` and `test/fixtures/astronomy/`
-- [ ] T080 [US4] Implement target positions, events, Milky Way, star shutter, and star-trail numeric planning in `lib/features/astronomy/`
+- [X] T079 [P] [US4] Select, license, document, and fixture-test astronomical algorithms and offline data in `specs/001-photography-assistant/research.md` and `test/fixtures/astronomy/`
+- [X] T080 [US4] Implement target positions, events, Milky Way, star shutter, and star-trail numeric planning in `lib/features/astronomy/`
 - [ ] T081 [P] [US5] Implement Sun/Moon bearing and elevation alignment search with safety guidance in `lib/features/alignment/`
 - [ ] T082 [US4] Add saved locations/plans and map, compass, timeline, numeric, permission-fallback, and capability-gated AR views in `lib/features/planning/`
 

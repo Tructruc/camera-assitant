@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/repositories/preferences_repository.dart';
+import '../features/astronomy/presentation/astronomy_screen.dart';
 import '../features/depth_of_field/presentation/depth_of_field_screen.dart';
 import '../features/exposure_comparison/presentation/exposure_comparison_screen.dart';
 import '../features/flash_exposure/presentation/flash_exposure_screen.dart';
@@ -13,6 +14,12 @@ import '../features/timelapse/presentation/timelapse_screen.dart';
 import 'providers.dart';
 
 enum CalculatorDestination {
+  astronomy(
+    id: 'astronomy',
+    label: 'Night-sky planner',
+    description: 'Targets, events, sharp stars, and star trails',
+    icon: Icons.nightlight_round,
+  ),
   depthOfField(
     id: 'depth_of_field',
     label: 'Depth of field',
@@ -87,6 +94,7 @@ enum CalculatorDestination {
   final IconData icon;
 
   Widget screen() => switch (this) {
+    astronomy => const AstronomyScreen(),
     depthOfField => const DepthOfFieldScreen(),
     exposureComparison => const ExposureComparisonScreen(),
     longExposure => const LongExposureScreen(),

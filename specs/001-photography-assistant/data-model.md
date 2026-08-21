@@ -78,6 +78,13 @@ minimum column and row counts, movement increments, resulting coverage, and an o
 positions. Each position records a one-based capture index plus zero-based row/column and centered yaw and
 pitch angles. Saved plans embed applied camera sensor dimensions and lens focal length.
 
+## Astronomy Plan
+
+An immutable UTC/location plan for a bundled fixed ICRS/J2000 target. It records altitude, true-north
+azimuth, above-horizon state, circumpolar/rising visibility cycle, next geometric rise/transit/set events,
+500-rule and NPF shutter estimates, and star-trail duration. Its snapshot embeds the target coordinates,
+observer coordinates, formula version, optical inputs, applied equipment, assumptions, and event instants.
+
 ## User Preferences
 
 Singleton local settings record.

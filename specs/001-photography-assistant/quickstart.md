@@ -66,6 +66,9 @@ Expected:
 16. Plan a 90° × 45° panorama with a 36 × 24 mm sensor, 50 mm lens, landscape orientation, and 30%
     overlap on both axes; verify a 3 × 2 grid (six frames), approximately 27.7° yaw and 18.9° pitch
     increments, at least the requested coverage, centered serpentine positions, and a reusable saved plan.
+17. Offline, select Sirius at Greenwich (`51.4779° N, 0° E`) for `2026-01-15 22:00 UTC`; verify
+    approximately `20.4°` altitude and `163.7°` true azimuth, UTC rise/transit/set events, a 20.8-second
+    500-rule estimate and 10.3-second NPF estimate for 24 mm, f/2.8, 5 µm, plus a saved immutable plan.
 
 ## Platform build gates
 
