@@ -68,7 +68,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Integration Camera'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Archive Integration Camera'));
+    await tester.tap(find.byTooltip('Actions for Integration Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archive').last);
     await tester.pumpAndSettle();
     expect(find.text('Integration Camera'), findsNothing);
 
@@ -77,7 +79,9 @@ void main() {
     expect(find.text('Integration Camera'), findsOneWidget);
     expect(find.text('Archived'), findsWidgets);
 
-    await tester.tap(find.byTooltip('Restore Integration Camera'));
+    await tester.tap(find.byTooltip('Actions for Integration Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore').last);
     await tester.pumpAndSettle();
     expect(find.text('Integration Camera'), findsOneWidget);
   });

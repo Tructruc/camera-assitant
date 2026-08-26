@@ -144,6 +144,11 @@ void main() {
     // Manual exposure comparison works without inventory or network access.
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Exposure comparison'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Exposure comparison'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -167,6 +172,11 @@ void main() {
     // A saved ND filter applies its canonical strength to the quickstart case.
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Long exposure / ND'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Long exposure / ND'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Saved ND filter (optional)'));
