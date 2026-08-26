@@ -8,7 +8,6 @@ import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
-import '../../planning/domain/north_reference.dart';
 import '../../planning/domain/planning_capabilities.dart';
 import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';

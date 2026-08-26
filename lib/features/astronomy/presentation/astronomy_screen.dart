@@ -12,7 +12,6 @@ import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
 import '../../planning/domain/planning_capabilities.dart';
-import '../../planning/domain/north_reference.dart';
 import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
 import '../../planning/presentation/field_checklist.dart';
