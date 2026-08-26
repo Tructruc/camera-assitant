@@ -14,6 +14,8 @@ import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
 import '../../planning/presentation/field_checklist.dart';
 import '../../planning/presentation/live_ar_view.dart';
+import '../../planning/presentation/live_compass_view.dart';
+import '../../planning/presentation/offline_planning_map.dart';
 import '../domain/alignment_calculator.dart';
 
 class AlignmentScreen extends ConsumerStatefulWidget {
@@ -84,7 +86,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       ),
       const SizedBox(height: 8),
       const Text(
-        'Search one UTC day for the closest bearing and elevation match. All calculations run offline.',
+        'Search up to 31 days for the closest bearing and elevation match. All calculations run offline.',
       ),
       const SizedBox(height: 12),
       DropdownButtonFormField<SavedLocation>(
@@ -357,10 +359,6 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       return const Text('No candidate positions to display.');
     }
     final best = output.candidates.first;
-    final magneticBearing = NorthReferenceBearing.trueToMagnetic(
-      best.azimuthDegrees,
-      _value(_magneticDeclination),
-    );
     return switch (_view) {
       PlanningView.numeric => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -390,47 +388,26 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             ),
         ],
       ),
-      PlanningView.compass => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: Column(
-              children: [
-                Transform.rotate(
-                  angle: best.azimuthDegrees * 3.141592653589793 / 180,
-                  child: const Icon(Icons.navigation, size: 72),
-                ),
-                Text('${best.azimuthDegrees.toStringAsFixed(1)}° true north'),
-                Text(
-                  northReference == NorthReference.magneticNorth
-                      ? '${magneticBearing.toStringAsFixed(1)}° magnetic using ${_value(_magneticDeclination).toStringAsFixed(1)}° east declination.'
-                      : 'True north selected. Device magnetic headings require local declination and calibration.',
-                ),
-              ],
-            ),
-          ),
-        ),
+      PlanningView.compass => LiveCompassView(
+        trueBearingDegrees: best.azimuthDegrees,
+        magneticDeclinationDegrees: _value(_magneticDeclination),
+        northReference: northReference,
       ),
-      PlanningView.map => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Offline schematic map',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Text('Observer: ${_latitude.text}, ${_longitude.text}'),
-              Text(
-                'Sight line: ${_bearing.text}° true for ${_targetDistance.text} m',
-              ),
-              const Text(
-                'No terrain or downloaded map tiles are available; coordinates and geometry remain usable.',
-              ),
-            ],
-          ),
-        ),
+      PlanningView.map => OfflinePlanningMap(
+        desiredBearingDegrees: _value(_bearing),
+        observerLabel:
+            'Observer ${_latitude.text}, ${_longitude.text} · sight-line distance ${_targetDistance.text} m',
+        markers: [
+          for (final candidate in output.candidates.take(8))
+            PlanningMapMarker(
+              bearingDegrees: candidate.azimuthDegrees,
+              altitudeDegrees: candidate.altitudeDegrees,
+              label: PlanningTimeContext.parse(
+                _timeZoneId,
+              ).format(candidate.instantUtc),
+              isPrimary: identical(candidate, best),
+            ),
+        ],
       ),
       PlanningView.augmentedReality => Card(
         child: Padding(

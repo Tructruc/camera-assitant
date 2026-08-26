@@ -92,12 +92,18 @@ class _LiveArViewState extends State<LiveArView> {
               final reading = snapshot.data;
               final heading =
                   reading?.cameraHeadingDegrees ?? reading?.headingDegrees;
-              final targetBearing =
-                  widget.northReference == NorthReference.magneticNorth
+              final declinationValid = NorthReferenceBearing.validDeclination(
+                widget.magneticDeclinationDegrees,
+              );
+              final magneticTarget = declinationValid
                   ? NorthReferenceBearing.trueToMagnetic(
                       widget.azimuthDegrees,
                       widget.magneticDeclinationDegrees,
                     )
+                  : null;
+              final displayedTarget =
+                  widget.northReference == NorthReference.magneticNorth
+                  ? magneticTarget
                   : widget.azimuthDegrees;
               return StreamBuilder<double>(
                 stream: widget.service.cameraPitchStream(),
@@ -105,9 +111,9 @@ class _LiveArViewState extends State<LiveArView> {
                   final pitch = pitchSnapshot.data;
                   return CustomPaint(
                     painter: _ArOverlayPainter(
-                      targetAzimuth: targetBearing,
+                      targetAzimuth: magneticTarget ?? widget.azimuthDegrees,
                       targetAltitude: widget.altitudeDegrees,
-                      heading: heading,
+                      heading: declinationValid ? heading : null,
                       pitch: pitch,
                     ),
                     child: Align(
@@ -116,9 +122,11 @@ class _LiveArViewState extends State<LiveArView> {
                         color: Colors.black87,
                         padding: const EdgeInsets.all(8),
                         child: Text(
-                          heading == null
+                          !declinationValid
+                              ? 'Declination is invalid. Enter a value from 90° west to 90° east; the reticle is hidden.'
+                              : heading == null
                               ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
-                              : 'Heading ${heading.toStringAsFixed(1)}° magnetic • pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°\nTarget ${targetBearing.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'} / ${widget.altitudeDegrees.toStringAsFixed(1)}° altitude\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
+                              : 'Heading ${heading.toStringAsFixed(1)}° magnetic • pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°\nTarget ${displayedTarget!.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'} / ${widget.altitudeDegrees.toStringAsFixed(1)}° altitude\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
@@ -184,9 +192,8 @@ final class _ArOverlayPainter extends CustomPainter {
   final double? pitch;
   @override
   void paint(Canvas canvas, Size size) {
-    final difference = heading == null
-        ? 0.0
-        : ((targetAzimuth - heading! + 540) % 360) - 180;
+    if (heading == null) return;
+    final difference = ((targetAzimuth - heading! + 540) % 360) - 180;
     final x = (size.width / 2 + difference / 60 * size.width).clamp(
       24.0,
       size.width - 24,

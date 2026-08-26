@@ -24,6 +24,26 @@ final class NorthReferenceBearing {
     }
     return _normalize(magneticDegrees + declinationDegrees);
   }
+
+  /// Difference from a magnetic device heading to a true-north target.
+  static double deviceHeadingDelta({
+    required double trueTargetDegrees,
+    required double magneticHeadingDegrees,
+    required double declinationDegrees,
+  }) {
+    final magneticTarget = trueToMagnetic(
+      trueTargetDegrees,
+      declinationDegrees,
+    );
+    if (!magneticHeadingDegrees.isFinite) {
+      throw const FormatException('Device heading must be finite.');
+    }
+    final delta = _normalize(magneticTarget - magneticHeadingDegrees);
+    return delta > 180 ? delta - 360 : delta;
+  }
+
+  static bool validDeclination(double degrees) =>
+      degrees.isFinite && degrees >= -90 && degrees <= 90;
 }
 
 double _normalize(double value) => (value % 360 + 360) % 360;

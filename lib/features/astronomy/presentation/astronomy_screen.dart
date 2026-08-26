@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
@@ -11,10 +12,13 @@ import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
 import '../../planning/domain/planning_capabilities.dart';
+import '../../planning/domain/north_reference.dart';
 import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
 import '../../planning/presentation/field_checklist.dart';
 import '../../planning/presentation/live_ar_view.dart';
+import '../../planning/presentation/live_compass_view.dart';
+import '../../planning/presentation/offline_planning_map.dart';
 import '../domain/astronomy_calculator.dart';
 
 class AstronomyScreen extends ConsumerStatefulWidget {
@@ -33,6 +37,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   final _aperture = TextEditingController(text: '2.8');
   final _pixelPitch = TextEditingController(text: '5');
   final _trailDegrees = TextEditingController(text: '30');
+  final _magneticDeclination = TextEditingController(text: '0');
   late DateTime _instantUtc;
   var _target = CelestialTarget.milkyWayCore;
   var _shutterRule = StarShutterRule.npf;
@@ -68,6 +73,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       _aperture,
       _pixelPitch,
       _trailDegrees,
+      _magneticDeclination,
     ]) {
       controller.dispose();
     }
@@ -95,7 +101,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Plan a fixed celestial target entirely offline. Times use UTC and bearings use true north.',
+          'Plan celestial targets entirely offline. Calculations use UTC and bearings use true north; saved locations can display local civil time.',
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<SavedLocation>(
@@ -176,6 +182,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
               ),
             ],
           ),
+        ),
+        CalculatorNumberField(
+          label: 'Magnetic declination, east positive (degrees)',
+          controller: _magneticDeclination,
         ),
         const SizedBox(height: 12),
         EquipmentPicker<CameraBody>(
@@ -448,6 +458,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         'desiredTrailDegrees': _value(_trailDegrees),
         'selectedRule': _shutterRule.name,
         'sharpnessTolerance': _sharpnessTolerance.name,
+        'magneticDeclinationDegrees': _value(_magneticDeclination),
       },
       canonicalOutputs: {
         'altitudeDegrees': output.altitudeDegrees,
@@ -472,6 +483,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       displayContext: {
         'timeZone': _timeZoneId,
         'azimuthReference': 'trueNorth',
+        'requestedNorthReference':
+            ref.read(preferencesProvider).valueOrNull?.northReference.name ??
+            NorthReference.trueNorth.name,
+        'magneticDeclinationDegrees': _value(_magneticDeclination),
         'angleUnit': 'degrees',
       },
       assumptions: _result!.assumptions,
@@ -528,6 +543,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     _aperture.text = '2.8';
     _pixelPitch.text = '5';
     _trailDegrees.text = '30';
+    _magneticDeclination.text = '0';
     setState(() {
       _target = CelestialTarget.milkyWayCore;
       _shutterRule = StarShutterRule.npf;
@@ -541,6 +557,9 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   }
 
   Widget _planningView(AstronomyOutput output) {
+    final northReference =
+        ref.watch(preferencesProvider).valueOrNull?.northReference ??
+        NorthReference.trueNorth;
     if (_view == PlanningView.augmentedReality &&
         widget.capabilities != null &&
         !widget.capabilities!.canShowAr) {
@@ -573,30 +592,29 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             ),
         ],
       ),
-      PlanningView.compass => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Transform.rotate(
-                angle: output.azimuthDegrees * 3.141592653589793 / 180,
-                child: const Icon(Icons.navigation, size: 72),
-              ),
-              Text('${output.azimuthDegrees.toStringAsFixed(1)}° true north'),
-              const Text(
-                'Calibrate away from metal; magnetic declination is not applied.',
-              ),
-            ],
-          ),
-        ),
+      PlanningView.compass => LiveCompassView(
+        trueBearingDegrees: output.azimuthDegrees,
+        magneticDeclinationDegrees: _value(_magneticDeclination),
+        northReference: northReference,
       ),
-      PlanningView.map => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text(
-            'Offline schematic · observer ${_latitude.text}, ${_longitude.text} at ${_elevation.text} m\nSight line ${output.azimuthDegrees.toStringAsFixed(1)}° true · terrain and map tiles unavailable',
+      PlanningView.map => OfflinePlanningMap(
+        desiredBearingDegrees: output.azimuthDegrees,
+        observerLabel:
+            'Observer ${_latitude.text}, ${_longitude.text} · ${_elevation.text} m',
+        markers: [
+          PlanningMapMarker(
+            bearingDegrees: output.azimuthDegrees,
+            altitudeDegrees: output.altitudeDegrees,
+            label: '${_target.label} now',
+            isPrimary: true,
           ),
-        ),
+          for (final sample in output.path.skip(1).take(7))
+            PlanningMapMarker(
+              bearingDegrees: sample.azimuthDegrees,
+              altitudeDegrees: sample.altitudeDegrees,
+              label: DateFormat('HH:mm').format(sample.instantUtc),
+            ),
+        ],
       ),
       PlanningView.augmentedReality => Card(
         child: Padding(
@@ -605,6 +623,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             azimuthDegrees: output.azimuthDegrees,
             altitudeDegrees: output.altitudeDegrees,
             isSun: false,
+            northReference: northReference,
+            magneticDeclinationDegrees: _value(_magneticDeclination),
           ),
         ),
       ),

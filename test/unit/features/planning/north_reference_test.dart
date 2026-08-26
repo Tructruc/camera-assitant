@@ -21,4 +21,23 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('compares true targets with magnetic device headings', () {
+    expect(
+      NorthReferenceBearing.deviceHeadingDelta(
+        trueTargetDegrees: 100,
+        magneticHeadingDegrees: 80,
+        declinationDegrees: 7,
+      ),
+      13,
+    );
+    expect(
+      NorthReferenceBearing.deviceHeadingDelta(
+        trueTargetDegrees: 2,
+        magneticHeadingDegrees: 350,
+        declinationDegrees: 7,
+      ),
+      5,
+    );
+  });
 }

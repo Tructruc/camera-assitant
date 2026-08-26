@@ -322,3 +322,10 @@ story phases, actionable description, and exact file path.
 - [X] T101 [US4] Recompute moving-target ephemerides while solving planet events and expose the calibrated model with reference fixtures per FR-009 and SC-004 (partial)
 - [X] T102 [US4] Preserve saved observer elevation and disclose it in night-sky results and immutable snapshots per FR-013 and US4/AC1 (partial)
 - [X] T103 [US1] Apply the saved length-unit preference to expanded optics and macro result presentation without changing canonical values per FR-020 and US1/AC3 (partial)
+
+## Phase 15: Convergence
+
+- [X] T104 [US4] CRITICAL compare AR target and device headings in the same magnetic reference while preserving explicit true/magnetic labels per Constitution I and FR-012 (contradicts)
+- [X] T105 [US4] Add reusable live compass views with calibration accuracy, declination, north preference, and unavailable-sensor fallback to both planners per FR-011 and FR-012 (partial)
+- [X] T106 [US4] Replace textual map placeholders with accessible offline spatial schematics for celestial paths and alignment candidates per FR-011 and US4/AC3 (partial)
+- [ ] T107 [US4] Add direct local date/time selection with bundled timezone and daylight-saving conversion to the night-sky planner per US4 and Constitution V (partial)
