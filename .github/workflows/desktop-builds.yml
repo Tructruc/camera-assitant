@@ -1,0 +1,162 @@
+name: Desktop builds
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 2 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-builds-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.x
+          cache: true
+      - name: Install Linux desktop dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang cmake git ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
+      - run: flutter pub get
+      - name: Build Linux release
+        if: github.event_name != 'pull_request'
+        run: flutter build linux --release
+      - name: Build Linux pull-request validation
+        if: github.event_name == 'pull_request'
+        run: flutter build linux --debug
+      - name: Package Linux build
+        if: github.event_name != 'pull_request'
+        run: |
+          tar -czf camera-assistant-linux-x64.tar.gz \
+            -C build/linux/x64/release/bundle .
+      - name: Upload Linux artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: camera-assistant-linux-x64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.x
+          cache: true
+      - run: flutter pub get
+      - name: Build Windows release
+        if: github.event_name != 'pull_request'
+        run: flutter build windows --release
+      - name: Build Windows pull-request validation
+        if: github.event_name == 'pull_request'
+        run: flutter build windows --debug
+      - name: Package Windows build
+        if: github.event_name != 'pull_request'
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "build\windows\x64\runner\Release\*" `
+            -DestinationPath camera-assistant-windows-x64.zip
+      - name: Upload Windows artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: camera-assistant-windows-x64.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.x
+          cache: true
+      - run: flutter pub get
+      - name: Build macOS release
+        if: github.event_name != 'pull_request'
+        run: flutter build macos --release
+      - name: Build macOS pull-request validation
+        if: github.event_name == 'pull_request'
+        run: flutter build macos --debug
+      - name: Package macOS build
+        if: github.event_name != 'pull_request'
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            build/macos/Build/Products/Release/photography_assistant.app \
+            camera-assistant-macos.zip
+      - name: Upload macOS artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: camera-assistant-macos.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-prerelease:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/v2') || github.event_name == 'schedule'
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-release
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: release-assets
+      - uses: actions/download-artifact@v4
+        with:
+          name: macos-release
+          path: release-assets
+      - name: Publish rolling v2 desktop prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="continuous-v2-desktop"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --prerelease \
+              --title "Latest v2 desktop test build" \
+              --notes "Continuously updated desktop test builds from branch v2. Linux (x64 tarball), Windows (x64 zip), macOS (unsigned app zip)."
+          gh release edit "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --prerelease \
+            --title "Latest v2 desktop test build" \
+            --notes "Continuously updated desktop test builds from branch v2. Linux (x64 tarball), Windows (x64 zip), macOS (unsigned app zip)."
+          gh release upload "$tag" \
+            release-assets/camera-assistant-linux-x64.tar.gz \
+            release-assets/camera-assistant-windows-x64.zip \
+            release-assets/camera-assistant-macos.zip \
+            --repo "$GITHUB_REPOSITORY" --clobber
