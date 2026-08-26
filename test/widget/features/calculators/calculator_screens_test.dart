@@ -31,6 +31,7 @@ void main() {
     Widget child, {
     double textScale = 1,
     AppPreferences preferences = const AppPreferences(),
+    List<SavedLocation> savedLocations = const [],
   }) => ProviderScope(
     key: UniqueKey(),
     overrides: <Override>[
@@ -42,7 +43,7 @@ void main() {
         DriftEquipmentRepository(database),
       ),
       savedLocationsProvider.overrideWith(
-        (ref) => Stream<List<SavedLocation>>.value(const []),
+        (ref) => Stream<List<SavedLocation>>.value(savedLocations),
       ),
     ],
     child: MaterialApp(
@@ -200,6 +201,63 @@ void main() {
       expect(find.textContaining('true'), findsWidgets);
     },
   );
+
+  testWidgets('night-sky plans preserve saved observer elevation', (
+    tester,
+  ) async {
+    final location = SavedLocation(
+      id: 'mountain-site',
+      name: 'Mountain site',
+      latitudeDegrees: 45.8326,
+      longitudeDegrees: 6.8652,
+      elevationMetres: 3842,
+      timeZoneId: 'Europe/Paris',
+      source: LocationSource.manual,
+      createdAt: DateTime.utc(2026, 8, 26),
+      updatedAt: DateTime.utc(2026, 8, 26),
+    );
+    await tester.pumpWidget(
+      app(const AstronomyScreen(), savedLocations: [location]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Saved location (optional)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mountain site').last);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(
+            find.widgetWithText(TextField, 'Observer elevation (m)'),
+          )
+          .controller!
+          .text,
+      '3842.0',
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Plan night sky'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Plan night sky'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('elevation 3842.0 m'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Save result'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final save = find.widgetWithText(FilledButton, 'Save result');
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    final snapshot = (await DriftSnapshotRepository(
+      database,
+    ).listNewestFirst()).single;
+    expect(snapshot.canonicalInputs['observerElevationMetres'], 3842.0);
+    expect(snapshot.displayContext['timeZone'], 'Europe/Paris');
+  });
 
   testWidgets('alignment planner preserves fallbacks and solar safety', (
     tester,

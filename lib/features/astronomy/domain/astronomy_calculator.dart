@@ -96,11 +96,13 @@ final class AstronomyInput {
     required this.aperture,
     required this.pixelPitchMicrometres,
     required this.desiredTrailDegrees,
+    this.observerElevationMetres = 0,
     this.selectedRule = StarShutterRule.npf,
     this.sharpnessTolerance = StarSharpnessTolerance.balanced,
   }) : assert(instantUtc.isUtc);
   final double observerLatitudeDegrees;
   final double observerLongitudeDegrees;
+  final double observerElevationMetres;
   final DateTime instantUtc;
   final CelestialTarget target;
   final double focalLengthMm;
@@ -166,6 +168,7 @@ final class AstronomyCalculator {
           input.observerLongitudeDegrees.isFinite &&
           input.observerLongitudeDegrees >= -180 &&
           input.observerLongitudeDegrees <= 180,
+      'observerElevationMetres': input.observerElevationMetres.isFinite,
       'focalLengthMm': _positive(input.focalLengthMm),
       'cropFactor': _positive(input.cropFactor),
       'aperture': _positive(input.aperture),
@@ -261,8 +264,13 @@ final class AstronomyCalculator {
         CalculationAssumption(
           key: 'coordinates',
           value: input.target.isMoving
-              ? 'low-precision circular geocentric orbital model'
+              ? 'JPL 1800-2050 approximate Keplerian geocentric model'
               : 'ICRS/J2000 fixed target',
+        ),
+        CalculationAssumption(
+          key: 'observerElevation',
+          value:
+              '${input.observerElevationMetres.toStringAsFixed(1)} m above mean sea level; not used for terrain or horizon correction',
         ),
         CalculationAssumption(
           key: 'horizon',
@@ -321,18 +329,21 @@ final class AstronomyCalculator {
     double declination,
     double rightAscensionDegrees,
   ) {
-    final transit = _event(
+    var transit = _event(
       input,
       localSidereal,
       rightAscensionDegrees,
       0,
       CelestialEventType.transit,
     );
+    if (input.target.isMoving) {
+      transit = _refineMovingEvent(input, transit);
+    }
     final cosHourAngle = -math.tan(latitude) * math.tan(declination);
     if (cosHourAngle < -1) return (VisibilityCycle.circumpolar, [transit]);
     if (cosHourAngle > 1) return (VisibilityCycle.neverRises, [transit]);
     final horizonHourAngle = _degrees(math.acos(cosHourAngle));
-    final events = [
+    var events = [
       _event(
         input,
         localSidereal,
@@ -348,8 +359,90 @@ final class AstronomyCalculator {
         horizonHourAngle,
         CelestialEventType.set,
       ),
-    ]..sort((a, b) => a.instantUtc.compareTo(b.instantUtc));
+    ];
+    if (input.target.isMoving) {
+      events = events.map((event) => _refineMovingEvent(input, event)).toList();
+    }
+    events.sort((a, b) => a.instantUtc.compareTo(b.instantUtc));
     return (VisibilityCycle.risesAndSets, List.unmodifiable(events));
+  }
+
+  CelestialEvent _refineMovingEvent(
+    AstronomyInput input,
+    CelestialEvent estimate,
+  ) {
+    const step = Duration(minutes: 5);
+    var left = estimate.instantUtc.subtract(const Duration(hours: 2));
+    var leftValue = _eventMetric(input, left, estimate.type);
+    final end = estimate.instantUtc.add(const Duration(hours: 2));
+    while (left.isBefore(end)) {
+      final right = left.add(step);
+      final rightValue = _eventMetric(input, right, estimate.type);
+      final crossing = estimate.type == CelestialEventType.set
+          ? leftValue >= 0 && rightValue <= 0
+          : leftValue <= 0 && rightValue >= 0;
+      if (crossing) {
+        return CelestialEvent(
+          type: estimate.type,
+          instantUtc: _bisectEvent(
+            input,
+            left,
+            right,
+            leftValue,
+            estimate.type,
+          ),
+        );
+      }
+      left = right;
+      leftValue = rightValue;
+    }
+    return estimate;
+  }
+
+  DateTime _bisectEvent(
+    AstronomyInput input,
+    DateTime left,
+    DateTime right,
+    double leftValue,
+    CelestialEventType type,
+  ) {
+    var low = left;
+    var high = right;
+    var lowValue = leftValue;
+    while (high.difference(low) > const Duration(seconds: 1)) {
+      final midpoint = DateTime.fromMicrosecondsSinceEpoch(
+        (low.microsecondsSinceEpoch + high.microsecondsSinceEpoch) ~/ 2,
+        isUtc: true,
+      );
+      final midpointValue = _eventMetric(input, midpoint, type);
+      if ((lowValue <= 0 && midpointValue >= 0) ||
+          (lowValue >= 0 && midpointValue <= 0)) {
+        high = midpoint;
+      } else {
+        low = midpoint;
+        lowValue = midpointValue;
+      }
+    }
+    return DateTime.fromMicrosecondsSinceEpoch(
+      (low.microsecondsSinceEpoch + high.microsecondsSinceEpoch) ~/ 2,
+      isUtc: true,
+    );
+  }
+
+  double _eventMetric(
+    AstronomyInput input,
+    DateTime instantUtc,
+    CelestialEventType type,
+  ) {
+    if (type != CelestialEventType.transit) {
+      return _positionSample(input, instantUtc).altitudeDegrees;
+    }
+    final coordinates = input.target.equatorialAt(instantUtc);
+    return _signed(
+      _greenwichSiderealDegrees(instantUtc) +
+          input.observerLongitudeDegrees -
+          coordinates.$1,
+    );
   }
 
   CelestialEvent _event(

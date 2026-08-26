@@ -166,12 +166,13 @@ class _SavedCalculationDetailScreenState
     final longitude =
         inputs['observerLongitudeDegrees'] ?? inputs['longitudeDegrees'];
     final time = inputs['startUtc'] ?? inputs['instantUtc'];
+    final elevation = inputs['observerElevationMetres'];
     return Card(
       child: ListTile(
         leading: const Icon(Icons.event_available_outlined),
         title: const Text('Offline observation plan'),
         subtitle: Text(
-          'Location $latitude, $longitude\nTime $time\n${_snapshot.displayContext['timeZone'] ?? 'UTC'} · ${_snapshot.displayContext['northReference'] ?? _snapshot.displayContext['azimuthReference'] ?? 'true north'}',
+          'Location $latitude, $longitude${elevation == null ? '' : ' · elevation $elevation m'}\nTime $time\n${_snapshot.displayContext['timeZone'] ?? 'UTC'} · ${_snapshot.displayContext['northReference'] ?? _snapshot.displayContext['azimuthReference'] ?? 'true north'}',
         ),
       ),
     );

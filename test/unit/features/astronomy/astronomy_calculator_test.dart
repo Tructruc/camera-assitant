@@ -104,6 +104,47 @@ void main() {
     expect(coordinates.$2, closeTo(22.03458, 0.25));
   });
 
+  test('moving-planet events are solved against the live ephemeris', () {
+    final input = AstronomyInput(
+      observerLatitudeDegrees: 51.4779,
+      observerLongitudeDegrees: 0,
+      instantUtc: DateTime.utc(2026, 8, 26),
+      target: CelestialTarget.mercury,
+      focalLengthMm: 200,
+      cropFactor: 1,
+      aperture: 4,
+      pixelPitchMicrometres: 4,
+      desiredTrailDegrees: 10,
+    );
+    final result = calculator.calculate(input);
+    final horizonEvents = result.output!.events.where(
+      (event) => event.type != CelestialEventType.transit,
+    );
+    expect(horizonEvents, hasLength(2));
+    for (final event in horizonEvents) {
+      final atEvent = calculator
+          .calculate(
+            AstronomyInput(
+              observerLatitudeDegrees: input.observerLatitudeDegrees,
+              observerLongitudeDegrees: input.observerLongitudeDegrees,
+              instantUtc: event.instantUtc,
+              target: input.target,
+              focalLengthMm: input.focalLengthMm,
+              cropFactor: input.cropFactor,
+              aperture: input.aperture,
+              pixelPitchMicrometres: input.pixelPitchMicrometres,
+              desiredTrailDegrees: input.desiredTrailDegrees,
+            ),
+          )
+          .output!;
+      expect(atEvent.altitudeDegrees, closeTo(0, 0.02));
+    }
+    expect(
+      result.assumptions.first.value,
+      contains('JPL 1800-2050 approximate Keplerian'),
+    );
+  });
+
   test('rejects invalid location, optics, and trail inputs', () {
     final result = calculator.calculate(
       AstronomyInput(

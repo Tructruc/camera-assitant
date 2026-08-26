@@ -319,6 +319,6 @@ story phases, actionable description, and exact file path.
 - [X] T098 [US2] Add prefilled equipment editing and duplication actions across every inventory type per US2 independent test (missing)
 - [X] T099 [US2] Warn before editing or archiving referenced equipment while preserving immutable saved snapshots per US2/AC3 and FR-014 (partial)
 - [X] T100 [US1] Apply compatible saved camera and lens values, one-off overrides, and snapshot provenance in optics tools per FR-008 (partial)
-- [ ] T101 [US4] Recompute moving-target ephemerides while solving planet events and expose the calibrated model with reference fixtures per FR-009 and SC-004 (partial)
-- [ ] T102 [US4] Preserve saved observer elevation and disclose it in night-sky results and immutable snapshots per FR-013 and US4/AC1 (partial)
+- [X] T101 [US4] Recompute moving-target ephemerides while solving planet events and expose the calibrated model with reference fixtures per FR-009 and SC-004 (partial)
+- [X] T102 [US4] Preserve saved observer elevation and disclose it in night-sky results and immutable snapshots per FR-013 and US4/AC1 (partial)
 - [X] T103 [US1] Apply the saved length-unit preference to expanded optics and macro result presentation without changing canonical values per FR-020 and US1/AC3 (partial)

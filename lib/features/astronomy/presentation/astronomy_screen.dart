@@ -27,6 +27,7 @@ class AstronomyScreen extends ConsumerStatefulWidget {
 class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   final _latitude = TextEditingController(text: '51.4779');
   final _longitude = TextEditingController(text: '0');
+  final _elevation = TextEditingController(text: '0');
   final _focalLength = TextEditingController(text: '24');
   final _cropFactor = TextEditingController(text: '1');
   final _aperture = TextEditingController(text: '2.8');
@@ -61,6 +62,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     for (final controller in [
       _latitude,
       _longitude,
+      _elevation,
       _focalLength,
       _cropFactor,
       _aperture,
@@ -111,6 +113,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             setState(() {
               _latitude.text = location.latitudeDegrees.toString();
               _longitude.text = location.longitudeDegrees.toString();
+              _elevation.text = (location.elevationMetres ?? 0).toString();
               _timeZoneId = location.timeZoneId;
               _result = null;
             });
@@ -145,6 +148,11 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           label: 'Observer longitude, east positive (degrees)',
           controller: _longitude,
           errorText: _errors['observerLongitudeDegrees'],
+        ),
+        CalculatorNumberField(
+          label: 'Observer elevation (m)',
+          controller: _elevation,
+          errorText: _errors['observerElevationMetres'],
         ),
         InputDecorator(
           decoration: const InputDecoration(labelText: 'Planning time (UTC)'),
@@ -270,7 +278,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(
-                    'Location ${_latitude.text}, ${_longitude.text} · ${time.timeZoneId}\n${time.confidenceLabel}\nTrue north · geometric horizon · planning accuracy · offline catalog bundled 2026-08-21',
+                    'Location ${_latitude.text}, ${_longitude.text} · elevation ${_elevation.text} m · ${time.timeZoneId}\n${time.confidenceLabel}\nTrue north · geometric horizon · planning accuracy · offline catalog bundled 2026-08-21',
                   ),
                 ),
               );
@@ -301,7 +309,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             ],
             assumptions: [
               _target.isMoving
-                  ? 'Low-precision circular orbital model; verify planet framing with an authoritative ephemeris'
+                  ? 'JPL 1800–2050 approximate Keplerian model; moving-target events are solved against updated coordinates and remain planning-grade'
                   : 'Fixed ICRS/J2000 target coordinates',
               'Airless geometric horizon; terrain and refraction excluded',
               'Approximate mean sidereal time and planning-grade exposure rules',
@@ -385,6 +393,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       AstronomyInput(
         observerLatitudeDegrees: _value(_latitude),
         observerLongitudeDegrees: _value(_longitude),
+        observerElevationMetres: _value(_elevation),
         instantUtc: _instantUtc,
         target: _target,
         focalLengthMm: _value(_focalLength),
@@ -427,6 +436,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       canonicalInputs: {
         'latitudeDegrees': _value(_latitude),
         'longitudeDegrees': _value(_longitude),
+        'observerElevationMetres': _value(_elevation),
         'instantUtc': _instantUtc.toIso8601String(),
         'target': _target.name,
         'rightAscensionDegrees': _target.equatorialAt(_instantUtc).$1,
@@ -498,7 +508,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   };
   String _category(TargetCategory category) => switch (category) {
     TargetCategory.milkyWay => 'Milky Way',
-    TargetCategory.planet => 'Planet · low-precision moving model',
+    TargetCategory.planet => 'Planet · JPL approximate moving model',
     TargetCategory.star => 'Star',
     TargetCategory.nebula => 'Nebula',
     TargetCategory.galaxy => 'Galaxy',
@@ -512,6 +522,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   void _reset() {
     _latitude.text = '51.4779';
     _longitude.text = '0';
+    _elevation.text = '0';
     _focalLength.text = '24';
     _cropFactor.text = '1';
     _aperture.text = '2.8';
@@ -583,7 +594,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Offline schematic · observer ${_latitude.text}, ${_longitude.text}\nSight line ${output.azimuthDegrees.toStringAsFixed(1)}° true · terrain and map tiles unavailable',
+            'Offline schematic · observer ${_latitude.text}, ${_longitude.text} at ${_elevation.text} m\nSight line ${output.azimuthDegrees.toStringAsFixed(1)}° true · terrain and map tiles unavailable',
           ),
         ),
       ),
