@@ -162,6 +162,20 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
     await load();
   }
 
+  Future<void> update(EquipmentItem item) async {
+    switch (item) {
+      case CameraBody():
+        await _repository.updateCamera(item);
+      case Lens():
+        await _repository.updateLens(item);
+      case NdFilter():
+        await _repository.updateFilter(item);
+      case OpticalAccessory():
+        await _repository.updateAccessory(item);
+    }
+    await load();
+  }
+
   Future<void> archive(EquipmentListEntry entry) async {
     switch (entry.kind) {
       case EquipmentKind.camera:

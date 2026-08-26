@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
 import '../domain/equipment.dart';
 import 'equipment_controller.dart';
 import 'equipment_editor_screen.dart';
@@ -48,7 +49,7 @@ class EquipmentListScreen extends ConsumerWidget {
                   ],
                 ),
               ),
-              Expanded(child: _content(state, controller)),
+              Expanded(child: _content(state, controller, ref)),
             ],
           ),
           Positioned(
@@ -76,7 +77,11 @@ class EquipmentListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _content(EquipmentState state, EquipmentController controller) {
+  Widget _content(
+    EquipmentState state,
+    EquipmentController controller,
+    WidgetRef ref,
+  ) {
     return switch (state.status) {
       EquipmentLoadStatus.loading => const Center(
         child: CircularProgressIndicator(semanticsLabel: 'Loading equipment'),
@@ -117,7 +122,15 @@ class EquipmentListScreen extends ConsumerWidget {
         itemCount: state.items.length,
         itemBuilder: (context, index) => _EquipmentCard(
           entry: state.items[index],
-          onArchive: () => controller.archive(state.items[index]),
+          onEdit: () => _openEditor(
+            context,
+            ref,
+            state.items[index],
+            checkReferences: true,
+          ),
+          onDuplicate: () =>
+              _openEditor(context, ref, state.items[index], duplicate: true),
+          onArchive: () => _archive(context, ref, state.items[index]),
           onRestore: () => controller.restore(state.items[index]),
         ),
       ),
@@ -155,16 +168,101 @@ class EquipmentListScreen extends ConsumerWidget {
       );
     }
   }
+
+  Future<void> _openEditor(
+    BuildContext context,
+    WidgetRef ref,
+    EquipmentListEntry entry, {
+    bool duplicate = false,
+    bool checkReferences = false,
+  }) async {
+    if (checkReferences &&
+        !await _confirmReferencedMutation(context, ref, entry, 'edit')) {
+      return;
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: Text(
+              duplicate
+                  ? 'Duplicate ${_kindLabel(entry.kind).toLowerCase()}'
+                  : 'Edit ${_kindLabel(entry.kind).toLowerCase()}',
+            ),
+          ),
+          body: EquipmentEditorScreen(
+            kind: entry.kind,
+            item: entry.item,
+            duplicate: duplicate,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _archive(
+    BuildContext context,
+    WidgetRef ref,
+    EquipmentListEntry entry,
+  ) async {
+    if (!await _confirmReferencedMutation(context, ref, entry, 'archive')) {
+      return;
+    }
+    await ref.read(equipmentControllerProvider.notifier).archive(entry);
+  }
+
+  Future<bool> _confirmReferencedMutation(
+    BuildContext context,
+    WidgetRef ref,
+    EquipmentListEntry entry,
+    String action,
+  ) async {
+    final impact = await ref
+        .read(equipmentRepositoryProvider)
+        .referenceImpact(entry.item.id);
+    if (!impact.isReferenced || !context.mounted) return true;
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(
+              '${action == 'edit' ? 'Edit' : 'Archive'} referenced equipment?',
+            ),
+            content: Text(
+              '${entry.item.name} is used by ${impact.snapshotCount} saved ${impact.snapshotCount == 1 ? 'result or plan' : 'results or plans'}. Saved snapshots keep their original applied values and will not be recalculated.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(
+                  action == 'edit' ? 'Edit anyway' : 'Archive anyway',
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
 }
+
+enum _EquipmentAction { edit, duplicate, archive, restore }
 
 class _EquipmentCard extends StatelessWidget {
   const _EquipmentCard({
     required this.entry,
+    required this.onEdit,
+    required this.onDuplicate,
     required this.onArchive,
     required this.onRestore,
   });
 
   final EquipmentListEntry entry;
+  final VoidCallback onEdit;
+  final VoidCallback onDuplicate;
   final VoidCallback onArchive;
   final VoidCallback onRestore;
 
@@ -176,6 +274,7 @@ class _EquipmentCard extends StatelessWidget {
       label: '${_kindLabel(entry.kind)} ${entry.item.name}',
       child: Card(
         child: ListTile(
+          onTap: archived ? null : onEdit,
           leading: Icon(_kindIcon(entry.kind)),
           title: Text(entry.item.name),
           subtitle: Column(
@@ -189,12 +288,37 @@ class _EquipmentCard extends StatelessWidget {
               if (archived) const Text('Archived'),
             ],
           ),
-          trailing: IconButton(
-            tooltip: archived
-                ? 'Restore ${entry.item.name}'
-                : 'Archive ${entry.item.name}',
-            onPressed: archived ? onRestore : onArchive,
-            icon: Icon(archived ? Icons.restore : Icons.archive_outlined),
+          trailing: PopupMenuButton<_EquipmentAction>(
+            tooltip: 'Actions for ${entry.item.name}',
+            onSelected: (action) {
+              switch (action) {
+                case _EquipmentAction.edit:
+                  onEdit();
+                case _EquipmentAction.duplicate:
+                  onDuplicate();
+                case _EquipmentAction.archive:
+                  onArchive();
+                case _EquipmentAction.restore:
+                  onRestore();
+              }
+            },
+            itemBuilder: (context) => [
+              if (!archived)
+                const PopupMenuItem(
+                  value: _EquipmentAction.edit,
+                  child: Text('Edit'),
+                ),
+              const PopupMenuItem(
+                value: _EquipmentAction.duplicate,
+                child: Text('Duplicate'),
+              ),
+              PopupMenuItem(
+                value: archived
+                    ? _EquipmentAction.restore
+                    : _EquipmentAction.archive,
+                child: Text(archived ? 'Restore' : 'Archive'),
+              ),
+            ],
           ),
         ),
       ),

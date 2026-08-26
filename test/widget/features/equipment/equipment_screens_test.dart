@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
-import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/core/data/database/app_database.dart'
+    hide CalculationSnapshot;
+import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
+import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 import 'package:photography_assistant/features/equipment/domain/equipment.dart'
     as domain;
@@ -166,6 +169,140 @@ void main() {
     );
   });
 
+  testWidgets('editor prefills and updates every value of an existing lens', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final lens = domain.Lens(
+      id: 'lens-edit',
+      name: 'Original Lens',
+      minimumFocalLengthMm: 24,
+      maximumFocalLengthMm: 70,
+      minimumAperture: 2.8,
+      minimumFocusDistanceMm: 380,
+      notes: 'Original notes',
+      provenance: const domain.EquipmentProvenance(
+        source: domain.EquipmentSource.userOverride,
+        note: 'Measured',
+      ),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    domain.EquipmentItem? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EquipmentEditorScreen(
+          kind: EquipmentKind.lens,
+          item: lens,
+          onSave: (item) async => saved = item,
+        ),
+      ),
+    );
+
+    expect(find.widgetWithText(TextFormField, 'Original Lens'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, '24.0'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Lens name'),
+      'Updated Lens',
+    );
+    await tester.ensureVisible(find.text('Update lens'));
+    await tester.tap(find.text('Update lens'));
+    await tester.pumpAndSettle();
+
+    expect(saved, isA<domain.Lens>());
+    expect(saved!.id, lens.id);
+    expect(saved!.createdAt, lens.createdAt);
+    expect(saved!.name, 'Updated Lens');
+  });
+
+  testWidgets('inventory duplicates equipment with a new identity', (
+    WidgetTester tester,
+  ) async {
+    await repository.createCamera(
+      domain.CameraBody(
+        id: 'camera-copy-source',
+        name: 'Travel Camera',
+        sensorWidthMm: 23.5,
+        sensorHeightMm: 15.6,
+        provenance: const domain.EquipmentProvenance(
+          source: domain.EquipmentSource.user,
+        ),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      ),
+    );
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Actions for Travel Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Duplicate'));
+    await tester.pumpAndSettle();
+    expect(
+      find.widgetWithText(TextFormField, 'Travel Camera copy'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Save camera'));
+    await tester.pumpAndSettle();
+
+    final cameras = await repository.listCameras();
+    expect(cameras, hasLength(2));
+    expect(cameras.map((item) => item.id).toSet(), hasLength(2));
+  });
+
+  testWidgets('referenced equipment warns before archival', (
+    WidgetTester tester,
+  ) async {
+    final camera = domain.CameraBody(
+      id: 'camera-referenced',
+      name: 'Referenced Camera',
+      sensorWidthMm: 36,
+      sensorHeightMm: 24,
+      provenance: const domain.EquipmentProvenance(
+        source: domain.EquipmentSource.user,
+      ),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    await repository.createCamera(camera);
+    await DriftSnapshotRepository(database).save(
+      CalculationSnapshot(
+        id: 'referencing-plan',
+        calculatorId: 'field_of_view',
+        formulaVersion: 1,
+        createdAt: timestamp,
+        title: 'Referenced plan',
+        canonicalInputs: const {'sensorWidthMm': 36.0},
+        canonicalOutputs: const {'horizontalDegrees': 40.0},
+        displayContext: const {'lengthUnit': 'metric'},
+        equipment: [
+          AppliedEquipmentSnapshot(
+            id: 'camera-referenced',
+            type: SnapshotEquipmentType.camera,
+            name: 'Referenced Camera',
+            source: 'user',
+            values: {'sensorWidthMm': 36.0, 'sensorHeightMm': 24.0},
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Actions for Referenced Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archive'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Archive referenced equipment?'), findsOneWidget);
+    expect(find.textContaining('1 saved result or plan'), findsOneWidget);
+    expect(find.textContaining('will not be recalculated'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(await repository.listCameras(), hasLength(1));
+  });
+
   testWidgets('picker identifies source and supports a one-off override', (
     WidgetTester tester,
   ) async {
@@ -237,7 +374,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Restart Camera'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Archive Restart Camera'));
+    await tester.tap(find.byTooltip('Actions for Restart Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archive'));
     await tester.pumpAndSettle();
     expect(find.text('Restart Camera'), findsNothing);
     expect(await repository.listCameras(includeArchived: true), hasLength(1));
@@ -253,7 +392,9 @@ void main() {
     await tester.tap(find.text('Archived'));
     await tester.pumpAndSettle();
     expect(find.text('Restart Camera'), findsOneWidget);
-    await tester.tap(find.byTooltip('Restore Restart Camera'));
+    await tester.tap(find.byTooltip('Actions for Restart Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore'));
     await tester.pumpAndSettle();
     expect(find.text('Restart Camera'), findsOneWidget);
     expect(find.textContaining('connect'), findsNothing);

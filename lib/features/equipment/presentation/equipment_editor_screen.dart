@@ -10,9 +10,17 @@ import 'equipment_controller.dart';
 typedef EquipmentSave = Future<void> Function(EquipmentItem item);
 
 class EquipmentEditorScreen extends ConsumerStatefulWidget {
-  const EquipmentEditorScreen({required this.kind, this.onSave, super.key});
+  const EquipmentEditorScreen({
+    required this.kind,
+    this.item,
+    this.duplicate = false,
+    this.onSave,
+    super.key,
+  });
 
   final EquipmentKind kind;
+  final EquipmentItem? item;
+  final bool duplicate;
   final EquipmentSave? onSave;
 
   @override
@@ -27,11 +35,46 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
   final _second = TextEditingController();
   final _third = TextEditingController();
   final _fourth = TextEditingController();
+  final _fifth = TextEditingController();
   final _sourceNote = TextEditingController();
   final _notes = TextEditingController();
   var _source = EquipmentSource.user;
   var _accessoryKind = OpticalAccessoryKind.extensionTube;
   var _saving = false;
+
+  bool get _isEditing => widget.item != null && !widget.duplicate;
+
+  @override
+  void initState() {
+    super.initState();
+    final item = widget.item;
+    if (item == null) return;
+    _name.text = widget.duplicate ? '${item.name} copy' : item.name;
+    _source = item.provenance.source;
+    _sourceNote.text = item.provenance.note ?? '';
+    switch (item) {
+      case CameraBody():
+        _first.text = '${item.sensorWidthMm}';
+        _second.text = '${item.sensorHeightMm}';
+        _third.text = item.defaultCircleOfConfusionMm?.toString() ?? '';
+      case Lens():
+        _first.text = '${item.minimumFocalLengthMm}';
+        _second.text = '${item.maximumFocalLengthMm}';
+        _third.text = item.minimumAperture?.toString() ?? '';
+        _fourth.text = item.maximumFocalLengthMinimumAperture?.toString() ?? '';
+        _fifth.text = item.minimumFocusDistanceMm?.toString() ?? '';
+        _notes.text = item.notes ?? '';
+      case NdFilter():
+        _first.text = '${item.strengthStops}';
+        _second.text = item.opticalDensity?.toString() ?? '';
+        _third.text = item.filterFactor?.toString() ?? '';
+        _notes.text = item.notes ?? '';
+      case OpticalAccessory():
+        _accessoryKind = item.kind;
+        _first.text = '${item.value}';
+        _notes.text = item.notes ?? '';
+    }
+  }
 
   @override
   void dispose() {
@@ -41,6 +84,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
       _second,
       _third,
       _fourth,
+      _fifth,
       _sourceNote,
       _notes,
     ]) {
@@ -96,7 +140,9 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
             FilledButton(
               onPressed: _saving ? null : _save,
               child: Text(
-                _saving ? 'Saving…' : 'Save ${_kindLabel().toLowerCase()}',
+                _saving
+                    ? 'Saving…'
+                    : '${_isEditing ? 'Update' : 'Save'} ${_kindLabel().toLowerCase()}',
               ),
             ),
           ],
@@ -120,7 +166,13 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
       const SizedBox(height: 12),
       _numberField(_third, 'Maximum aperture (f-number)', optional: true),
       const SizedBox(height: 12),
-      _numberField(_fourth, 'Minimum focus distance (mm)', optional: true),
+      _numberField(
+        _fourth,
+        'Maximum focal length aperture (f-number)',
+        optional: true,
+      ),
+      const SizedBox(height: 12),
+      _numberField(_fifth, 'Minimum focus distance (mm)', optional: true),
     ],
     EquipmentKind.filter => <Widget>[
       _numberField(_first, 'Filter strength (stops)', allowZero: true),
@@ -180,7 +232,12 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
         source: _source,
         note: _nullableText(_sourceNote.text),
       );
-      final id = 'equipment-${now.microsecondsSinceEpoch}';
+      final original = widget.item;
+      final id = _isEditing
+          ? original!.id
+          : 'equipment-${now.microsecondsSinceEpoch}';
+      final createdAt = _isEditing ? original!.createdAt : now;
+      final archivedAt = _isEditing ? original!.archivedAt : null;
       final item = switch (widget.kind) {
         EquipmentKind.camera => CameraBody(
           id: id,
@@ -189,8 +246,9 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           sensorHeightMm: _value(_second),
           defaultCircleOfConfusionMm: _optionalValue(_third),
           provenance: provenance,
-          createdAt: now,
+          createdAt: createdAt,
           updatedAt: now,
+          archivedAt: archivedAt,
         ),
         EquipmentKind.lens => Lens(
           id: id,
@@ -198,11 +256,13 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           minimumFocalLengthMm: _value(_first),
           maximumFocalLengthMm: _value(_second),
           minimumAperture: _optionalValue(_third),
-          minimumFocusDistanceMm: _optionalValue(_fourth),
+          maximumFocalLengthMinimumAperture: _optionalValue(_fourth),
+          minimumFocusDistanceMm: _optionalValue(_fifth),
           notes: _nullableText(_notes.text),
           provenance: provenance,
-          createdAt: now,
+          createdAt: createdAt,
           updatedAt: now,
+          archivedAt: archivedAt,
         ),
         EquipmentKind.filter => NdFilter(
           id: id,
@@ -212,8 +272,9 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           filterFactor: _optionalValue(_third),
           notes: _nullableText(_notes.text),
           provenance: provenance,
-          createdAt: now,
+          createdAt: createdAt,
           updatedAt: now,
+          archivedAt: archivedAt,
         ),
         EquipmentKind.accessory => OpticalAccessory(
           id: id,
@@ -222,13 +283,16 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           value: _value(_first),
           notes: _nullableText(_notes.text),
           provenance: provenance,
-          createdAt: now,
+          createdAt: createdAt,
           updatedAt: now,
+          archivedAt: archivedAt,
         ),
       };
       final save = widget.onSave;
       if (save != null) {
         await save(item);
+      } else if (_isEditing) {
+        await ref.read(equipmentControllerProvider.notifier).update(item);
       } else {
         await ref.read(equipmentControllerProvider.notifier).create(item);
       }

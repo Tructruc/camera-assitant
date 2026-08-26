@@ -313,3 +313,12 @@ story phases, actionable description, and exact file path.
 - [X] T095 [US4] Resolve bundled IANA timezone/DST rules offline for saved planning locations per FR-013 and US4/AC1 (partial)
 - [X] T096 [US4] Incorporate live device pitch into AR vertical target placement with unavailable-sensor fallback per FR-011 and FR-012 (partial)
 - [X] T097 [US7] Render saved observation plans and field checklists as actionable plan details rather than generic payload rows per FR-014 and US7/AC2 (partial)
+
+## Phase 14: Convergence
+
+- [X] T098 [US2] Add prefilled equipment editing and duplication actions across every inventory type per US2 independent test (missing)
+- [X] T099 [US2] Warn before editing or archiving referenced equipment while preserving immutable saved snapshots per US2/AC3 and FR-014 (partial)
+- [ ] T100 [US1] Apply compatible saved camera and lens values, one-off overrides, and snapshot provenance in optics tools per FR-008 (partial)
+- [ ] T101 [US4] Recompute moving-target ephemerides while solving planet events and expose the calibrated model with reference fixtures per FR-009 and SC-004 (partial)
+- [ ] T102 [US4] Preserve saved observer elevation and disclose it in night-sky results and immutable snapshots per FR-013 and US4/AC1 (partial)
+- [ ] T103 [US1] Apply the saved length-unit preference to expanded optics and macro result presentation without changing canonical values per FR-020 and US1/AC3 (partial)
