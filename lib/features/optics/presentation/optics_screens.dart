@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/domain/validation/validation.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
+import '../../equipment/domain/equipment.dart';
+import '../../equipment/presentation/equipment_controller.dart';
+import '../../equipment/presentation/equipment_picker.dart';
 import '../domain/optics_calculators.dart';
 
 enum _OpticsTool { fieldOfView, diffraction, focusStack }
@@ -35,6 +40,8 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
   List<String> _assumptions = const [];
   String _guidance = '';
   Map<String, Object?> _outputs = const {};
+  CameraBody? _camera;
+  Lens? _lens;
 
   List<(String, String, String)> get _fields => switch (widget.tool) {
     _OpticsTool.fieldOfView => const [
@@ -88,32 +95,74 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => CalculatorPage(
-    children: [
-      Text(_title, style: Theme.of(context).textTheme.headlineSmall),
-      const SizedBox(height: 8),
-      Text(_description),
-      const SizedBox(height: 16),
-      for (var index = 0; index < _fields.length; index++)
-        CalculatorNumberField(
-          label: _fields[index].$1,
-          controller: _controllers[index],
-          errorText: _errors[_fields[index].$3],
-          fieldKey: Key('${widget.tool.name}-${_fields[index].$3}'),
+  Widget build(BuildContext context) {
+    ref.watch(preferencesProvider);
+    final equipment = ref.watch(equipmentControllerProvider).items;
+    final cameras = equipment
+        .where((entry) => entry.kind == EquipmentKind.camera)
+        .map((entry) => entry.item)
+        .whereType<CameraBody>()
+        .toList();
+    final lenses = equipment
+        .where((entry) => entry.kind == EquipmentKind.lens)
+        .map((entry) => entry.item)
+        .whereType<Lens>()
+        .toList();
+    return CalculatorPage(
+      children: [
+        Text(_title, style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 8),
+        Text(_description),
+        const SizedBox(height: 16),
+        if (widget.tool != _OpticsTool.diffraction) ...[
+          EquipmentPicker<CameraBody>(
+            label: 'Saved camera (optional)',
+            items: cameras,
+            itemLabel: (item) => item.name,
+            value: _camera,
+            onSelected: _applyCamera,
+          ),
+          if (_camera case final camera?)
+            AppliedEquipmentNotice(
+              equipmentName: camera.name,
+              appliedValues: widget.tool == _OpticsTool.fieldOfView
+                  ? '${_controllers[0].text} × ${_controllers[1].text} mm sensor'
+                  : '${_controllers[2].text} mm circle of confusion',
+            ),
+        ],
+        EquipmentPicker<Lens>(
+          label: 'Saved lens (optional)',
+          items: lenses,
+          itemLabel: (item) => item.name,
+          value: _lens,
+          onSelected: _applyLens,
         ),
-      FilledButton(onPressed: _calculate, child: const Text('Calculate')),
-      const SizedBox(height: 16),
-      if (_rows case final rows?)
-        CalculationResultView(
-          title: '$_title result',
-          rows: rows,
-          assumptions: _assumptions,
-          guidance: _guidance,
-          onSave: _save,
-          onReset: _reset,
-        ),
-    ],
-  );
+        if (_lens case final lens?)
+          AppliedEquipmentNotice(
+            equipmentName: lens.name,
+            appliedValues: _lensAppliedValues,
+          ),
+        for (var index = 0; index < _fields.length; index++)
+          CalculatorNumberField(
+            label: _fields[index].$1,
+            controller: _controllers[index],
+            errorText: _errors[_fields[index].$3],
+            fieldKey: Key('${widget.tool.name}-${_fields[index].$3}'),
+          ),
+        FilledButton(onPressed: _calculate, child: const Text('Calculate')),
+        const SizedBox(height: 16),
+        if (_rows case final rows?)
+          CalculationResultView(
+            title: '$_title result',
+            rows: rows,
+            assumptions: _assumptions,
+            guidance: _guidance,
+            onSave: _save,
+            onReset: _reset,
+          ),
+      ],
+    );
+  }
 
   double _value(int index) =>
       double.tryParse(_controllers[index].text.trim()) ?? double.nan;
@@ -262,10 +311,30 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
           _fields[index].$3: _value(index),
       },
       canonicalOutputs: _outputs,
-      displayContext: const {'distanceUnit': 'metric'},
+      displayContext: {'distanceUnit': _lengthDisplay.name},
       assumptions: _snapshotAssumptions,
       warnings: _snapshotWarnings,
-      equipment: const [],
+      equipment: [
+        if (_camera case final camera?)
+          _equipment(camera, SnapshotEquipmentType.camera, {
+            if (widget.tool == _OpticsTool.fieldOfView) ...{
+              'sensorWidthMm': _value(0),
+              'sensorHeightMm': _value(1),
+            },
+            if (widget.tool == _OpticsTool.focusStack)
+              'circleOfConfusionMm': _value(2),
+          }),
+        if (_lens case final lens?)
+          _equipment(lens, SnapshotEquipmentType.lens, {
+            if (widget.tool == _OpticsTool.fieldOfView)
+              'focalLengthMm': _value(2),
+            if (widget.tool == _OpticsTool.diffraction) 'aperture': _value(0),
+            if (widget.tool == _OpticsTool.focusStack) ...{
+              'focalLengthMm': _value(0),
+              'aperture': _value(1),
+            },
+          }),
+      ],
     ),
   );
   void _reset() {
@@ -276,12 +345,70 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
       _errors = const {};
       _rows = null;
       _outputs = const {};
+      _camera = null;
+      _lens = null;
     });
   }
 
-  String _distance(double mm) => mm >= 1000
-      ? '${(mm / 1000).toStringAsFixed(2)} m'
-      : '${mm.toStringAsFixed(1)} mm';
+  LengthDisplay get _lengthDisplay =>
+      ref.read(preferencesProvider).valueOrNull?.lengthDisplay ??
+      LengthDisplay.metric;
+
+  String _distance(double mm) => formatDisplayLength(mm, _lengthDisplay);
+
+  void _applyCamera(CameraBody? camera) => setState(() {
+    _camera = camera;
+    if (camera != null) {
+      if (widget.tool == _OpticsTool.fieldOfView) {
+        _controllers[0].text = camera.sensorWidthMm.toString();
+        _controllers[1].text = camera.sensorHeightMm.toString();
+      } else if (widget.tool == _OpticsTool.focusStack &&
+          camera.defaultCircleOfConfusionMm != null) {
+        _controllers[2].text = camera.defaultCircleOfConfusionMm.toString();
+      }
+    }
+    _rows = null;
+  });
+
+  void _applyLens(Lens? lens) => setState(() {
+    _lens = lens;
+    if (lens != null) {
+      switch (widget.tool) {
+        case _OpticsTool.fieldOfView:
+          _controllers[2].text = lens.minimumFocalLengthMm.toString();
+        case _OpticsTool.diffraction:
+          if (lens.minimumAperture != null) {
+            _controllers[0].text = lens.minimumAperture.toString();
+          }
+        case _OpticsTool.focusStack:
+          _controllers[0].text = lens.maximumFocalLengthMm.toString();
+          final aperture =
+              lens.maximumFocalLengthMinimumAperture ?? lens.minimumAperture;
+          if (aperture != null) _controllers[1].text = aperture.toString();
+      }
+    }
+    _rows = null;
+  });
+
+  String get _lensAppliedValues => switch (widget.tool) {
+    _OpticsTool.fieldOfView => '${_controllers[2].text} mm focal length',
+    _OpticsTool.diffraction => 'f/${_controllers[0].text} aperture',
+    _OpticsTool.focusStack =>
+      '${_controllers[0].text} mm at f/${_controllers[1].text}',
+  };
+
+  AppliedEquipmentSnapshot _equipment(
+    EquipmentItem item,
+    SnapshotEquipmentType type,
+    Map<String, Object?> values,
+  ) => AppliedEquipmentSnapshot(
+    id: item.id,
+    type: type,
+    name: item.name,
+    source: item.provenance.source.name,
+    note: item.provenance.note,
+    values: values,
+  );
 
   List<CalculationAssumption> get _snapshotAssumptions => switch (widget.tool) {
     _OpticsTool.fieldOfView => const [

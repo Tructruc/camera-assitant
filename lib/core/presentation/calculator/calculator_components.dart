@@ -3,6 +3,20 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../data/repositories/preferences_repository.dart';
+
+String formatDisplayLength(double millimetres, LengthDisplay display) {
+  if (display == LengthDisplay.imperial) {
+    final inches = millimetres / 25.4;
+    return inches >= 12
+        ? '${(inches / 12).toStringAsFixed(2)} ft'
+        : '${inches.toStringAsFixed(2)} in';
+  }
+  return millimetres >= 1000
+      ? '${(millimetres / 1000).toStringAsFixed(2)} m'
+      : '${millimetres.toStringAsFixed(1)} mm';
+}
+
 class CalculatorPage extends StatelessWidget {
   const CalculatorPage({required this.children, super.key});
 

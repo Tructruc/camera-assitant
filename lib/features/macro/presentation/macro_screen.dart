@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
@@ -49,6 +51,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(preferencesProvider);
     final entries = ref.watch(equipmentControllerProvider).items;
     final lenses = entries
         .where((entry) => entry.kind == EquipmentKind.lens)
@@ -212,7 +215,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
               ),
               (
                 'Subject width across frame',
-                '${output.subjectWidthMm.toStringAsFixed(1)} mm',
+                formatDisplayLength(output.subjectWidthMm, _lengthDisplay),
               ),
               (
                 'Exposure compensation',
@@ -315,7 +318,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         'subjectWidthMm': output.subjectWidthMm,
         'exposureCompensationStops': output.exposureCompensationStops,
       },
-      displayContext: const {'lengthUnit': 'millimetres'},
+      displayContext: {'lengthUnit': _lengthDisplay.name},
       assumptions: _result!.assumptions,
       warnings: _result!.warnings,
       equipment: [
@@ -393,4 +396,8 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
       'sensorWidthMm': _value(_sensorWidth),
     },
   };
+
+  LengthDisplay get _lengthDisplay =>
+      ref.read(preferencesProvider).valueOrNull?.lengthDisplay ??
+      LengthDisplay.metric;
 }
