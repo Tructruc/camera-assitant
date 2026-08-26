@@ -74,6 +74,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Integration Camera'), findsNothing);
 
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(-800, 0),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Archived'));
     await tester.pumpAndSettle();
     expect(find.text('Integration Camera'), findsOneWidget);
