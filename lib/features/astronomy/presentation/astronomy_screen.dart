@@ -160,29 +160,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           controller: _elevation,
           errorText: _errors['observerElevationMetres'],
         ),
-        InputDecorator(
-          decoration: const InputDecoration(labelText: 'Planning time (UTC)'),
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'One hour earlier',
-                onPressed: () => _shiftTime(-1),
-                icon: const Icon(Icons.remove),
-              ),
-              Expanded(
-                child: Text(
-                  DateFormat("yyyy-MM-dd HH:mm 'UTC'").format(_instantUtc),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              IconButton(
-                tooltip: 'One hour later',
-                onPressed: () => _shiftTime(1),
-                icon: const Icon(Icons.add),
-              ),
-            ],
-          ),
-        ),
+        _planningTimeControl(),
         CalculatorNumberField(
           label: 'Magnetic declination, east positive (degrees)',
           controller: _magneticDeclination,
@@ -428,6 +406,82 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     _instantUtc = _instantUtc.add(Duration(hours: hours));
     _result = null;
   });
+
+  Widget _planningTimeControl() {
+    final time = PlanningTimeContext.parse(_timeZoneId);
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: 'Planning time (${time.timeZoneId})',
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            time.format(_instantUtc),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Text(
+            '${DateFormat("yyyy-MM-dd HH:mm 'UTC'").format(_instantUtc)} · ${time.confidenceLabel}',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _pickLocalDateTime,
+            icon: const Icon(Icons.event_outlined),
+            label: const Text('Choose local date and time'),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                tooltip: 'One hour earlier',
+                onPressed: () => _shiftTime(-1),
+                icon: const Icon(Icons.remove),
+              ),
+              const Text('Adjust one hour'),
+              IconButton(
+                tooltip: 'One hour later',
+                onPressed: () => _shiftTime(1),
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickLocalDateTime() async {
+    final time = PlanningTimeContext.parse(_timeZoneId);
+    final initial = time.localCivilTime(_instantUtc);
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1800),
+      lastDate: DateTime(2050, 12, 31),
+      helpText: 'Choose local date · ${time.timeZoneId}',
+    );
+    if (selectedDate == null || !mounted) return;
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+      helpText: 'Choose local time · ${time.timeZoneId}',
+    );
+    if (selectedTime == null || !mounted) return;
+    final localCivilTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      selectedTime.hour,
+      selectedTime.minute,
+    );
+    setState(() {
+      _instantUtc = time.toUtc(localCivilTime);
+      _result = null;
+    });
+  }
+
   void _applyLens(Lens? lens) => setState(() {
     _lens = lens;
     if (lens != null) _focalLength.text = lens.minimumFocalLengthMm.toString();

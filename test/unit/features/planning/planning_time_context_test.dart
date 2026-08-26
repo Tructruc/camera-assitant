@@ -28,6 +28,34 @@ void main() {
     expect(context.confidenceLabel, contains('daylight-saving'));
   });
 
+  test('converts local civil fields through IANA daylight-saving rules', () {
+    final context = PlanningTimeContext.parse('Europe/Paris');
+    expect(
+      context.toUtc(DateTime(2026, 1, 21, 21, 30)),
+      DateTime.utc(2026, 1, 21, 20, 30),
+    );
+    expect(
+      context.toUtc(DateTime(2026, 8, 21, 22, 30)),
+      DateTime.utc(2026, 8, 21, 20, 30),
+    );
+    expect(
+      context.localCivilTime(DateTime.utc(2026, 8, 21, 20, 30)),
+      DateTime(2026, 8, 21, 22, 30),
+    );
+  });
+
+  test('converts local civil fields with fixed offsets offline', () {
+    final context = PlanningTimeContext.parse('UTC-0530');
+    expect(
+      context.toUtc(DateTime(2026, 8, 21, 15)),
+      DateTime.utc(2026, 8, 21, 20, 30),
+    );
+    expect(
+      context.localCivilTime(DateTime.utc(2026, 8, 21, 20, 30)),
+      DateTime(2026, 8, 21, 15),
+    );
+  });
+
   test('retains UTC and identifies unknown timezone identifiers', () {
     final context = PlanningTimeContext.parse('Mars/Olympus');
     expect(context.canConvertOffline, isFalse);

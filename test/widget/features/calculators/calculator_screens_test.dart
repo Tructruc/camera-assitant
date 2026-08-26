@@ -259,6 +259,38 @@ void main() {
     expect(snapshot.displayContext['timeZone'], 'Europe/Paris');
   });
 
+  testWidgets('night-sky planner opens a direct local date and time picker', (
+    tester,
+  ) async {
+    final location = SavedLocation(
+      id: 'paris',
+      name: 'Paris',
+      latitudeDegrees: 48.8566,
+      longitudeDegrees: 2.3522,
+      timeZoneId: 'Europe/Paris',
+      source: LocationSource.manual,
+      createdAt: DateTime.utc(2026, 8, 26),
+      updatedAt: DateTime.utc(2026, 8, 26),
+    );
+    await tester.pumpWidget(
+      app(const AstronomyScreen(), savedLocations: [location]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Saved location (optional)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paris').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose local date and time'), findsOneWidget);
+    expect(find.textContaining('Europe/Paris'), findsWidgets);
+    final chooseTime = find.text('Choose local date and time');
+    await tester.ensureVisible(chooseTime);
+    await tester.pumpAndSettle();
+    await tester.tap(chooseTime);
+    await tester.pumpAndSettle();
+    expect(find.byType(DatePickerDialog), findsOneWidget);
+  });
+
   testWidgets('alignment planner preserves fallbacks and solar safety', (
     tester,
   ) async {
