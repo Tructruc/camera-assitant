@@ -126,6 +126,15 @@ class UserPreferences extends Table {
       text().withDefault(const Constant<String>('[]'))();
   TextColumn get northReference =>
       text().withDefault(const Constant<String>('trueNorth'))();
+  TextColumn get defaultStarSharpness => text()
+      .check(defaultStarSharpness.isIn(const ['strict', 'balanced', 'relaxed']))
+      .withDefault(const Constant<String>('balanced'))();
+  RealColumn get defaultAlignmentToleranceDegrees => real()
+      .check(
+        defaultAlignmentToleranceDegrees.isBiggerThanValue(0) &
+            defaultAlignmentToleranceDegrees.isSmallerOrEqualValue(180),
+      )
+      .withDefault(const Constant<double>(3))();
 
   @override
   Set<Column<Object>> get primaryKey => <Column<Object>>{id};
@@ -176,7 +185,7 @@ final class AppDatabase extends _$AppDatabase {
   AppDatabase.inMemory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -232,6 +241,21 @@ final class AppDatabase extends _$AppDatabase {
           await migrator.addColumn(
             userPreferences,
             userPreferences.northReference,
+          );
+        }
+      }
+      if (from < 5) {
+        final preferencesTable = await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'user_preferences'",
+        ).getSingleOrNull();
+        if (preferencesTable != null) {
+          await migrator.addColumn(
+            userPreferences,
+            userPreferences.defaultStarSharpness,
+          );
+          await migrator.addColumn(
+            userPreferences,
+            userPreferences.defaultAlignmentToleranceDegrees,
           );
         }
       }

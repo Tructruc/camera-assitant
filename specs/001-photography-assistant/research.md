@@ -204,7 +204,10 @@ extra crop margin; exact nodal setup and distortion correction require the actua
 **Decision**: Fixed ICRS/J2000 coordinates are converted to local altitude and north-clockwise azimuth with
 the standard spherical hour-angle transform. Approximate Greenwich mean sidereal time follows the US Naval
 Observatory convention; rise, transit, and set use the airless geometric horizon and sidereal-day rotation.
-The bundled v1 catalog covers the Milky Way core, Polaris, Sirius, M42, and M31. Sharp-star guidance exposes
+The bundled catalog version `2026.08` covers the Milky Way core, planets, and categorized notable stars,
+nebulae, galaxies, and clusters. Its metadata records SIMBAD/JPL provenance, a 1800–2050 supported epoch,
+and its 2026-08-21 bundle date. Catalog metadata is reviewed at least annually, shipped only through a
+versioned app release, and labeled stale after 365 days so offline users can judge its age. Sharp-star guidance exposes
 both the common 500 rule and the NPF estimate `(35 × aperture + 30 × pixel pitch µm) / focal length mm`;
 star-trail duration uses Earth's 86,164.0905-second sidereal day.
 

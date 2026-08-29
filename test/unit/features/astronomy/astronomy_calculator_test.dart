@@ -84,6 +84,23 @@ void main() {
     );
   });
 
+  test('catalog metadata declares provenance, epoch, and staleness', () {
+    const metadata = AstronomyCatalogMetadata.current;
+    expect(metadata.version, isNotEmpty);
+    expect(metadata.provenance, contains('SIMBAD'));
+    expect(metadata.supportedStartYear, 1800);
+    expect(metadata.supportedEndYear, 2050);
+    expect(
+      metadata.freshnessAt(DateTime.utc(2026, 8, 29)),
+      CatalogFreshness.current,
+    );
+    expect(
+      metadata.freshnessAt(DateTime.utc(2028, 8, 29)),
+      CatalogFreshness.stale,
+    );
+    expect(metadata.updatePolicy, contains('annual'));
+  });
+
   test('moving planets change equatorial position over time', () {
     final first = CelestialTarget.jupiter.equatorialAt(
       DateTime.utc(2026, 1, 1),

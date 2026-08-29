@@ -74,6 +74,46 @@ class SettingsScreen extends ConsumerWidget {
                 _save(context, ref, value.copyWith(northReference: choice)),
           ),
           const SizedBox(height: 16),
+          Text(
+            'Planner defaults',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          _SettingCard<DefaultStarSharpness>(
+            title: 'Default star sharpness',
+            subtitle:
+                'Applied when opening or resetting the night-sky planner.',
+            value: value.defaultStarSharpness,
+            options: const <(DefaultStarSharpness, String)>[
+              (DefaultStarSharpness.strict, 'Strict'),
+              (DefaultStarSharpness.balanced, 'Balanced'),
+              (DefaultStarSharpness.relaxed, 'Relaxed'),
+            ],
+            onChanged: (choice) => _save(
+              context,
+              ref,
+              value.copyWith(defaultStarSharpness: choice),
+            ),
+          ),
+          _SettingCard<double>(
+            title: 'Alignment angular tolerance',
+            subtitle:
+                'Applied when opening or resetting the alignment planner.',
+            value: value.defaultAlignmentToleranceDegrees,
+            options: const <(double, String)>[
+              (1, '1°'),
+              (2, '2°'),
+              (3, '3°'),
+              (5, '5°'),
+              (10, '10°'),
+            ],
+            onChanged: (choice) => _save(
+              context,
+              ref,
+              value.copyWith(defaultAlignmentToleranceDegrees: choice),
+            ),
+          ),
+          const SizedBox(height: 16),
           Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           _SettingCard<AppThemeMode>(

@@ -4243,6 +4243,39 @@ class $UserPreferencesTable extends UserPreferences
     requiredDuringInsert: false,
     defaultValue: const Constant<String>('trueNorth'),
   );
+  static const VerificationMeta _defaultStarSharpnessMeta =
+      const VerificationMeta('defaultStarSharpness');
+  @override
+  late final GeneratedColumn<String> defaultStarSharpness =
+      GeneratedColumn<String>(
+        'default_star_sharpness',
+        aliasedName,
+        false,
+        check: () =>
+            defaultStarSharpness.isIn(const ['strict', 'balanced', 'relaxed']),
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant<String>('balanced'),
+      );
+  static const VerificationMeta _defaultAlignmentToleranceDegreesMeta =
+      const VerificationMeta('defaultAlignmentToleranceDegrees');
+  @override
+  late final GeneratedColumn<double> defaultAlignmentToleranceDegrees =
+      GeneratedColumn<double>(
+        'default_alignment_tolerance_degrees',
+        aliasedName,
+        false,
+        check: () =>
+            ComparableExpr(
+              defaultAlignmentToleranceDegrees,
+            ).isBiggerThanValue(0) &
+            ComparableExpr(
+              defaultAlignmentToleranceDegrees,
+            ).isSmallerOrEqualValue(180),
+        type: DriftSqlType.double,
+        requiredDuringInsert: false,
+        defaultValue: const Constant<double>(3),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4252,6 +4285,8 @@ class $UserPreferencesTable extends UserPreferences
     themeMode,
     favoriteToolIds,
     northReference,
+    defaultStarSharpness,
+    defaultAlignmentToleranceDegrees,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4319,6 +4354,24 @@ class $UserPreferencesTable extends UserPreferences
         ),
       );
     }
+    if (data.containsKey('default_star_sharpness')) {
+      context.handle(
+        _defaultStarSharpnessMeta,
+        defaultStarSharpness.isAcceptableOrUnknown(
+          data['default_star_sharpness']!,
+          _defaultStarSharpnessMeta,
+        ),
+      );
+    }
+    if (data.containsKey('default_alignment_tolerance_degrees')) {
+      context.handle(
+        _defaultAlignmentToleranceDegreesMeta,
+        defaultAlignmentToleranceDegrees.isAcceptableOrUnknown(
+          data['default_alignment_tolerance_degrees']!,
+          _defaultAlignmentToleranceDegreesMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -4356,6 +4409,14 @@ class $UserPreferencesTable extends UserPreferences
         DriftSqlType.string,
         data['${effectivePrefix}north_reference'],
       )!,
+      defaultStarSharpness: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}default_star_sharpness'],
+      )!,
+      defaultAlignmentToleranceDegrees: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}default_alignment_tolerance_degrees'],
+      )!,
     );
   }
 
@@ -4373,6 +4434,8 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
   final String themeMode;
   final String favoriteToolIds;
   final String northReference;
+  final String defaultStarSharpness;
+  final double defaultAlignmentToleranceDegrees;
   const UserPreference({
     required this.id,
     required this.lengthDisplay,
@@ -4381,6 +4444,8 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     required this.themeMode,
     required this.favoriteToolIds,
     required this.northReference,
+    required this.defaultStarSharpness,
+    required this.defaultAlignmentToleranceDegrees,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4392,6 +4457,10 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     map['theme_mode'] = Variable<String>(themeMode);
     map['favorite_tool_ids'] = Variable<String>(favoriteToolIds);
     map['north_reference'] = Variable<String>(northReference);
+    map['default_star_sharpness'] = Variable<String>(defaultStarSharpness);
+    map['default_alignment_tolerance_degrees'] = Variable<double>(
+      defaultAlignmentToleranceDegrees,
+    );
     return map;
   }
 
@@ -4404,6 +4473,8 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       themeMode: Value(themeMode),
       favoriteToolIds: Value(favoriteToolIds),
       northReference: Value(northReference),
+      defaultStarSharpness: Value(defaultStarSharpness),
+      defaultAlignmentToleranceDegrees: Value(defaultAlignmentToleranceDegrees),
     );
   }
 
@@ -4420,6 +4491,12 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       themeMode: serializer.fromJson<String>(json['themeMode']),
       favoriteToolIds: serializer.fromJson<String>(json['favoriteToolIds']),
       northReference: serializer.fromJson<String>(json['northReference']),
+      defaultStarSharpness: serializer.fromJson<String>(
+        json['defaultStarSharpness'],
+      ),
+      defaultAlignmentToleranceDegrees: serializer.fromJson<double>(
+        json['defaultAlignmentToleranceDegrees'],
+      ),
     );
   }
   @override
@@ -4433,6 +4510,10 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       'themeMode': serializer.toJson<String>(themeMode),
       'favoriteToolIds': serializer.toJson<String>(favoriteToolIds),
       'northReference': serializer.toJson<String>(northReference),
+      'defaultStarSharpness': serializer.toJson<String>(defaultStarSharpness),
+      'defaultAlignmentToleranceDegrees': serializer.toJson<double>(
+        defaultAlignmentToleranceDegrees,
+      ),
     };
   }
 
@@ -4444,6 +4525,8 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     String? themeMode,
     String? favoriteToolIds,
     String? northReference,
+    String? defaultStarSharpness,
+    double? defaultAlignmentToleranceDegrees,
   }) => UserPreference(
     id: id ?? this.id,
     lengthDisplay: lengthDisplay ?? this.lengthDisplay,
@@ -4452,6 +4535,10 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     themeMode: themeMode ?? this.themeMode,
     favoriteToolIds: favoriteToolIds ?? this.favoriteToolIds,
     northReference: northReference ?? this.northReference,
+    defaultStarSharpness: defaultStarSharpness ?? this.defaultStarSharpness,
+    defaultAlignmentToleranceDegrees:
+        defaultAlignmentToleranceDegrees ??
+        this.defaultAlignmentToleranceDegrees,
   );
   UserPreference copyWithCompanion(UserPreferencesCompanion data) {
     return UserPreference(
@@ -4472,6 +4559,13 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
       northReference: data.northReference.present
           ? data.northReference.value
           : this.northReference,
+      defaultStarSharpness: data.defaultStarSharpness.present
+          ? data.defaultStarSharpness.value
+          : this.defaultStarSharpness,
+      defaultAlignmentToleranceDegrees:
+          data.defaultAlignmentToleranceDegrees.present
+          ? data.defaultAlignmentToleranceDegrees.value
+          : this.defaultAlignmentToleranceDegrees,
     );
   }
 
@@ -4484,7 +4578,11 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
           ..write('fractionStep: $fractionStep, ')
           ..write('themeMode: $themeMode, ')
           ..write('favoriteToolIds: $favoriteToolIds, ')
-          ..write('northReference: $northReference')
+          ..write('northReference: $northReference, ')
+          ..write('defaultStarSharpness: $defaultStarSharpness, ')
+          ..write(
+            'defaultAlignmentToleranceDegrees: $defaultAlignmentToleranceDegrees',
+          )
           ..write(')'))
         .toString();
   }
@@ -4498,6 +4596,8 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
     themeMode,
     favoriteToolIds,
     northReference,
+    defaultStarSharpness,
+    defaultAlignmentToleranceDegrees,
   );
   @override
   bool operator ==(Object other) =>
@@ -4509,7 +4609,10 @@ class UserPreference extends DataClass implements Insertable<UserPreference> {
           other.fractionStep == this.fractionStep &&
           other.themeMode == this.themeMode &&
           other.favoriteToolIds == this.favoriteToolIds &&
-          other.northReference == this.northReference);
+          other.northReference == this.northReference &&
+          other.defaultStarSharpness == this.defaultStarSharpness &&
+          other.defaultAlignmentToleranceDegrees ==
+              this.defaultAlignmentToleranceDegrees);
 }
 
 class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
@@ -4520,6 +4623,8 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
   final Value<String> themeMode;
   final Value<String> favoriteToolIds;
   final Value<String> northReference;
+  final Value<String> defaultStarSharpness;
+  final Value<double> defaultAlignmentToleranceDegrees;
   const UserPreferencesCompanion({
     this.id = const Value.absent(),
     this.lengthDisplay = const Value.absent(),
@@ -4528,6 +4633,8 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     this.themeMode = const Value.absent(),
     this.favoriteToolIds = const Value.absent(),
     this.northReference = const Value.absent(),
+    this.defaultStarSharpness = const Value.absent(),
+    this.defaultAlignmentToleranceDegrees = const Value.absent(),
   });
   UserPreferencesCompanion.insert({
     this.id = const Value.absent(),
@@ -4537,6 +4644,8 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     this.themeMode = const Value.absent(),
     this.favoriteToolIds = const Value.absent(),
     this.northReference = const Value.absent(),
+    this.defaultStarSharpness = const Value.absent(),
+    this.defaultAlignmentToleranceDegrees = const Value.absent(),
   });
   static Insertable<UserPreference> custom({
     Expression<int>? id,
@@ -4546,6 +4655,8 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     Expression<String>? themeMode,
     Expression<String>? favoriteToolIds,
     Expression<String>? northReference,
+    Expression<String>? defaultStarSharpness,
+    Expression<double>? defaultAlignmentToleranceDegrees,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -4555,6 +4666,10 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
       if (themeMode != null) 'theme_mode': themeMode,
       if (favoriteToolIds != null) 'favorite_tool_ids': favoriteToolIds,
       if (northReference != null) 'north_reference': northReference,
+      if (defaultStarSharpness != null)
+        'default_star_sharpness': defaultStarSharpness,
+      if (defaultAlignmentToleranceDegrees != null)
+        'default_alignment_tolerance_degrees': defaultAlignmentToleranceDegrees,
     });
   }
 
@@ -4566,6 +4681,8 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     Value<String>? themeMode,
     Value<String>? favoriteToolIds,
     Value<String>? northReference,
+    Value<String>? defaultStarSharpness,
+    Value<double>? defaultAlignmentToleranceDegrees,
   }) {
     return UserPreferencesCompanion(
       id: id ?? this.id,
@@ -4575,6 +4692,10 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
       themeMode: themeMode ?? this.themeMode,
       favoriteToolIds: favoriteToolIds ?? this.favoriteToolIds,
       northReference: northReference ?? this.northReference,
+      defaultStarSharpness: defaultStarSharpness ?? this.defaultStarSharpness,
+      defaultAlignmentToleranceDegrees:
+          defaultAlignmentToleranceDegrees ??
+          this.defaultAlignmentToleranceDegrees,
     );
   }
 
@@ -4602,6 +4723,16 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
     if (northReference.present) {
       map['north_reference'] = Variable<String>(northReference.value);
     }
+    if (defaultStarSharpness.present) {
+      map['default_star_sharpness'] = Variable<String>(
+        defaultStarSharpness.value,
+      );
+    }
+    if (defaultAlignmentToleranceDegrees.present) {
+      map['default_alignment_tolerance_degrees'] = Variable<double>(
+        defaultAlignmentToleranceDegrees.value,
+      );
+    }
     return map;
   }
 
@@ -4614,7 +4745,11 @@ class UserPreferencesCompanion extends UpdateCompanion<UserPreference> {
           ..write('fractionStep: $fractionStep, ')
           ..write('themeMode: $themeMode, ')
           ..write('favoriteToolIds: $favoriteToolIds, ')
-          ..write('northReference: $northReference')
+          ..write('northReference: $northReference, ')
+          ..write('defaultStarSharpness: $defaultStarSharpness, ')
+          ..write(
+            'defaultAlignmentToleranceDegrees: $defaultAlignmentToleranceDegrees',
+          )
           ..write(')'))
         .toString();
   }
@@ -7609,6 +7744,8 @@ typedef $$UserPreferencesTableCreateCompanionBuilder =
       Value<String> themeMode,
       Value<String> favoriteToolIds,
       Value<String> northReference,
+      Value<String> defaultStarSharpness,
+      Value<double> defaultAlignmentToleranceDegrees,
     });
 typedef $$UserPreferencesTableUpdateCompanionBuilder =
     UserPreferencesCompanion Function({
@@ -7619,6 +7756,8 @@ typedef $$UserPreferencesTableUpdateCompanionBuilder =
       Value<String> themeMode,
       Value<String> favoriteToolIds,
       Value<String> northReference,
+      Value<String> defaultStarSharpness,
+      Value<double> defaultAlignmentToleranceDegrees,
     });
 
 class $$UserPreferencesTableFilterComposer
@@ -7664,6 +7803,17 @@ class $$UserPreferencesTableFilterComposer
     column: $table.northReference,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get defaultStarSharpness => $composableBuilder(
+    column: $table.defaultStarSharpness,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get defaultAlignmentToleranceDegrees =>
+      $composableBuilder(
+        column: $table.defaultAlignmentToleranceDegrees,
+        builder: (column) => ColumnFilters(column),
+      );
 }
 
 class $$UserPreferencesTableOrderingComposer
@@ -7709,6 +7859,17 @@ class $$UserPreferencesTableOrderingComposer
     column: $table.northReference,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get defaultStarSharpness => $composableBuilder(
+    column: $table.defaultStarSharpness,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get defaultAlignmentToleranceDegrees =>
+      $composableBuilder(
+        column: $table.defaultAlignmentToleranceDegrees,
+        builder: (column) => ColumnOrderings(column),
+      );
 }
 
 class $$UserPreferencesTableAnnotationComposer
@@ -7750,6 +7911,17 @@ class $$UserPreferencesTableAnnotationComposer
     column: $table.northReference,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get defaultStarSharpness => $composableBuilder(
+    column: $table.defaultStarSharpness,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get defaultAlignmentToleranceDegrees =>
+      $composableBuilder(
+        column: $table.defaultAlignmentToleranceDegrees,
+        builder: (column) => column,
+      );
 }
 
 class $$UserPreferencesTableTableManager
@@ -7796,6 +7968,9 @@ class $$UserPreferencesTableTableManager
                 Value<String> themeMode = const Value.absent(),
                 Value<String> favoriteToolIds = const Value.absent(),
                 Value<String> northReference = const Value.absent(),
+                Value<String> defaultStarSharpness = const Value.absent(),
+                Value<double> defaultAlignmentToleranceDegrees =
+                    const Value.absent(),
               }) => UserPreferencesCompanion(
                 id: id,
                 lengthDisplay: lengthDisplay,
@@ -7804,6 +7979,9 @@ class $$UserPreferencesTableTableManager
                 themeMode: themeMode,
                 favoriteToolIds: favoriteToolIds,
                 northReference: northReference,
+                defaultStarSharpness: defaultStarSharpness,
+                defaultAlignmentToleranceDegrees:
+                    defaultAlignmentToleranceDegrees,
               ),
           createCompanionCallback:
               ({
@@ -7814,6 +7992,9 @@ class $$UserPreferencesTableTableManager
                 Value<String> themeMode = const Value.absent(),
                 Value<String> favoriteToolIds = const Value.absent(),
                 Value<String> northReference = const Value.absent(),
+                Value<String> defaultStarSharpness = const Value.absent(),
+                Value<double> defaultAlignmentToleranceDegrees =
+                    const Value.absent(),
               }) => UserPreferencesCompanion.insert(
                 id: id,
                 lengthDisplay: lengthDisplay,
@@ -7822,6 +8003,9 @@ class $$UserPreferencesTableTableManager
                 themeMode: themeMode,
                 favoriteToolIds: favoriteToolIds,
                 northReference: northReference,
+                defaultStarSharpness: defaultStarSharpness,
+                defaultAlignmentToleranceDegrees:
+                    defaultAlignmentToleranceDegrees,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

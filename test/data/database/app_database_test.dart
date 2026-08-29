@@ -20,7 +20,7 @@ void main() {
   tearDown(() => database.close());
 
   test('current schema creates every equipment and snapshot table', () async {
-    expect(database.schemaVersion, 4);
+    expect(database.schemaVersion, 5);
 
     final rows = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -92,7 +92,7 @@ void main() {
     final version = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 4);
+    expect(version.read<int>('user_version'), 5);
   });
 
   test('frozen schema v1 fixture remains readable without data loss', () async {
@@ -241,7 +241,7 @@ void main() {
     final version = await migrated
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 4);
+    expect(version.read<int>('user_version'), 5);
     final tables = await migrated
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
         .get();
@@ -253,6 +253,48 @@ void main() {
       tables.map((row) => row.read<String>('name')),
       contains('saved_locations'),
     );
+  });
+
+  test('migrates v4 planner preferences without losing choices', () async {
+    await database.close();
+    final migrated = AppDatabase(
+      NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute('''
+            CREATE TABLE user_preferences (
+              id INTEGER NOT NULL PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+              length_display TEXT NOT NULL DEFAULT 'metric',
+              shutter_display TEXT NOT NULL DEFAULT 'exact',
+              fraction_step TEXT NOT NULL DEFAULT 'third',
+              theme_mode TEXT NOT NULL DEFAULT 'system',
+              favorite_tool_ids TEXT NOT NULL DEFAULT '[]',
+              north_reference TEXT NOT NULL DEFAULT 'trueNorth'
+            );
+          ''');
+          raw.execute('''
+            INSERT INTO user_preferences
+            (id, length_display, shutter_display, fraction_step, theme_mode,
+             favorite_tool_ids, north_reference)
+            VALUES (1, 'imperial', 'conventional', 'half', 'low_light',
+                    '["astronomy"]', 'magneticNorth');
+          ''');
+          raw.execute('PRAGMA user_version = 4');
+        },
+      ),
+    );
+    addTearDown(migrated.close);
+
+    final preferences = await PreferencesRepository(migrated).load();
+    expect(preferences.lengthDisplay, LengthDisplay.imperial);
+    expect(preferences.shutterDisplay, ShutterDisplay.conventional);
+    expect(preferences.fractionStep, FractionStep.half);
+    expect(preferences.northReference, NorthReference.magneticNorth);
+    expect(preferences.defaultStarSharpness, DefaultStarSharpness.balanced);
+    expect(preferences.defaultAlignmentToleranceDegrees, 3);
+    final version = await migrated
+        .customSelect('PRAGMA user_version')
+        .getSingle();
+    expect(version.read<int>('user_version'), 5);
   });
 }
 

@@ -22,6 +22,8 @@ void main() {
     expect(preferences.themeMode, AppThemeMode.system);
     expect(preferences.favoriteToolIds, isEmpty);
     expect(preferences.northReference, NorthReference.trueNorth);
+    expect(preferences.defaultStarSharpness, DefaultStarSharpness.balanced);
+    expect(preferences.defaultAlignmentToleranceDegrees, 3);
   });
 
   test(
@@ -34,6 +36,8 @@ void main() {
         themeMode: AppThemeMode.lowLight,
         favoriteToolIds: <String>['long-exposure', 'depth-of-field'],
         northReference: NorthReference.magneticNorth,
+        defaultStarSharpness: DefaultStarSharpness.strict,
+        defaultAlignmentToleranceDegrees: 5,
       );
 
       await repository.save(updated);
@@ -44,6 +48,8 @@ void main() {
         'long-exposure',
         'depth-of-field',
       ]);
+      expect(loaded.defaultStarSharpness, DefaultStarSharpness.strict);
+      expect(loaded.defaultAlignmentToleranceDegrees, 5);
     },
   );
 

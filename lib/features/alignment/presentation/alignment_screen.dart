@@ -51,6 +51,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   };
   var _timeZoneId = 'UTC';
   SavedLocation? _selectedLocation;
+  var _defaultsApplied = false;
 
   @override
   void initState() {
@@ -80,241 +81,254 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => CalculatorPage(
-    children: [
-      Text(
-        'Sun & Moon alignment',
-        style: Theme.of(context).textTheme.headlineSmall,
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Search up to one year for the closest bearing and elevation match. All calculations run offline.',
-      ),
-      const SizedBox(height: 12),
-      DropdownButtonFormField<SavedLocation>(
-        key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
-        decoration: const InputDecoration(
-          labelText: 'Saved location (optional)',
+  Widget build(BuildContext context) {
+    final preferences = ref.watch(preferencesProvider).valueOrNull;
+    if (!_defaultsApplied && preferences != null) {
+      _tolerance.text = _numberText(
+        preferences.defaultAlignmentToleranceDegrees,
+      );
+      _defaultsApplied = true;
+    }
+    return CalculatorPage(
+      children: [
+        Text(
+          'Sun & Moon alignment',
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
-        items: [
-          for (final location
-              in ref.watch(savedLocationsProvider).valueOrNull ??
-                  const <SavedLocation>[])
-            DropdownMenuItem(value: location, child: Text(location.name)),
-        ],
-        initialValue: _selectedLocation,
-        onChanged: (location) {
-          if (location == null) return;
-          setState(() {
-            _latitude.text = location.latitudeDegrees.toString();
-            _longitude.text = location.longitudeDegrees.toString();
-            if (location.elevationMetres != null) {
-              _observerElevation.text = location.elevationMetres.toString();
-            }
-            _timeZoneId = location.timeZoneId;
-            _selectedLocation = location;
-            _result = null;
-          });
-        },
-      ),
-      const SizedBox(height: 12),
-      SegmentedButton<AlignmentBody>(
-        segments: const [
-          ButtonSegment(
-            value: AlignmentBody.sun,
-            label: Text('Sun'),
-            icon: Icon(Icons.wb_sunny_outlined),
-          ),
-          ButtonSegment(
-            value: AlignmentBody.moon,
-            label: Text('Moon'),
-            icon: Icon(Icons.nightlight_outlined),
-          ),
-        ],
-        selected: {_body},
-        onSelectionChanged: (value) => setState(() {
-          _body = value.first;
-          _result = null;
-        }),
-      ),
-      if (_body == AlignmentBody.sun)
-        const Card(
-          color: Color(0xffffe0b2),
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.warning_amber_rounded),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter. This plan is an estimate, not a safety guarantee.',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      CalculatorNumberField(
-        label: 'Observer latitude (degrees)',
-        controller: _latitude,
-        errorText: _errors['observerLatitudeDegrees'],
-      ),
-      CalculatorNumberField(
-        label: 'Observer longitude, east positive (degrees)',
-        controller: _longitude,
-        errorText: _errors['observerLongitudeDegrees'],
-      ),
-      CalculatorNumberField(
-        label: 'Observer elevation (m)',
-        controller: _observerElevation,
-        errorText: _errors['observerElevationMetres'],
-      ),
-      CalculatorNumberField(
-        label: 'Target elevation (m)',
-        controller: _targetElevation,
-        errorText: _errors['targetElevationMetres'],
-      ),
-      CalculatorNumberField(
-        label: 'Target distance (m)',
-        controller: _targetDistance,
-        errorText: _errors['targetDistanceMetres'],
-      ),
-      CalculatorNumberField(
-        label: 'Desired true bearing (degrees)',
-        controller: _bearing,
-        errorText: _errors['desiredBearingDegrees'],
-      ),
-      ExpansionTile(
-        title: const Text('Target coordinate'),
-        subtitle: const Text(
-          'Derive bearing and distance; manual values remain editable.',
-        ),
-        children: [
-          CalculatorNumberField(
-            label: 'Target latitude (degrees)',
-            controller: _targetLatitude,
-          ),
-          CalculatorNumberField(
-            label: 'Target longitude (degrees)',
-            controller: _targetLongitude,
-          ),
-          OutlinedButton.icon(
-            onPressed: _deriveTargetGeometry,
-            icon: const Icon(Icons.route_outlined),
-            label: const Text('Calculate geometry'),
-          ),
-        ],
-      ),
-      CalculatorNumberField(
-        label: 'Angular tolerance (degrees)',
-        controller: _tolerance,
-        errorText: _errors['angularToleranceDegrees'],
-      ),
-      CalculatorNumberField(
-        label: 'Magnetic declination, east positive (degrees)',
-        controller: _magneticDeclination,
-      ),
-      InputDecorator(
-        decoration: InputDecoration(
-          labelText: 'Inclusive date range ($_timeZoneId, maximum one year)',
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              '${DateFormat('yyyy-MM-dd').format(_startLocalDate)} to ${DateFormat('yyyy-MM-dd').format(_endLocalDate)}',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Text(
-              PlanningTimeContext.parse(_timeZoneId).confidenceLabel,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              key: const Key('alignment-date-range'),
-              onPressed: _pickLocalDateRange,
-              icon: const Icon(Icons.date_range_outlined),
-              label: const Text('Choose local date range'),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 12),
-      FilledButton(
-        key: const Key('alignment-search'),
-        onPressed: _search,
-        child: const Text('Search alignments'),
-      ),
-      const SizedBox(height: 16),
-      if (_result?.output case final output?) ...[
-        _planningContext(),
-        CalculationResultView(
-          title: '${_body.name} alignment search',
-          rows: [
-            (
-              'Target altitude',
-              '${output.desiredAltitudeDegrees.toStringAsFixed(1)}°',
-            ),
-            ('Candidates', '${output.candidates.length}'),
-            ('Search resolution', '${output.sampleMinutes} minutes'),
-            (
-              'Best angular error',
-              output.candidates.isEmpty
-                  ? 'No match within tolerance'
-                  : '${output.candidates.first.angularErrorDegrees.toStringAsFixed(2)}°',
-            ),
-          ],
-          assumptions: const [
-            'True north and unobstructed geometric horizon',
-            'Manual elevations; terrain and refraction are not modeled',
-            'Ten-minute samples; confirm near the predicted time',
-          ],
-          guidance: output.candidates.isEmpty
-              ? 'Increase the tolerance, adjust geometry, or try another date.'
-              : 'Review the best candidates below and verify terrain, weather, and composition on site.',
-          onSave: () => _save(output),
-          onReset: _reset,
+        const SizedBox(height: 8),
+        const Text(
+          'Search up to one year for the closest bearing and elevation match. All calculations run offline.',
         ),
         const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SegmentedButton<PlanningView>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(
-                value: PlanningView.numeric,
-                label: Text('Numeric'),
+        DropdownButtonFormField<SavedLocation>(
+          key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
+          decoration: const InputDecoration(
+            labelText: 'Saved location (optional)',
+          ),
+          items: [
+            for (final location
+                in ref.watch(savedLocationsProvider).valueOrNull ??
+                    const <SavedLocation>[])
+              DropdownMenuItem(value: location, child: Text(location.name)),
+          ],
+          initialValue: _selectedLocation,
+          onChanged: (location) {
+            if (location == null) return;
+            setState(() {
+              _latitude.text = location.latitudeDegrees.toString();
+              _longitude.text = location.longitudeDegrees.toString();
+              if (location.elevationMetres != null) {
+                _observerElevation.text = location.elevationMetres.toString();
+              }
+              _timeZoneId = location.timeZoneId;
+              _selectedLocation = location;
+              _result = null;
+            });
+          },
+        ),
+        const SizedBox(height: 12),
+        SegmentedButton<AlignmentBody>(
+          segments: const [
+            ButtonSegment(
+              value: AlignmentBody.sun,
+              label: Text('Sun'),
+              icon: Icon(Icons.wb_sunny_outlined),
+            ),
+            ButtonSegment(
+              value: AlignmentBody.moon,
+              label: Text('Moon'),
+              icon: Icon(Icons.nightlight_outlined),
+            ),
+          ],
+          selected: {_body},
+          onSelectionChanged: (value) => setState(() {
+            _body = value.first;
+            _result = null;
+          }),
+        ),
+        if (_body == AlignmentBody.sun)
+          const Card(
+            color: Color(0xffffe0b2),
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter. This plan is an estimate, not a safety guarantee.',
+                    ),
+                  ),
+                ],
               ),
-              ButtonSegment(
-                value: PlanningView.timeline,
-                label: Text('Timeline'),
+            ),
+          ),
+        CalculatorNumberField(
+          label: 'Observer latitude (degrees)',
+          controller: _latitude,
+          errorText: _errors['observerLatitudeDegrees'],
+        ),
+        CalculatorNumberField(
+          label: 'Observer longitude, east positive (degrees)',
+          controller: _longitude,
+          errorText: _errors['observerLongitudeDegrees'],
+        ),
+        CalculatorNumberField(
+          label: 'Observer elevation (m)',
+          controller: _observerElevation,
+          errorText: _errors['observerElevationMetres'],
+        ),
+        CalculatorNumberField(
+          label: 'Target elevation (m)',
+          controller: _targetElevation,
+          errorText: _errors['targetElevationMetres'],
+        ),
+        CalculatorNumberField(
+          label: 'Target distance (m)',
+          controller: _targetDistance,
+          errorText: _errors['targetDistanceMetres'],
+        ),
+        CalculatorNumberField(
+          label: 'Desired true bearing (degrees)',
+          controller: _bearing,
+          errorText: _errors['desiredBearingDegrees'],
+        ),
+        ExpansionTile(
+          title: const Text('Target coordinate'),
+          subtitle: const Text(
+            'Derive bearing and distance; manual values remain editable.',
+          ),
+          children: [
+            CalculatorNumberField(
+              label: 'Target latitude (degrees)',
+              controller: _targetLatitude,
+            ),
+            CalculatorNumberField(
+              label: 'Target longitude (degrees)',
+              controller: _targetLongitude,
+            ),
+            OutlinedButton.icon(
+              onPressed: _deriveTargetGeometry,
+              icon: const Icon(Icons.route_outlined),
+              label: const Text('Calculate geometry'),
+            ),
+          ],
+        ),
+        CalculatorNumberField(
+          label: 'Angular tolerance (degrees)',
+          controller: _tolerance,
+          errorText: _errors['angularToleranceDegrees'],
+        ),
+        Text(
+          'Default: ${_numberText(preferences?.defaultAlignmentToleranceDegrees ?? 3)}° from Settings',
+        ),
+        CalculatorNumberField(
+          label: 'Magnetic declination, east positive (degrees)',
+          controller: _magneticDeclination,
+        ),
+        InputDecorator(
+          decoration: InputDecoration(
+            labelText: 'Inclusive date range ($_timeZoneId, maximum one year)',
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                '${DateFormat('yyyy-MM-dd').format(_startLocalDate)} to ${DateFormat('yyyy-MM-dd').format(_endLocalDate)}',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              ButtonSegment(
-                value: PlanningView.compass,
-                label: Text('Compass'),
+              Text(
+                PlanningTimeContext.parse(_timeZoneId).confidenceLabel,
+                textAlign: TextAlign.center,
               ),
-              ButtonSegment(value: PlanningView.map, label: Text('Map')),
-              ButtonSegment(
-                value: PlanningView.augmentedReality,
-                label: Text('AR'),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                key: const Key('alignment-date-range'),
+                onPressed: _pickLocalDateRange,
+                icon: const Icon(Icons.date_range_outlined),
+                label: const Text('Choose local date range'),
               ),
             ],
-            selected: {_view},
-            onSelectionChanged: (value) => setState(() => _view = value.first),
           ),
         ),
         const SizedBox(height: 12),
-        _planningView(output),
-        FieldChecklist(
-          items: _checklist,
-          onChanged: (items) => setState(() => _checklist = items),
+        FilledButton(
+          key: const Key('alignment-search'),
+          onPressed: _search,
+          child: const Text('Search alignments'),
         ),
+        const SizedBox(height: 16),
+        if (_result?.output case final output?) ...[
+          _planningContext(),
+          CalculationResultView(
+            title: '${_body.name} alignment search',
+            rows: [
+              (
+                'Target altitude',
+                '${output.desiredAltitudeDegrees.toStringAsFixed(1)}°',
+              ),
+              ('Candidates', '${output.candidates.length}'),
+              ('Search resolution', '${output.sampleMinutes} minutes'),
+              (
+                'Best angular error',
+                output.candidates.isEmpty
+                    ? 'No match within tolerance'
+                    : '${output.candidates.first.angularErrorDegrees.toStringAsFixed(2)}°',
+              ),
+            ],
+            assumptions: const [
+              'True north and unobstructed geometric horizon',
+              'Manual elevations; terrain and refraction are not modeled',
+              'Ten-minute samples; confirm near the predicted time',
+            ],
+            guidance: output.candidates.isEmpty
+                ? 'Increase the tolerance, adjust geometry, or try another date.'
+                : 'Review the best candidates below and verify terrain, weather, and composition on site.',
+            onSave: () => _save(output),
+            onReset: _reset,
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SegmentedButton<PlanningView>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(
+                  value: PlanningView.numeric,
+                  label: Text('Numeric'),
+                ),
+                ButtonSegment(
+                  value: PlanningView.timeline,
+                  label: Text('Timeline'),
+                ),
+                ButtonSegment(
+                  value: PlanningView.compass,
+                  label: Text('Compass'),
+                ),
+                ButtonSegment(value: PlanningView.map, label: Text('Map')),
+                ButtonSegment(
+                  value: PlanningView.augmentedReality,
+                  label: Text('AR'),
+                ),
+              ],
+              selected: {_view},
+              onSelectionChanged: (value) =>
+                  setState(() => _view = value.first),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _planningView(output),
+          FieldChecklist(
+            items: _checklist,
+            onChanged: (items) => setState(() => _checklist = items),
+          ),
+        ],
       ],
-    ],
-  );
+    );
+  }
 
   Widget _planningView(AlignmentSearchOutput output) {
     final northReference =
@@ -570,7 +584,13 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     _targetElevation.text = '820';
     _targetDistance.text = '1000';
     _bearing.text = '180';
-    _tolerance.text = '3';
+    _tolerance.text = _numberText(
+      ref
+              .read(preferencesProvider)
+              .valueOrNull
+              ?.defaultAlignmentToleranceDegrees ??
+          3,
+    );
     _targetLatitude.clear();
     _targetLongitude.clear();
     _magneticDeclination.text = '0';
@@ -584,6 +604,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       _errors = const {};
     });
   }
+
+  String _numberText(double value) => value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toString();
 
   String get _locationLabel =>
       _selectedLocation?.name ?? '${_latitude.text}, ${_longitude.text}';

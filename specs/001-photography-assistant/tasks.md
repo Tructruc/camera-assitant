@@ -336,3 +336,10 @@ story phases, actionable description, and exact file path.
 - [X] T109 [US5] Replace the 31-day alignment cap with a memory-bounded one-year search and update its documented contract, limitations, and accuracy policy per SC-009 and Constitution I (contradicts)
 - [X] T110 [US5] Replace UTC-only alignment day steppers with direct inclusive local civil-date range selection using saved-location timezone rules and canonical UTC search bounds per US5 and FR-013 (partial)
 - [X] T111 [US5] Add accessible, locally grouped alignment timeline candidates and complete reproducibility context for location, timezone confidence, elevations, horizon/refraction, source freshness, north reference, and expected accuracy in results and saved snapshots per FR-011, FR-013, and SC-008 (partial)
+
+## Phase 17: Preferences and Planning Metadata Convergence
+
+- [X] T112 [US1] Apply the persisted whole/half/third-stop increment preference to conventional shutter presentation with pure formatter, widget, and snapshot regression coverage per FR-020 (contradicts)
+- [X] T113 [US4] Persist user-selectable default star-sharpness and alignment angular tolerances through a tested schema migration, expose them accessibly in settings, and apply them as overridable planner defaults per the User Preferences entity and Constitution V (partial)
+- [X] T114 [US4] Replace the generic night-sky context block with complete location source/accuracy/timestamp, local/UTC time, timezone confidence, north reference, elevation, horizon/refraction, source freshness, and explicit expected-accuracy context preserved in immutable snapshots per FR-013 and SC-008 (partial)
+- [X] T115 [US4] Add versioned offline celestial-catalog metadata, provenance, supported epoch, maintenance policy, and explicit current/stale status to results and documentation per FR-009, FR-021, and plan: bundled dataset update policy (partial)

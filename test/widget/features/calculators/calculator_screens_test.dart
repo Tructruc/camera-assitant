@@ -9,6 +9,7 @@ import 'package:photography_assistant/core/data/repositories/preferences_reposit
 import 'package:photography_assistant/features/alignment/domain/alignment_calculator.dart';
 import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
 import 'package:photography_assistant/features/alignment/presentation/alignment_timeline.dart';
+import 'package:photography_assistant/features/astronomy/domain/astronomy_calculator.dart';
 import 'package:photography_assistant/features/astronomy/presentation/astronomy_screen.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
@@ -214,7 +215,8 @@ void main() {
       longitudeDegrees: 6.8652,
       elevationMetres: 3842,
       timeZoneId: 'Europe/Paris',
-      source: LocationSource.manual,
+      source: LocationSource.device,
+      accuracyMetres: 8,
       createdAt: DateTime.utc(2026, 8, 26),
       updatedAt: DateTime.utc(2026, 8, 26),
     );
@@ -243,7 +245,12 @@ void main() {
     );
     await tester.tap(find.text('Plan night sky'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('elevation 3842.0 m'), findsOneWidget);
+    expect(find.text('Planning context'), findsOneWidget);
+    expect(find.text('Mountain site'), findsOneWidget);
+    expect(find.textContaining('±8 m reported accuracy'), findsOneWidget);
+    expect(find.text('3842.0 m'), findsOneWidget);
+    expect(find.textContaining('SIMBAD'), findsOneWidget);
+    expect(find.textContaining('approximately ±0.25°'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Save result'),
       300,
@@ -259,6 +266,17 @@ void main() {
     ).listNewestFirst()).single;
     expect(snapshot.canonicalInputs['observerElevationMetres'], 3842.0);
     expect(snapshot.displayContext['timeZone'], 'Europe/Paris');
+    expect(snapshot.displayContext['locationLabel'], 'Mountain site');
+    expect(snapshot.displayContext['locationSource'], 'device');
+    expect(snapshot.displayContext['locationAccuracyMetres'], 8.0);
+    expect(snapshot.displayContext['locationUpdatedAtUtc'], isNotNull);
+    expect(snapshot.displayContext['timeZoneConfidence'], contains('IANA'));
+    expect(snapshot.displayContext['horizon'], contains('geometric'));
+    expect(snapshot.displayContext['refraction'], 'not applied');
+    expect(snapshot.displayContext['catalogVersion'], '2026.08');
+    expect(snapshot.displayContext['catalogProvenance'], contains('SIMBAD'));
+    expect(snapshot.displayContext['sourceFreshness'], contains('current'));
+    expect(snapshot.displayContext['expectedAccuracy'], contains('±0.25°'));
   });
 
   testWidgets('night-sky planner opens a direct local date and time picker', (
@@ -509,7 +527,69 @@ void main() {
     );
     await tester.tap(find.text('Calculate exposure'));
     await tester.pump();
-    expect(find.text('34.1 s'), findsOneWidget);
+    expect(find.text('32 s'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Save result'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final save = find.widgetWithText(FilledButton, 'Save result');
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    final snapshot = (await DriftSnapshotRepository(
+      database,
+    ).listNewestFirst()).single;
+    expect(snapshot.displayContext['fractionStep'], 'third');
+    expect(snapshot.displayContext['shutterLabel'], '32 s');
+  });
+
+  testWidgets('planner defaults come from preferences and remain overridable', (
+    tester,
+  ) async {
+    const preferences = AppPreferences(
+      defaultStarSharpness: DefaultStarSharpness.strict,
+      defaultAlignmentToleranceDegrees: 5,
+    );
+    await tester.pumpWidget(
+      app(const AstronomyScreen(), preferences: preferences),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Default: strict from Settings'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Default: strict from Settings'), findsOneWidget);
+    expect(
+      tester
+          .widget<SegmentedButton<StarSharpnessTolerance>>(
+            find.byType(SegmentedButton<StarSharpnessTolerance>),
+          )
+          .selected,
+      {StarSharpnessTolerance.strict},
+    );
+
+    await tester.pumpWidget(
+      app(const AlignmentScreen(), preferences: preferences),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Default: 5° from Settings'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Default: 5° from Settings'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(
+            find.widgetWithText(TextField, 'Angular tolerance (degrees)'),
+          )
+          .controller!
+          .text,
+      '5',
+    );
   });
 
   testWidgets('calculator screens remain scrollable at 200 percent text', (

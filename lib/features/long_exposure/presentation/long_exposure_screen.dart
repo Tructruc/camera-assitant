@@ -7,6 +7,7 @@ import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
+import '../../../core/presentation/formatters/conventional_shutter_formatter.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
@@ -105,7 +106,10 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         if (_result?.output case final output?)
           CalculationResultView(
             title: preferences.shutterDisplay == ShutterDisplay.conventional
-                ? output.conventionalGuidance
+                ? formatConventionalShutter(
+                    output.filteredTime.seconds,
+                    preferences.fractionStep,
+                  )
                 : '${output.filteredTime.seconds.toStringAsFixed(6)} seconds',
             rows: <(String, String)>[
               (
@@ -201,7 +205,13 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         displayContext: <String, Object?>{
           'shutterDisplay': preferences.shutterDisplay.name,
           'fractionStep': preferences.fractionStep.name,
-          'shutterLabel': output.conventionalGuidance,
+          'shutterLabel':
+              preferences.shutterDisplay == ShutterDisplay.conventional
+              ? formatConventionalShutter(
+                  output.filteredTime.seconds,
+                  preferences.fractionStep,
+                )
+              : '${output.filteredTime.seconds.toStringAsFixed(6)} seconds',
           'secondsPrecision': 6,
         },
         assumptions: result.assumptions,

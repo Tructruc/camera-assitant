@@ -18,6 +18,7 @@ import '../../planning/presentation/field_checklist.dart';
 import '../../planning/presentation/live_ar_view.dart';
 import '../../planning/presentation/live_compass_view.dart';
 import '../../planning/presentation/offline_planning_map.dart';
+import '../../planning/presentation/planning_context_card.dart';
 import '../domain/astronomy_calculator.dart';
 
 class AstronomyScreen extends ConsumerStatefulWidget {
@@ -53,6 +54,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     'Capture a test frame and inspect stars': false,
   };
   var _timeZoneId = 'UTC';
+  SavedLocation? _selectedLocation;
+  var _defaultsApplied = false;
 
   @override
   void initState() {
@@ -81,6 +84,11 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final preferences = ref.watch(preferencesProvider).valueOrNull;
+    if (!_defaultsApplied && preferences != null) {
+      _sharpnessTolerance = _starSharpness(preferences.defaultStarSharpness);
+      _defaultsApplied = true;
+    }
     final equipment = ref.watch(equipmentControllerProvider).items;
     final cameras = equipment
         .where((entry) => entry.kind == EquipmentKind.camera)
@@ -104,6 +112,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<SavedLocation>(
+          key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
           decoration: const InputDecoration(
             labelText: 'Saved location (optional)',
           ),
@@ -113,6 +122,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                     const <SavedLocation>[])
               DropdownMenuItem(value: location, child: Text(location.name)),
           ],
+          initialValue: _selectedLocation,
           onChanged: (location) {
             if (location == null) return;
             setState(() {
@@ -120,6 +130,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
               _longitude.text = location.longitudeDegrees.toString();
               _elevation.text = (location.elevationMetres ?? 0).toString();
               _timeZoneId = location.timeZoneId;
+              _selectedLocation = location;
               _result = null;
             });
           },
@@ -252,25 +263,16 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             _result = null;
           }),
         ),
+        Text(
+          'Default: ${_starSharpness(preferences?.defaultStarSharpness ?? DefaultStarSharpness.balanced).name} from Settings',
+        ),
         FilledButton(
           onPressed: _calculate,
           child: const Text('Plan night sky'),
         ),
         const SizedBox(height: 16),
         if (_result?.output case final output?) ...[
-          Builder(
-            builder: (context) {
-              final time = PlanningTimeContext.parse(_timeZoneId);
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(
-                    'Location ${_latitude.text}, ${_longitude.text} · elevation ${_elevation.text} m · ${time.timeZoneId}\n${time.confidenceLabel}\nTrue north · geometric horizon · planning accuracy · offline catalog bundled 2026-08-21',
-                  ),
-                ),
-              );
-            },
-          ),
+          _planningContext(),
           CalculationResultView(
             title: '${_target.label} plan',
             rows: [
@@ -302,7 +304,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
               'Approximate mean sidereal time and planning-grade exposure rules',
             ],
             guidance:
-                'The 500 and NPF values are estimates: inspect stars at your intended output size. Event times are UTC and ignore terrain, refraction, precession, and proper motion.',
+                'The 500 and NPF values are estimates: inspect stars at your intended output size. Event instants are stored in UTC and displayed in the selected timezone. Terrain, refraction, precession, and proper motion are excluded.',
             onSave: () => _save(output),
             onReset: _reset,
           ),
@@ -535,6 +537,25 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       },
       displayContext: {
         'timeZone': _timeZoneId,
+        'localPlanningTime': PlanningTimeContext.parse(
+          _timeZoneId,
+        ).format(_instantUtc),
+        'timeZoneConfidence': PlanningTimeContext.parse(
+          _timeZoneId,
+        ).confidenceLabel,
+        'locationLabel': _selectedLocation?.name ?? 'Manual coordinates',
+        'locationSource': _selectedLocation?.source.name ?? 'manual entry',
+        'locationAccuracyMetres': _selectedLocation?.accuracyMetres,
+        'locationUpdatedAtUtc': _selectedLocation?.updatedAt.toIso8601String(),
+        'observerElevationMetres': _value(_elevation),
+        'horizon': 'airless geometric horizon',
+        'refraction': 'not applied',
+        'catalogVersion': AstronomyCatalogMetadata.current.version,
+        'catalogProvenance': AstronomyCatalogMetadata.current.provenance,
+        'catalogSupportedEpoch':
+            '${AstronomyCatalogMetadata.current.supportedStartYear}–${AstronomyCatalogMetadata.current.supportedEndYear}',
+        'sourceFreshness': _catalogFreshness,
+        'expectedAccuracy': _expectedAccuracy,
         'azimuthReference': 'trueNorth',
         'requestedNorthReference':
             ref.read(preferencesProvider).valueOrNull?.northReference.name ??
@@ -600,13 +621,65 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     setState(() {
       _target = CelestialTarget.milkyWayCore;
       _shutterRule = StarShutterRule.npf;
-      _sharpnessTolerance = StarSharpnessTolerance.balanced;
+      _sharpnessTolerance = _starSharpness(
+        ref.read(preferencesProvider).valueOrNull?.defaultStarSharpness ??
+            DefaultStarSharpness.balanced,
+      );
       _view = PlanningView.numeric;
       _camera = null;
       _lens = null;
+      _selectedLocation = null;
+      _timeZoneId = 'UTC';
       _result = null;
       _errors = const {};
     });
+  }
+
+  StarSharpnessTolerance _starSharpness(DefaultStarSharpness value) =>
+      switch (value) {
+        DefaultStarSharpness.strict => StarSharpnessTolerance.strict,
+        DefaultStarSharpness.balanced => StarSharpnessTolerance.balanced,
+        DefaultStarSharpness.relaxed => StarSharpnessTolerance.relaxed,
+      };
+
+  String get _catalogFreshness {
+    const catalog = AstronomyCatalogMetadata.current;
+    return 'catalog ${catalog.version} ${catalog.freshnessLabel(DateTime.now().toUtc())}; bundled ${catalog.bundledAtUtc}; ${catalog.updatePolicy}';
+  }
+
+  String get _expectedAccuracy => _target.isMoving
+      ? 'Planning-grade: approximately ±0.25° position and ±10 minutes for events'
+      : 'Planning-grade: approximately ±0.25° position and ±2 minutes for events';
+
+  Widget _planningContext() {
+    final time = PlanningTimeContext.parse(_timeZoneId);
+    const catalog = AstronomyCatalogMetadata.current;
+    final location = _selectedLocation;
+    final locationDetail = location == null
+        ? 'Manual entry · accuracy not reported · no saved capture timestamp'
+        : '${location.source.name} · ${location.accuracyMetres == null ? 'accuracy not reported' : '±${location.accuracyMetres!.toStringAsFixed(0)} m reported accuracy'} · updated ${DateFormat("yyyy-MM-dd HH:mm 'UTC'").format(location.updatedAt)}';
+    return PlanningContextCard(
+      entries: [
+        ('Location', location?.name ?? 'Manual coordinates'),
+        ('Coordinates', '${_latitude.text}, ${_longitude.text}'),
+        ('Location data', locationDetail),
+        ('Elevation', '${_elevation.text} m'),
+        ('Local time', time.format(_instantUtc)),
+        (
+          'Canonical UTC',
+          DateFormat("yyyy-MM-dd HH:mm 'UTC'").format(_instantUtc),
+        ),
+        ('Timezone', '${time.timeZoneId} · ${time.confidenceLabel}'),
+        ('North', 'true north (calculated); user preference retained'),
+        ('Horizon', 'airless geometric horizon · refraction not applied'),
+        ('Accuracy', _expectedAccuracy),
+        (
+          'Catalog',
+          '${catalog.version} · ${catalog.provenance} · ${catalog.supportedStartYear}–${catalog.supportedEndYear}',
+        ),
+        ('Freshness', _catalogFreshness),
+      ],
+    );
   }
 
   Widget _planningView(AstronomyOutput output) {

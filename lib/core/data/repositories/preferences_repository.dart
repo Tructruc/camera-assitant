@@ -17,6 +17,8 @@ enum AppThemeMode { system, light, dark, lowLight }
 
 enum NorthReference { trueNorth, magneticNorth }
 
+enum DefaultStarSharpness { strict, balanced, relaxed }
+
 extension on AppThemeMode {
   String get storageId => switch (this) {
     AppThemeMode.system => 'system',
@@ -36,7 +38,7 @@ T _enumByName<T extends Enum>(Iterable<T> values, String id, String field) {
   throw FormatException('Unsupported $field preference: $id');
 }
 
-/// Immutable display preferences; canonical calculation values are unaffected.
+/// Immutable display and planner defaults; canonical values remain unaffected.
 final class AppPreferences {
   const AppPreferences({
     this.lengthDisplay = LengthDisplay.metric,
@@ -45,6 +47,8 @@ final class AppPreferences {
     this.themeMode = AppThemeMode.system,
     this.favoriteToolIds = const <String>[],
     this.northReference = NorthReference.trueNorth,
+    this.defaultStarSharpness = DefaultStarSharpness.balanced,
+    this.defaultAlignmentToleranceDegrees = 3,
   });
 
   final LengthDisplay lengthDisplay;
@@ -53,6 +57,8 @@ final class AppPreferences {
   final AppThemeMode themeMode;
   final List<String> favoriteToolIds;
   final NorthReference northReference;
+  final DefaultStarSharpness defaultStarSharpness;
+  final double defaultAlignmentToleranceDegrees;
 
   AppPreferences copyWith({
     LengthDisplay? lengthDisplay,
@@ -61,6 +67,8 @@ final class AppPreferences {
     AppThemeMode? themeMode,
     List<String>? favoriteToolIds,
     NorthReference? northReference,
+    DefaultStarSharpness? defaultStarSharpness,
+    double? defaultAlignmentToleranceDegrees,
   }) => AppPreferences(
     lengthDisplay: lengthDisplay ?? this.lengthDisplay,
     shutterDisplay: shutterDisplay ?? this.shutterDisplay,
@@ -68,6 +76,10 @@ final class AppPreferences {
     themeMode: themeMode ?? this.themeMode,
     favoriteToolIds: favoriteToolIds ?? this.favoriteToolIds,
     northReference: northReference ?? this.northReference,
+    defaultStarSharpness: defaultStarSharpness ?? this.defaultStarSharpness,
+    defaultAlignmentToleranceDegrees:
+        defaultAlignmentToleranceDegrees ??
+        this.defaultAlignmentToleranceDegrees,
   );
 
   AppPreferences immutable() => AppPreferences(
@@ -77,6 +89,8 @@ final class AppPreferences {
     themeMode: themeMode,
     favoriteToolIds: List.unmodifiable(favoriteToolIds),
     northReference: northReference,
+    defaultStarSharpness: defaultStarSharpness,
+    defaultAlignmentToleranceDegrees: defaultAlignmentToleranceDegrees,
   );
 
   @override
@@ -87,7 +101,10 @@ final class AppPreferences {
       other.fractionStep == fractionStep &&
       other.themeMode == themeMode &&
       _listEquals(other.favoriteToolIds, favoriteToolIds) &&
-      other.northReference == northReference;
+      other.northReference == northReference &&
+      other.defaultStarSharpness == defaultStarSharpness &&
+      other.defaultAlignmentToleranceDegrees ==
+          defaultAlignmentToleranceDegrees;
 
   @override
   int get hashCode => Object.hash(
@@ -97,6 +114,8 @@ final class AppPreferences {
     themeMode,
     Object.hashAll(favoriteToolIds),
     northReference,
+    defaultStarSharpness,
+    defaultAlignmentToleranceDegrees,
   );
 }
 
@@ -146,6 +165,12 @@ final class PreferencesRepository {
                 jsonEncode(immutable.favoriteToolIds),
               ),
               northReference: Value<String>(immutable.northReference.name),
+              defaultStarSharpness: Value<String>(
+                immutable.defaultStarSharpness.name,
+              ),
+              defaultAlignmentToleranceDegrees: Value<double>(
+                immutable.defaultAlignmentToleranceDegrees,
+              ),
             ),
           );
     });
@@ -186,6 +211,12 @@ final class PreferencesRepository {
         row.northReference,
         'northReference',
       ),
+      defaultStarSharpness: _enumByName(
+        DefaultStarSharpness.values,
+        row.defaultStarSharpness,
+        'defaultStarSharpness',
+      ),
+      defaultAlignmentToleranceDegrees: row.defaultAlignmentToleranceDegrees,
     );
   }
 }

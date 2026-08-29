@@ -84,6 +84,9 @@ An immutable UTC/location plan for a bundled fixed ICRS/J2000 target. It records
 azimuth, above-horizon state, circumpolar/rising visibility cycle, next geometric rise/transit/set events,
 500-rule and NPF shutter estimates, and star-trail duration. Its snapshot embeds the target coordinates,
 observer coordinates, formula version, optical inputs, applied equipment, assumptions, and event instants.
+It also embeds the saved/manual location source, reported accuracy and capture timestamp, local and UTC
+planning times, timezone confidence, elevation, horizon/refraction policy, catalog version/provenance/
+freshness, supported epoch, and the result's explicit planning-accuracy boundary.
 
 ## Alignment Result
 
@@ -100,7 +103,8 @@ compass, map, and AR-capability views consume this same result.
 A mutable reusable local record with stable ID, normalized unique name, latitude, longitude, optional
 elevation, IANA-style time-zone identifier, manual/device source, optional device accuracy, and UTC
 creation/update timestamps. Schema version 3 adds `saved_locations`; calculation and observation-plan
-snapshots embed coordinates and context so later location edits cannot rewrite a saved plan.
+snapshots embed coordinates and context so later location edits cannot rewrite a saved plan. Schema version
+5 adds planner-default preferences while preserving all earlier choices.
 
 ## User Preferences
 
@@ -112,6 +116,9 @@ Singleton local settings record.
 - `themeMode`: system, light, dark, or field-red/low-light
 - `textScalePolicy`: system value without application-imposed reduction
 - `favoriteToolIds`: ordered stable identifiers
+- `northReference`: true or magnetic north presentation preference
+- `defaultStarSharpness`: strict, balanced, or relaxed night-sky recommendation
+- `defaultAlignmentToleranceDegrees`: positive default tolerance up to 180°
 
 ## Calculation Input and Result
 

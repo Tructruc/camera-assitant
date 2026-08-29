@@ -49,6 +49,20 @@ void main() {
     await tester.tap(find.text('Magnetic north'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
+      find.text('Strict'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Strict'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('5°'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('5°'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
       find.text('Low-light red'),
       300,
       scrollable: find.byType(Scrollable).first,
@@ -72,6 +86,8 @@ void main() {
     expect(saved.shutterDisplay, ShutterDisplay.conventional);
     expect(saved.themeMode, AppThemeMode.lowLight);
     expect(saved.northReference, NorthReference.magneticNorth);
+    expect(saved.defaultStarSharpness, DefaultStarSharpness.strict);
+    expect(saved.defaultAlignmentToleranceDegrees, 5);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

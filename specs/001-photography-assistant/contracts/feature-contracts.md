@@ -132,8 +132,11 @@ Latitude in `[-90, 90]`, east-positive longitude in `[-180, 180]`, a UTC instant
 target, positive optics, and desired trail arc in `(0, 360]` produce airless altitude, true-north azimuth,
 horizon visibility, visibility cycle, and next geometric events. Circumpolar and never-rising targets omit
 rise/set rather than inventing times. The same result includes 500-rule and NPF shutter estimates and the
-sidereal duration for a requested trail arc. Calculations remain offline, disclose exclusions and UTC
-context, and snapshots preserve target coordinates, event times, and equipment provenance.
+sidereal duration for a requested trail arc. Calculations remain offline and disclose their explicit
+numeric accuracy, exclusions, canonical UTC, and local-time context. Results identify the bundled catalog
+version, SIMBAD/JPL provenance, supported epoch, annual maintenance policy, and current/stale state.
+Snapshots preserve those values plus target coordinates, event times, location source/accuracy/update
+timestamp, elevation, timezone confidence, horizon/refraction policy, and equipment provenance.
 
 ## Sun/Moon alignment contract
 

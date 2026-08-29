@@ -84,6 +84,12 @@ Expected:
     target reticle respond to compass heading. Confirm magnetic heading and true target bearing are labeled
     separately, calibration limitations remain visible, and denying camera/location returns to the full
     numeric/timeline/compass/map plan.
+22. Select whole-, half-, and third-stop exposure increments and verify conventional long-exposure labels
+    change while raw seconds do not. Set strict star sharpness and a 5° alignment default, reopen both
+    planners, override the values, reset, and verify the persisted defaults return.
+23. Save a night-sky plan from a device-derived location; verify the result and immutable snapshot contain
+    reported location accuracy/update time, local and canonical UTC time, timezone confidence, elevation,
+    horizon/refraction policy, explicit numeric accuracy, and catalog version/provenance/epoch/freshness.
 
 ## Platform build gates
 

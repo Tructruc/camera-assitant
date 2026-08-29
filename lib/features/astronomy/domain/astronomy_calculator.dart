@@ -7,6 +7,45 @@ import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/validation/validation.dart';
 import 'planetary_ephemeris.dart';
 
+enum CatalogFreshness { current, stale }
+
+final class AstronomyCatalogMetadata {
+  const AstronomyCatalogMetadata({
+    required this.version,
+    required this.bundledAtUtc,
+    required this.provenance,
+    required this.supportedStartYear,
+    required this.supportedEndYear,
+    required this.updatePolicy,
+  });
+
+  static const current = AstronomyCatalogMetadata(
+    version: '2026.08',
+    bundledAtUtc: '2026-08-21T00:00:00Z',
+    provenance: 'SIMBAD fixed-target catalog and JPL approximate elements',
+    supportedStartYear: 1800,
+    supportedEndYear: 2050,
+    updatePolicy: 'Reviewed at least annually and replaced with an app release',
+  );
+
+  final String version;
+  final String bundledAtUtc;
+  final String provenance;
+  final int supportedStartYear;
+  final int supportedEndYear;
+  final String updatePolicy;
+
+  CatalogFreshness freshnessAt(DateTime nowUtc) {
+    final bundled = DateTime.parse(bundledAtUtc);
+    return nowUtc.toUtc().difference(bundled).inDays <= 365
+        ? CatalogFreshness.current
+        : CatalogFreshness.stale;
+  }
+
+  String freshnessLabel(DateTime nowUtc) =>
+      freshnessAt(nowUtc) == CatalogFreshness.current ? 'current' : 'stale';
+}
+
 enum CelestialTarget {
   milkyWayCore('Milky Way core', TargetCategory.milkyWay, 266.41683, -29.00781),
   polaris('Polaris', TargetCategory.star, 37.95456, 89.26411),
