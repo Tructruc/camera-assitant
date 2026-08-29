@@ -167,5 +167,5 @@ jobs:
           else
             gh release create continuous-v2 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Latest v2 test build" --notes "Continuously updated Android and iOS simulator test builds from branch v2. Android is persistently signed; iOS is an unsigned simulator archive."
           fi
-          gh release edit continuous-v2 --repo "$GITHUB_REPOSITORY" --prerelease --title "Latest v2 test build" --notes "Continuously updated Android and iOS simulator test builds from branch v2. Android is persistently signed; iOS is an unsigned simulator archive."
+          gh release edit continuous-v2 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Latest v2 test build" --notes "Continuously updated Android and iOS simulator test builds from branch v2. Android is persistently signed; iOS is an unsigned simulator archive."
           gh release upload continuous-v2 release-assets/camera-assistant-v2.apk release-assets/camera-assistant-v2-ios-simulator.zip --repo "$GITHUB_REPOSITORY" --clobber
