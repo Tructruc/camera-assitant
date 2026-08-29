@@ -138,10 +138,14 @@ context, and snapshots preserve target coordinates, event times, and equipment p
 ## Sun/Moon alignment contract
 
 A supported body, valid observer coordinates, finite manual observer/target elevations, positive target
-distance, true bearing, angular tolerance, and UTC range no longer than 31 days produce a derived target
-altitude and ordered local-minimum candidates. Every candidate includes time, azimuth, altitude, angular
-error, and horizon state. Search resolution, terrain/refraction exclusions, true-north reference, and
-expected accuracy remain visible and are saved. Sun views always display optical safety guidance.
+distance, true bearing, angular tolerance, and UTC range no longer than 366 elapsed days produce a derived
+target altitude and the best 20 ordered local-minimum candidates. The presentation accepts an inclusive
+local civil-date range of at most 366 calendar dates and converts its boundaries through bundled IANA
+daylight-saving rules before calling the pure UTC domain. The search streams ten-minute samples without
+retaining the full range in memory. Every candidate includes local/UTC time, azimuth, altitude, angular
+error, and horizon state. Location source/accuracy, local dates, timezone rule confidence, elevations,
+terrain/refraction exclusions, true-north reference, source freshness, and expected accuracy remain
+visible and are saved. Sun views always display optical safety guidance.
 
 Planning view capability states are `available`, `permissionRequired`, `denied`, or `unsupported`. Live AR
 requires camera, orientation, and AR support simultaneously. Any missing capability leaves numeric,

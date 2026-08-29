@@ -56,6 +56,57 @@ void main() {
     );
   });
 
+  test('converts inclusive local date ranges across daylight saving', () {
+    final context = PlanningTimeContext.parse('Europe/Paris');
+    final springRange = context.inclusiveLocalDateRange(
+      startDate: DateTime(2026, 3, 28),
+      endDate: DateTime(2026, 3, 29),
+    );
+
+    expect(springRange.startUtc, DateTime.utc(2026, 3, 27, 23));
+    expect(
+      springRange.endUtc.add(const Duration(microseconds: 1)),
+      DateTime.utc(2026, 3, 29, 22),
+    );
+    expect(
+      springRange.endUtc.difference(springRange.startUtc),
+      lessThan(const Duration(days: 2)),
+    );
+
+    final autumnRange = context.inclusiveLocalDateRange(
+      startDate: DateTime(2026, 10, 24),
+      endDate: DateTime(2026, 10, 25),
+    );
+    expect(autumnRange.startUtc, DateTime.utc(2026, 10, 23, 22));
+    expect(
+      autumnRange.endUtc.add(const Duration(microseconds: 1)),
+      DateTime.utc(2026, 10, 25, 23),
+    );
+    expect(
+      autumnRange.endUtc.difference(autumnRange.startUtc),
+      greaterThan(const Duration(days: 2)),
+    );
+  });
+
+  test('rejects reversed and longer-than-one-year local date ranges', () {
+    final context = PlanningTimeContext.parse('UTC');
+
+    expect(
+      () => context.inclusiveLocalDateRange(
+        startDate: DateTime(2026, 2),
+        endDate: DateTime(2026, 1),
+      ),
+      throwsArgumentError,
+    );
+    expect(
+      () => context.inclusiveLocalDateRange(
+        startDate: DateTime(2026),
+        endDate: DateTime(2027, 1, 2),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('retains UTC and identifies unknown timezone identifiers', () {
     final context = PlanningTimeContext.parse('Mars/Olympus');
     expect(context.canConvertOffline, isFalse);

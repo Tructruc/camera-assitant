@@ -234,12 +234,17 @@ aberration, precession/nutation, and topocentric parallax. A Jupiter fixture is 
 **Decision**: Solar equatorial coordinates use NOAA's published low-accuracy/Meeus model. Lunar
 coordinates use an explicitly planning-grade elliptical-orbit approximation before conversion through
 local mean sidereal time. Alignment altitude comes from manual observer/target elevation difference and
-horizontal distance. The engine samples a maximum 31-day UTC range at ten-minute intervals, retains local
-angular-error minima inside the requested tolerance, and orders the best 20 by angular error.
+horizontal distance. The engine samples a maximum one-year UTC range at ten-minute intervals and streams
+local angular-error minima without retaining every sample, keeping only the best 20 ordered candidates.
+The UI treats the selected local start and end dates as inclusive calendar dates, then converts their day
+boundaries to UTC with bundled IANA daylight-saving rules.
 
-**Rationale**: This is deterministic, fast, and fully offline while supporting bearing-plus-elevation
-composition search. Manual target geometry is preferable to silently inventing terrain. Ten-minute
-sampling and an explicit error score make the result understandable and prevent false exactness.
+**Rationale**: This is deterministic, memory-bounded, fast, and fully offline while supporting
+bearing-plus-elevation composition search over the specification's complete annual planning horizon.
+Manual target geometry is preferable to silently inventing terrain. Ten-minute sampling and an explicit
+error score make the result understandable and prevent false exactness. Civil-date conversion keeps a
+photographer's intended shooting dates stable across daylight-saving boundaries while canonical snapshots
+retain the exact UTC instants used by the calculation.
 
 **Accuracy and safety boundary**: The Sun model is expected within approximately 1° and the truncated Moon
 model within approximately 1.5° for composition scouting; candidate time resolution is ten minutes.

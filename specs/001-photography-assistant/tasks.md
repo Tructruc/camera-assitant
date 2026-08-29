@@ -329,3 +329,10 @@ story phases, actionable description, and exact file path.
 - [X] T105 [US4] Add reusable live compass views with calibration accuracy, declination, north preference, and unavailable-sensor fallback to both planners per FR-011 and FR-012 (partial)
 - [X] T106 [US4] Replace textual map placeholders with accessible offline spatial schematics for celestial paths and alignment candidates per FR-011 and US4/AC3 (partial)
 - [X] T107 [US4] Add direct local date/time selection with bundled timezone and daylight-saving conversion to the night-sky planner per US4 and Constitution V (partial)
+
+## Phase 16: Alignment Range and Context Convergence
+
+- [X] T108 [P] [US5] Add regression tests for a one-year alignment range, bounded ordered candidates, performance budget, and local civil-date conversion across daylight-saving transitions per SC-009 and Constitution II (contradicts)
+- [X] T109 [US5] Replace the 31-day alignment cap with a memory-bounded one-year search and update its documented contract, limitations, and accuracy policy per SC-009 and Constitution I (contradicts)
+- [X] T110 [US5] Replace UTC-only alignment day steppers with direct inclusive local civil-date range selection using saved-location timezone rules and canonical UTC search bounds per US5 and FR-013 (partial)
+- [X] T111 [US5] Add accessible, locally grouped alignment timeline candidates and complete reproducibility context for location, timezone confidence, elevations, horizon/refraction, source freshness, north reference, and expected accuracy in results and saved snapshots per FR-011, FR-013, and SC-008 (partial)

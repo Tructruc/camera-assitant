@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/features/alignment/domain/alignment_calculator.dart';
 import 'package:photography_assistant/features/depth_of_field/domain/depth_of_field_calculator.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 import 'package:photography_assistant/features/equipment/domain/equipment.dart';
@@ -7,6 +8,32 @@ import 'package:photography_assistant/features/exposure_comparison/domain/exposu
 import 'package:photography_assistant/features/long_exposure/domain/long_exposure_calculator.dart';
 
 void main() {
+  test('one-year alignment search remains below five seconds', () {
+    final watch = Stopwatch()..start();
+    final result = const AlignmentCalculator().search(
+      AlignmentSearchInput(
+        body: AlignmentBody.sun,
+        observerLatitudeDegrees: 48.8566,
+        observerLongitudeDegrees: 2.3522,
+        observerElevationMetres: 35,
+        targetElevationMetres: 335,
+        targetDistanceMetres: 1000,
+        desiredBearingDegrees: 180,
+        angularToleranceDegrees: 5,
+        startUtc: DateTime.utc(2026),
+        endUtc: DateTime.utc(2026, 12, 31, 23, 59),
+      ),
+    );
+    watch.stop();
+
+    expect(result.errors, isEmpty);
+    expect(result.output!.candidates.length, lessThanOrEqualTo(20));
+    expect(watch.elapsed, lessThan(const Duration(seconds: 5)));
+    // Visible in CI logs and copied into the release evidence document.
+    // ignore: avoid_print
+    print('alignment_one_year_ms=${watch.elapsedMilliseconds}');
+  });
+
   test('calculator p95 remains below the 100 ms field budget', () {
     final samples = <int>[];
     for (var index = 0; index < 1000; index++) {

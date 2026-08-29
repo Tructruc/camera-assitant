@@ -115,7 +115,8 @@ final class AlignmentSearchOutput {
 final class AlignmentCalculator {
   const AlignmentCalculator({this.ephemeris = const SolarLunarEphemeris()});
   static const id = 'sun_moon_alignment';
-  static const version = 1;
+  static const version = 2;
+  static const maximumRange = Duration(days: 366);
   final SolarLunarEphemeris ephemeris;
 
   CalculationResult<AlignmentSearchOutput> search(AlignmentSearchInput input) {
@@ -150,7 +151,7 @@ final class AlignmentCalculator {
       if (!input.startUtc.isUtc ||
           !input.endUtc.isUtc ||
           input.endUtc.isBefore(input.startUtc) ||
-          input.endUtc.difference(input.startUtc) > const Duration(days: 31))
+          input.endUtc.difference(input.startUtc) > maximumRange)
         _error('dateRange'),
     ];
     if (errors.isNotEmpty) {
@@ -168,12 +169,7 @@ final class AlignmentCalculator {
       ),
     );
     const step = Duration(minutes: 10);
-    final samples = <AlignmentCandidate>[];
-    for (
-      var instant = input.startUtc;
-      !instant.isAfter(input.endUtc);
-      instant = instant.add(step)
-    ) {
+    AlignmentCandidate candidateAt(DateTime instant) {
       final position = ephemeris.position(
         body: input.body,
         instantUtc: instant,
@@ -187,40 +183,52 @@ final class AlignmentCalculator {
       final error = math.sqrt(
         azimuthError * azimuthError + altitudeError * altitudeError,
       );
-      samples.add(
-        AlignmentCandidate(
-          instantUtc: instant,
-          azimuthDegrees: position.azimuthDegrees,
-          altitudeDegrees: position.altitudeDegrees,
-          angularErrorDegrees: error,
-          aboveHorizon: position.altitudeDegrees >= 0,
-        ),
+      return AlignmentCandidate(
+        instantUtc: instant,
+        azimuthDegrees: position.azimuthDegrees,
+        altitudeDegrees: position.altitudeDegrees,
+        angularErrorDegrees: error,
+        aboveHorizon: position.altitudeDegrees >= 0,
       );
     }
-    final localMinima = <AlignmentCandidate>[];
-    for (var index = 0; index < samples.length; index++) {
-      final candidate = samples[index];
-      final previous = index == 0
-          ? double.infinity
-          : samples[index - 1].angularErrorDegrees;
-      final next = index == samples.length - 1
-          ? double.infinity
-          : samples[index + 1].angularErrorDegrees;
+
+    final bestCandidates = <AlignmentCandidate>[];
+    void retainIfLocalMinimum(
+      AlignmentCandidate candidate,
+      double previousError,
+      double nextError,
+    ) {
       if (candidate.angularErrorDegrees <= input.angularToleranceDegrees &&
-          candidate.angularErrorDegrees <= previous &&
-          candidate.angularErrorDegrees <= next) {
-        localMinima.add(candidate);
+          candidate.angularErrorDegrees <= previousError &&
+          candidate.angularErrorDegrees <= nextError) {
+        bestCandidates.add(candidate);
+        bestCandidates.sort(
+          (a, b) => a.angularErrorDegrees.compareTo(b.angularErrorDegrees),
+        );
+        if (bestCandidates.length > 20) bestCandidates.removeLast();
       }
     }
-    localMinima.sort(
-      (a, b) => a.angularErrorDegrees.compareTo(b.angularErrorDegrees),
-    );
+
+    var previousError = double.infinity;
+    var current = candidateAt(input.startUtc);
+    for (
+      var instant = input.startUtc.add(step);
+      !instant.isAfter(input.endUtc);
+      instant = instant.add(step)
+    ) {
+      final next = candidateAt(instant);
+      retainIfLocalMinimum(current, previousError, next.angularErrorDegrees);
+      previousError = current.angularErrorDegrees;
+      current = next;
+    }
+    retainIfLocalMinimum(current, previousError, double.infinity);
+
     return CalculationResult.valid(
       calculatorId: id,
       formulaVersion: version,
       output: AlignmentSearchOutput(
         desiredAltitudeDegrees: desiredAltitude,
-        candidates: List.unmodifiable(localMinima.take(20)),
+        candidates: List.unmodifiable(bestCandidates),
         sampleMinutes: step.inMinutes,
       ),
       assumptions: const [

@@ -115,4 +115,39 @@ final class PlanningTimeContext {
     );
     return offset == null ? fieldsAsUtc : fieldsAsUtc.subtract(offset!);
   }
+
+  /// Converts an inclusive pair of local calendar dates to canonical UTC.
+  ///
+  /// The end instant is the final microsecond before the next local day, so a
+  /// daylight-saving transition naturally produces a 23- or 25-hour day.
+  PlanningUtcRange inclusiveLocalDateRange({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    // UTC instances are used only as timezone-neutral calendar-field carriers.
+    // Local DateTime.add/difference would otherwise inherit the device zone and
+    // can jump an hour while crossing daylight-saving boundaries.
+    final start = DateTime.utc(startDate.year, startDate.month, startDate.day);
+    final end = DateTime.utc(endDate.year, endDate.month, endDate.day);
+    final calendarSpan = end.difference(start);
+    if (calendarSpan.isNegative || calendarSpan > const Duration(days: 365)) {
+      throw ArgumentError.value(
+        (startDate, endDate),
+        'dateRange',
+        'Local date range must be ordered and span at most one year.',
+      );
+    }
+    final nextLocalDay = DateTime.utc(end.year, end.month, end.day + 1);
+    return PlanningUtcRange(
+      startUtc: toUtc(start),
+      endUtc: toUtc(nextLocalDay).subtract(const Duration(microseconds: 1)),
+    );
+  }
+}
+
+final class PlanningUtcRange {
+  const PlanningUtcRange({required this.startUtc, required this.endUtc});
+
+  final DateTime startUtc;
+  final DateTime endUtc;
 }

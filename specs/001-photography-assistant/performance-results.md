@@ -10,11 +10,15 @@ on representative Android and iOS hardware.
 | Load and map 1,000 camera records, p95 of 20 reads | < 500 ms | 39.828 ms | Pass |
 | Cold widget/application composition to interactive calculator catalog | < 2,000 ms | 371 ms | Pass |
 | Large-inventory drag and frame pump, p95 of 20 steps | < 100 ms host regression threshold | 29.489 ms | Pass |
+| One-year Sun alignment scan at ten-minute resolution | < 5,000 ms | 32 ms | Pass |
 
 The automated gates live in `test/performance/release_budgets_test.dart` and
 `test/performance/ui_budgets_test.dart`. They print their measured values in CI and fail if a budget is
 exceeded. Database seeding is intentionally excluded from inventory-readiness timing; the measurement
 covers the user-facing query and domain mapping after data already exists.
+
+The annual alignment measurement was added on 29 August 2026. It covers 52,560 planning samples using the
+same memory-bounded scan as the application and retains no more than the best 20 candidate records.
 
 Limitations:
 

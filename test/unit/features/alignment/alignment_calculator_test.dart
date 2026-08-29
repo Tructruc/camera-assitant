@@ -74,6 +74,56 @@ void main() {
     expect(output.candidates, isNotEmpty);
   });
 
+  test('searches a full year within the planning performance budget', () {
+    final stopwatch = Stopwatch()..start();
+    final result = const AlignmentCalculator().search(
+      AlignmentSearchInput(
+        body: AlignmentBody.sun,
+        observerLatitudeDegrees: 48.8566,
+        observerLongitudeDegrees: 2.3522,
+        observerElevationMetres: 35,
+        targetElevationMetres: 335,
+        targetDistanceMetres: 1000,
+        desiredBearingDegrees: 180,
+        angularToleranceDegrees: 5,
+        startUtc: DateTime.utc(2026),
+        endUtc: DateTime.utc(2026, 12, 31, 23, 59),
+      ),
+    );
+    stopwatch.stop();
+
+    expect(result.errors, isEmpty);
+    expect(result.output!.candidates.length, lessThanOrEqualTo(20));
+    expect(
+      result.output!.candidates.map((item) => item.angularErrorDegrees),
+      orderedEquals(
+        [...result.output!.candidates.map((item) => item.angularErrorDegrees)]
+          ..sort(),
+      ),
+    );
+    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
+  });
+
+  test('rejects ranges longer than one year', () {
+    final result = const AlignmentCalculator().search(
+      AlignmentSearchInput(
+        body: AlignmentBody.moon,
+        observerLatitudeDegrees: 45,
+        observerLongitudeDegrees: 5,
+        observerElevationMetres: 100,
+        targetElevationMetres: 200,
+        targetDistanceMetres: 1000,
+        desiredBearingDegrees: 120,
+        angularToleranceDegrees: 3,
+        startUtc: DateTime.utc(2026),
+        endUtc: DateTime.utc(2027, 1, 3),
+      ),
+    );
+
+    expect(result.output, isNull);
+    expect(result.errors.single.field, 'dateRange');
+  });
+
   test('validates coordinates, dates, geometry, and tolerance', () {
     final result = const AlignmentCalculator().search(
       AlignmentSearchInput(

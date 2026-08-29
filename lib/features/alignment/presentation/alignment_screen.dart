@@ -15,7 +15,9 @@ import '../../planning/presentation/field_checklist.dart';
 import '../../planning/presentation/live_ar_view.dart';
 import '../../planning/presentation/live_compass_view.dart';
 import '../../planning/presentation/offline_planning_map.dart';
+import '../../planning/presentation/planning_context_card.dart';
 import '../domain/alignment_calculator.dart';
+import 'alignment_timeline.dart';
 
 class AlignmentScreen extends ConsumerStatefulWidget {
   const AlignmentScreen({this.capabilities, super.key});
@@ -37,8 +39,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   final _magneticDeclination = TextEditingController(text: '0');
   var _body = AlignmentBody.sun;
   var _view = PlanningView.numeric;
-  late DateTime _startUtc;
-  late DateTime _endUtc;
+  late DateTime _startLocalDate;
+  late DateTime _endLocalDate;
   CalculationResult<AlignmentSearchOutput>? _result;
   Map<String, String> _errors = const {};
   Map<String, bool> _checklist = {
@@ -48,13 +50,14 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     'Use certified solar filtration for Sun plans': false,
   };
   var _timeZoneId = 'UTC';
+  SavedLocation? _selectedLocation;
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now().toUtc();
-    _startUtc = DateTime.utc(now.year, now.month, now.day);
-    _endUtc = _startUtc.add(const Duration(days: 1));
+    _startLocalDate = DateTime(now.year, now.month, now.day);
+    _endLocalDate = _startLocalDate;
   }
 
   @override
@@ -85,10 +88,11 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       ),
       const SizedBox(height: 8),
       const Text(
-        'Search up to 31 days for the closest bearing and elevation match. All calculations run offline.',
+        'Search up to one year for the closest bearing and elevation match. All calculations run offline.',
       ),
       const SizedBox(height: 12),
       DropdownButtonFormField<SavedLocation>(
+        key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
         decoration: const InputDecoration(
           labelText: 'Saved location (optional)',
         ),
@@ -98,6 +102,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
                   const <SavedLocation>[])
             DropdownMenuItem(value: location, child: Text(location.name)),
         ],
+        initialValue: _selectedLocation,
         onChanged: (location) {
           if (location == null) return;
           setState(() {
@@ -107,6 +112,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
               _observerElevation.text = location.elevationMetres.toString();
             }
             _timeZoneId = location.timeZoneId;
+            _selectedLocation = location;
             _result = null;
           });
         },
@@ -211,58 +217,40 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         controller: _magneticDeclination,
       ),
       InputDecorator(
-        decoration: const InputDecoration(labelText: 'Start date (UTC)'),
-        child: Row(
+        decoration: InputDecoration(
+          labelText: 'Inclusive date range ($_timeZoneId, maximum one year)',
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            IconButton(
-              tooltip: 'Previous day',
-              onPressed: () => _shiftStartDay(-1),
-              icon: const Icon(Icons.chevron_left),
+            Text(
+              '${DateFormat('yyyy-MM-dd').format(_startLocalDate)} to ${DateFormat('yyyy-MM-dd').format(_endLocalDate)}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            Expanded(
-              child: Text(
-                DateFormat('yyyy-MM-dd').format(_startUtc),
-                textAlign: TextAlign.center,
-              ),
+            Text(
+              PlanningTimeContext.parse(_timeZoneId).confidenceLabel,
+              textAlign: TextAlign.center,
             ),
-            IconButton(
-              tooltip: 'Next day',
-              onPressed: () => _shiftStartDay(1),
-              icon: const Icon(Icons.chevron_right),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('alignment-date-range'),
+              onPressed: _pickLocalDateRange,
+              icon: const Icon(Icons.date_range_outlined),
+              label: const Text('Choose local date range'),
             ),
           ],
         ),
       ),
       const SizedBox(height: 12),
-      InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'End date (UTC, maximum 31 days)',
-        ),
-        child: Row(
-          children: [
-            IconButton(
-              tooltip: 'End one day earlier',
-              onPressed: () => _shiftEndDay(-1),
-              icon: const Icon(Icons.chevron_left),
-            ),
-            Expanded(
-              child: Text(
-                DateFormat('yyyy-MM-dd').format(_endUtc),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            IconButton(
-              tooltip: 'End one day later',
-              onPressed: () => _shiftEndDay(1),
-              icon: const Icon(Icons.chevron_right),
-            ),
-          ],
-        ),
+      FilledButton(
+        key: const Key('alignment-search'),
+        onPressed: _search,
+        child: const Text('Search alignments'),
       ),
-      const SizedBox(height: 12),
-      FilledButton(onPressed: _search, child: const Text('Search alignments')),
       const SizedBox(height: 16),
       if (_result?.output case final output?) ...[
+        _planningContext(),
         CalculationResultView(
           title: '${_body.name} alignment search',
           rows: [
@@ -372,19 +360,13 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Best opportunities ${DateFormat('yyyy-MM-dd').format(_startUtc)} to ${DateFormat('yyyy-MM-dd').format(_endUtc)}',
+            'Best opportunities ${DateFormat('yyyy-MM-dd').format(_startLocalDate)} to ${DateFormat('yyyy-MM-dd').format(_endLocalDate)}',
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-          for (final candidate in output.candidates.take(8))
-            LinearProgressIndicator(
-              value:
-                  1 -
-                  (candidate.angularErrorDegrees / _value(_tolerance)).clamp(
-                    0,
-                    1,
-                  ),
-              semanticsLabel:
-                  '${DateFormat('HH:mm').format(candidate.instantUtc)} alignment closeness',
-            ),
+          AlignmentTimeline(
+            candidates: output.candidates.take(20).toList(growable: false),
+            timeZoneId: _timeZoneId,
+          ),
         ],
       ),
       PlanningView.compass => LiveCompassView(
@@ -448,6 +430,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   }
 
   void _search() {
+    final range = _utcRange;
     final result = const AlignmentCalculator().search(
       AlignmentSearchInput(
         body: _body,
@@ -458,8 +441,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         targetDistanceMetres: _value(_targetDistance),
         desiredBearingDegrees: _value(_bearing),
         angularToleranceDegrees: _value(_tolerance),
-        startUtc: _startUtc,
-        endUtc: _endUtc,
+        startUtc: range.startUtc,
+        endUtc: range.endUtc,
       ),
     );
     setState(() {
@@ -471,14 +454,44 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     });
   }
 
-  void _shiftStartDay(int days) => setState(() {
-    _startUtc = _startUtc.add(Duration(days: days));
-    _result = null;
-  });
-  void _shiftEndDay(int days) => setState(() {
-    _endUtc = _endUtc.add(Duration(days: days));
-    _result = null;
-  });
+  PlanningUtcRange get _utcRange => PlanningTimeContext.parse(
+    _timeZoneId,
+  ).inclusiveLocalDateRange(startDate: _startLocalDate, endDate: _endLocalDate);
+
+  Future<void> _pickLocalDateRange() async {
+    final selected = await showDateRangePicker(
+      context: context,
+      initialDateRange: DateTimeRange(
+        start: _startLocalDate,
+        end: _endLocalDate,
+      ),
+      firstDate: DateTime(1800),
+      lastDate: DateTime(2050, 12, 31),
+      helpText: 'Choose inclusive dates · $_timeZoneId',
+      saveText: 'Use range',
+    );
+    if (selected == null || !mounted) return;
+    if (selected.end.difference(selected.start) > const Duration(days: 365)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a range of one year or less.')),
+      );
+      return;
+    }
+    setState(() {
+      _startLocalDate = DateTime(
+        selected.start.year,
+        selected.start.month,
+        selected.start.day,
+      );
+      _endLocalDate = DateTime(
+        selected.end.year,
+        selected.end.month,
+        selected.end.day,
+      );
+      _result = null;
+    });
+  }
+
   Future<void> _save(AlignmentSearchOutput output) => saveCalculationSnapshot(
     context,
     ref,
@@ -488,7 +501,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       formulaVersion: AlignmentCalculator.version,
       createdAt: DateTime.now().toUtc(),
       title:
-          '${_body.name} alignment ${DateFormat('yyyy-MM-dd').format(_startUtc)}',
+          '${_body.name} alignment ${DateFormat('yyyy-MM-dd').format(_startLocalDate)}',
       canonicalInputs: {
         'body': _body.name,
         'observerLatitudeDegrees': _value(_latitude),
@@ -503,8 +516,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
           'targetLongitudeDegrees': _value(_targetLongitude),
         'angularToleranceDegrees': _value(_tolerance),
         'magneticDeclinationDegrees': _value(_magneticDeclination),
-        'startUtc': _startUtc.toIso8601String(),
-        'endUtc': _endUtc.toIso8601String(),
+        'startLocalDate': DateFormat('yyyy-MM-dd').format(_startLocalDate),
+        'endLocalDate': DateFormat('yyyy-MM-dd').format(_endLocalDate),
+        'startUtc': _utcRange.startUtc.toIso8601String(),
+        'endUtc': _utcRange.endUtc.toIso8601String(),
       },
       canonicalOutputs: {
         'desiredAltitudeDegrees': output.desiredAltitudeDegrees,
@@ -531,6 +546,18 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             NorthReference.trueNorth.name,
         'magneticDeclinationDegrees': _value(_magneticDeclination),
         'mapMode': 'offlineSchematic',
+        'locationLabel': _locationLabel,
+        'locationSource': _locationSource,
+        'locationAccuracyMetres': ?_selectedLocation?.accuracyMetres,
+        'timeZoneConfidence': PlanningTimeContext.parse(
+          _timeZoneId,
+        ).confidenceLabel,
+        'observerElevationMetres': _value(_observerElevation),
+        'targetElevationMetres': _value(_targetElevation),
+        'horizon': 'unobstructed geometric horizon',
+        'refraction': 'not applied',
+        'sourceFreshness': 'Bundled formula v${AlignmentCalculator.version}',
+        'expectedAccuracy': _expectedAccuracy,
       },
       assumptions: _result!.assumptions,
       warnings: _result!.warnings,
@@ -550,9 +577,57 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     setState(() {
       _body = AlignmentBody.sun;
       _view = PlanningView.numeric;
-      _endUtc = _startUtc.add(const Duration(days: 1));
+      _endLocalDate = _startLocalDate;
+      _selectedLocation = null;
+      _timeZoneId = 'UTC';
       _result = null;
       _errors = const {};
     });
+  }
+
+  String get _locationLabel =>
+      _selectedLocation?.name ?? '${_latitude.text}, ${_longitude.text}';
+
+  String get _locationSource {
+    final location = _selectedLocation;
+    if (location == null) return 'Manual coordinates';
+    final accuracy = location.accuracyMetres;
+    return '${location.source.name}${accuracy == null ? '' : ' · ±${accuracy.toStringAsFixed(0)} m reported accuracy'}';
+  }
+
+  String get _expectedAccuracy => _body == AlignmentBody.sun
+      ? 'About ±1° position; candidate times sampled every 10 minutes'
+      : 'About ±1.5° position; candidate times sampled every 10 minutes';
+
+  Widget _planningContext() {
+    final time = PlanningTimeContext.parse(_timeZoneId);
+    final north =
+        ref.watch(preferencesProvider).valueOrNull?.northReference ??
+        NorthReference.trueNorth;
+    return PlanningContextCard(
+      entries: [
+        ('Location', _locationLabel),
+        ('Location source', _locationSource),
+        (
+          'Local range',
+          '${DateFormat('yyyy-MM-dd').format(_startLocalDate)} to ${DateFormat('yyyy-MM-dd').format(_endLocalDate)} · $_timeZoneId',
+        ),
+        ('Time-zone rules', time.confidenceLabel),
+        (
+          'Elevations',
+          'observer ${_observerElevation.text} m · target ${_targetElevation.text} m',
+        ),
+        (
+          'North reference',
+          'Calculated in true north · compass preference ${north.name}',
+        ),
+        ('Horizon / refraction', 'Unobstructed geometric horizon · none'),
+        (
+          'Source freshness',
+          'Bundled formula v${AlignmentCalculator.version}; no remote data',
+        ),
+        ('Expected accuracy', _expectedAccuracy),
+      ],
+    );
   }
 }

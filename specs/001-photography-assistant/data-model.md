@@ -89,8 +89,11 @@ observer coordinates, formula version, optical inputs, applied equipment, assump
 
 An immutable Sun/Moon composition search containing observer coordinates/elevation, target elevation and
 distance, desired true bearing, derived target altitude, UTC range, angular tolerance, sampling resolution,
-and ordered candidates. Each candidate records UTC instant, true azimuth, altitude, angular error, and
-horizon state. Numeric, timeline, compass, map, and AR-capability views consume this same result.
+and up to 20 ordered candidates selected by a memory-bounded one-year scan. Each candidate records UTC
+instant, true azimuth, altitude, angular error, and horizon state. The immutable snapshot additionally
+stores the inclusive local civil dates, timezone rule confidence, source/accuracy context, elevations,
+horizon/refraction policy, model freshness, and declared accuracy. Numeric, locally grouped timeline,
+compass, map, and AR-capability views consume this same result.
 
 ## Saved Location
 

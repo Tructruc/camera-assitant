@@ -6,7 +6,9 @@ import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CameraBody, SavedLocation;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
+import 'package:photography_assistant/features/alignment/domain/alignment_calculator.dart';
 import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
+import 'package:photography_assistant/features/alignment/presentation/alignment_timeline.dart';
 import 'package:photography_assistant/features/astronomy/presentation/astronomy_screen.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
@@ -303,10 +305,17 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -150));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Search alignments'));
-    await tester.pump();
+    final search = find.byKey(const Key('alignment-search'));
+    await tester.ensureVisible(search);
+    await tester.pumpAndSettle();
+    await tester.tap(search);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Search resolution'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Search resolution'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('AR'),
@@ -317,6 +326,162 @@ void main() {
     await tester.pump();
     expect(find.text('AR unavailable'), findsOneWidget);
     expect(find.textContaining('remain fully usable'), findsOneWidget);
+  });
+
+  testWidgets('alignment planner selects an inclusive local date range', (
+    tester,
+  ) async {
+    final location = SavedLocation(
+      id: 'paris-alignment',
+      name: 'Paris alignment',
+      latitudeDegrees: 48.8566,
+      longitudeDegrees: 2.3522,
+      elevationMetres: 35,
+      timeZoneId: 'Europe/Paris',
+      source: LocationSource.manual,
+      createdAt: DateTime.utc(2026, 8, 29),
+      updatedAt: DateTime.utc(2026, 8, 29),
+    );
+    await tester.pumpWidget(
+      app(const AlignmentScreen(), savedLocations: [location]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<SavedLocation>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paris alignment').last);
+    await tester.pumpAndSettle();
+
+    final chooseRange = find.byKey(const Key('alignment-date-range'));
+    await tester.scrollUntilVisible(
+      chooseRange,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Europe/Paris'), findsWidgets);
+    await tester.tap(chooseRange);
+    await tester.pumpAndSettle();
+    expect(find.byType(DateRangePickerDialog), findsOneWidget);
+  });
+
+  testWidgets('alignment timeline groups readable candidates by local date', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AlignmentTimeline(
+            timeZoneId: 'Europe/Paris',
+            candidates: [
+              AlignmentCandidate(
+                instantUtc: DateTime.utc(2026, 3, 28, 23, 30),
+                azimuthDegrees: 179.4,
+                altitudeDegrees: 38.2,
+                angularErrorDegrees: 0.62,
+                aboveHorizon: true,
+              ),
+              AlignmentCandidate(
+                instantUtc: DateTime.utc(2026, 3, 29, 22, 30),
+                azimuthDegrees: 181.1,
+                altitudeDegrees: -2.5,
+                angularErrorDegrees: 1.21,
+                aboveHorizon: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('2026-03-29'), findsOneWidget);
+    expect(find.text('2026-03-30'), findsOneWidget);
+    expect(find.textContaining('Europe/Paris'), findsNWidgets(2));
+    expect(find.textContaining('above horizon'), findsOneWidget);
+    expect(find.textContaining('below horizon'), findsOneWidget);
+    expect(find.text('0.62° error'), findsOneWidget);
+  });
+
+  testWidgets('alignment plan displays and saves reproducibility context', (
+    tester,
+  ) async {
+    final location = SavedLocation(
+      id: 'device-ridge',
+      name: 'Device ridge',
+      latitudeDegrees: 45.8326,
+      longitudeDegrees: 6.8652,
+      elevationMetres: 1200,
+      timeZoneId: 'Europe/Paris',
+      source: LocationSource.device,
+      accuracyMetres: 8,
+      createdAt: DateTime.utc(2026, 8, 29),
+      updatedAt: DateTime.utc(2026, 8, 29),
+    );
+    await tester.pumpWidget(
+      app(const AlignmentScreen(), savedLocations: [location]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(DropdownButtonFormField<SavedLocation>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Device ridge').last);
+    await tester.pumpAndSettle();
+
+    final tolerance = find.widgetWithText(
+      TextField,
+      'Angular tolerance (degrees)',
+    );
+    await tester.scrollUntilVisible(
+      tolerance,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(tolerance, '180');
+    final search = find.byKey(const Key('alignment-search'));
+    await tester.scrollUntilVisible(
+      search,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(search);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Planning context'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Planning context'), findsOneWidget);
+    expect(find.text('Device ridge'), findsOneWidget);
+    expect(find.textContaining('±8 m reported accuracy'), findsOneWidget);
+
+    final save = find.widgetWithText(FilledButton, 'Save result');
+    await tester.scrollUntilVisible(
+      save,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(save);
+    await tester.pumpAndSettle();
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    final snapshot = (await DriftSnapshotRepository(
+      database,
+    ).listNewestFirst()).single;
+    expect(snapshot.formulaVersion, 2);
+    expect(snapshot.canonicalInputs['startLocalDate'], isNotNull);
+    expect(snapshot.canonicalInputs['endLocalDate'], isNotNull);
+    expect(snapshot.canonicalInputs['startUtc'], endsWith('Z'));
+    expect(snapshot.canonicalInputs['endUtc'], endsWith('Z'));
+    expect(snapshot.displayContext['locationLabel'], 'Device ridge');
+    expect(snapshot.displayContext['locationSource'], contains('device'));
+    expect(snapshot.displayContext['locationAccuracyMetres'], 8.0);
+    expect(snapshot.displayContext['timeZone'], 'Europe/Paris');
+    expect(snapshot.displayContext['timeZoneConfidence'], contains('IANA'));
+    expect(snapshot.displayContext['observerElevationMetres'], 1200.0);
+    expect(snapshot.displayContext['targetElevationMetres'], 820.0);
+    expect(snapshot.displayContext['horizon'], contains('geometric'));
+    expect(snapshot.displayContext['refraction'], 'not applied');
+    expect(snapshot.displayContext['sourceFreshness'], contains('formula v2'));
+    expect(snapshot.displayContext['expectedAccuracy'], contains('10 minutes'));
   });
 
   testWidgets('preferences change result presentation, not calculations', (
