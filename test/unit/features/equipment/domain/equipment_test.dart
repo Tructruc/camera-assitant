@@ -13,6 +13,7 @@ void main() {
       name: '  Full   Frame  ',
       sensorWidthMm: 36,
       sensorHeightMm: 24,
+      notes: 'Primary landscape body',
       provenance: provenance,
       createdAt: createdAt,
       updatedAt: createdAt,
@@ -100,6 +101,7 @@ void main() {
       name: 'Camera',
       sensorWidthMm: 36,
       sensorHeightMm: 24,
+      notes: 'Primary landscape body',
       provenance: provenance,
       createdAt: createdAt,
       updatedAt: createdAt,
@@ -114,6 +116,7 @@ void main() {
     expect(restored.isArchived, isFalse);
     expect(restored.id, camera.id);
     expect(restored.provenance, camera.provenance);
+    expect(restored.notes, 'Primary landscape body');
   });
 
   test('timestamps must be UTC and identifiers must not be blank', () {

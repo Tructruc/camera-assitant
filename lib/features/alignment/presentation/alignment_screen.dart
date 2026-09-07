@@ -265,6 +265,22 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
           _planningContext(),
           CalculationResultView(
             title: '${_body.name} alignment search',
+            inputs: [
+              ('Body', _body.name),
+              (
+                'Observer',
+                '${_latitude.text.trim()}°, ${_longitude.text.trim()}° · ${_observerElevation.text.trim()} m',
+              ),
+              (
+                'Target geometry',
+                '${_bearing.text.trim()}° true · ${_targetDistance.text.trim()} m · ${_targetElevation.text.trim()} m elevation',
+              ),
+              ('Angular tolerance', '${_tolerance.text.trim()}°'),
+              (
+                'Date range',
+                '${DateFormat('yyyy-MM-dd').format(_startLocalDate)} to ${DateFormat('yyyy-MM-dd').format(_endLocalDate)} ($_timeZoneId)',
+              ),
+            ],
             rows: [
               (
                 'Target altitude',

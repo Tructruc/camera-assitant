@@ -57,6 +57,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
         _first.text = '${item.sensorWidthMm}';
         _second.text = '${item.sensorHeightMm}';
         _third.text = item.defaultCircleOfConfusionMm?.toString() ?? '';
+        _notes.text = item.notes ?? '';
       case Lens():
         _first.text = '${item.minimumFocalLengthMm}';
         _second.text = '${item.maximumFocalLengthMm}';
@@ -130,12 +131,11 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
               decoration: const InputDecoration(labelText: 'Source note'),
             ),
             const SizedBox(height: 12),
-            if (widget.kind != EquipmentKind.camera)
-              TextFormField(
-                controller: _notes,
-                decoration: const InputDecoration(labelText: 'Notes'),
-                maxLines: 3,
-              ),
+            TextFormField(
+              controller: _notes,
+              decoration: const InputDecoration(labelText: 'Notes'),
+              maxLines: 3,
+            ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _saving ? null : _save,
@@ -245,6 +245,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           sensorWidthMm: _value(_first),
           sensorHeightMm: _value(_second),
           defaultCircleOfConfusionMm: _optionalValue(_third),
+          notes: _nullableText(_notes.text),
           provenance: provenance,
           createdAt: createdAt,
           updatedAt: now,

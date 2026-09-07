@@ -207,6 +207,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         if (_result?.output case final output?)
           CalculationResultView(
             title: 'Macro estimate',
+            inputs: _inputSummary,
             rows: [
               ('Magnification', '${output.magnification.toStringAsFixed(2)}×'),
               (
@@ -238,6 +239,22 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
 
   double _value(TextEditingController controller) =>
       double.tryParse(controller.text.trim()) ?? double.nan;
+
+  List<(String, String)> get _inputSummary => [
+    ('Configuration', _configurationLabel()),
+    if (_configuration != MacroConfiguration.reversedLens)
+      ('Primary focal length', '${_primaryFocal.text.trim()} mm'),
+    if (_configuration != MacroConfiguration.extensionTube)
+      ('Reversed focal length', '${_reversedFocal.text.trim()} mm'),
+    if (_configuration == MacroConfiguration.extensionTube) ...[
+      ('Extension length', '${_extension.text.trim()} mm'),
+      ('Native magnification', '${_nativeMagnification.text.trim()}×'),
+    ],
+    if (_configuration == MacroConfiguration.reversedLens)
+      ('Flange distance', '${_flangeDistance.text.trim()} mm'),
+    ('Nominal aperture', 'f/${_aperture.text.trim()}'),
+    ('Sensor width', '${_sensorWidth.text.trim()} mm'),
+  ];
   void _calculate() {
     final input = switch (_configuration) {
       MacroConfiguration.extensionTube => MacroInput.extensionTube(

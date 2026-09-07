@@ -138,6 +138,12 @@ version, SIMBAD/JPL provenance, supported epoch, annual maintenance policy, and 
 Snapshots preserve those values plus target coordinates, event times, location source/accuracy/update
 timestamp, elevation, timezone confidence, horizon/refraction policy, and equipment provenance.
 
+For the Milky Way core, formula version 2 also returns the local Galactic-plane tangent's projected
+angle relative to a level, unmirrored horizon, in `[0, 180)`: 0° horizontal, 90° vertical, increasing
+upward from image right. It returns null with a warning within 0.1° of zenith/nadir, and omits this
+output for other targets. Below-horizon projections do not imply visibility. Results and snapshots
+preserve the convention, precise value, and exclusions (camera roll, refraction, terrain, precession).
+
 ## Sun/Moon alignment contract
 
 A supported body, valid observer coordinates, finite manual observer/target elevations, positive target
@@ -170,7 +176,9 @@ checklist inside their immutable canonical payload.
 ## Equipment repository contract
 
 Operations: watch/list active items by type, fetch by ID, create, update, archive, restore, and determine
-reference impact.
+reference impact. Confirmed deletion removes unreferenced equipment permanently; referenced equipment
+cannot be permanently deleted and offers an explicit archive-and-warning path. Camera notes are
+preserved separately from provenance through editing, duplication, storage and migration.
 
 Guarantees:
 

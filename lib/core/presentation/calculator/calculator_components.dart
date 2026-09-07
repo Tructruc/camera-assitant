@@ -91,6 +91,7 @@ class AppliedEquipmentNotice extends StatelessWidget {
 class CalculationResultView extends StatelessWidget {
   const CalculationResultView({
     required this.title,
+    required this.inputs,
     required this.rows,
     required this.assumptions,
     required this.onReset,
@@ -100,6 +101,7 @@ class CalculationResultView extends StatelessWidget {
   });
 
   final String title;
+  final List<(String, String)> inputs;
   final List<(String, String)> rows;
   final List<String> assumptions;
   final String? guidance;
@@ -119,6 +121,38 @@ class CalculationResultView extends StatelessWidget {
           children: <Widget>[
             Text(title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
+            Semantics(
+              container: true,
+              label:
+                  'Input summary: ${inputs.map((input) => '${input.$1} ${input.$2}').join('; ')}',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text(
+                    'Input summary',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 6),
+                  for (final (label, value) in inputs)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(child: Text(label)),
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(value, textAlign: TextAlign.end),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            Text('Results', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
             for (final (label, value) in rows)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),

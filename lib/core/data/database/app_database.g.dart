@@ -134,6 +134,15 @@ class $CameraBodiesTable extends CameraBodies
         type: DriftSqlType.double,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -147,6 +156,7 @@ class $CameraBodiesTable extends CameraBodies
     sensorWidthMm,
     sensorHeightMm,
     defaultCircleOfConfusionMm,
+    notes,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -251,6 +261,12 @@ class $CameraBodiesTable extends CameraBodies
         ),
       );
     }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     return context;
   }
 
@@ -304,6 +320,10 @@ class $CameraBodiesTable extends CameraBodies
         DriftSqlType.double,
         data['${effectivePrefix}default_circle_of_confusion_mm'],
       ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
     );
   }
 
@@ -325,6 +345,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
   final double sensorWidthMm;
   final double sensorHeightMm;
   final double? defaultCircleOfConfusionMm;
+  final String? notes;
   const CameraBody({
     required this.id,
     required this.name,
@@ -337,6 +358,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
     required this.sensorWidthMm,
     required this.sensorHeightMm,
     this.defaultCircleOfConfusionMm,
+    this.notes,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -359,6 +381,9 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
       map['default_circle_of_confusion_mm'] = Variable<double>(
         defaultCircleOfConfusionMm,
       );
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
     }
     return map;
   }
@@ -383,6 +408,9 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
           defaultCircleOfConfusionMm == null && nullToAbsent
           ? const Value.absent()
           : Value(defaultCircleOfConfusionMm),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
     );
   }
 
@@ -405,6 +433,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
       defaultCircleOfConfusionMm: serializer.fromJson<double?>(
         json['defaultCircleOfConfusionMm'],
       ),
+      notes: serializer.fromJson<String?>(json['notes']),
     );
   }
   @override
@@ -424,6 +453,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
       'defaultCircleOfConfusionMm': serializer.toJson<double?>(
         defaultCircleOfConfusionMm,
       ),
+      'notes': serializer.toJson<String?>(notes),
     };
   }
 
@@ -439,6 +469,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
     double? sensorWidthMm,
     double? sensorHeightMm,
     Value<double?> defaultCircleOfConfusionMm = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
   }) => CameraBody(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -453,6 +484,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
     defaultCircleOfConfusionMm: defaultCircleOfConfusionMm.present
         ? defaultCircleOfConfusionMm.value
         : this.defaultCircleOfConfusionMm,
+    notes: notes.present ? notes.value : this.notes,
   );
   CameraBody copyWithCompanion(CameraBodiesCompanion data) {
     return CameraBody(
@@ -481,6 +513,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
       defaultCircleOfConfusionMm: data.defaultCircleOfConfusionMm.present
           ? data.defaultCircleOfConfusionMm.value
           : this.defaultCircleOfConfusionMm,
+      notes: data.notes.present ? data.notes.value : this.notes,
     );
   }
 
@@ -497,7 +530,8 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
           ..write('archivedAt: $archivedAt, ')
           ..write('sensorWidthMm: $sensorWidthMm, ')
           ..write('sensorHeightMm: $sensorHeightMm, ')
-          ..write('defaultCircleOfConfusionMm: $defaultCircleOfConfusionMm')
+          ..write('defaultCircleOfConfusionMm: $defaultCircleOfConfusionMm, ')
+          ..write('notes: $notes')
           ..write(')'))
         .toString();
   }
@@ -515,6 +549,7 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
     sensorWidthMm,
     sensorHeightMm,
     defaultCircleOfConfusionMm,
+    notes,
   );
   @override
   bool operator ==(Object other) =>
@@ -530,7 +565,8 @@ class CameraBody extends DataClass implements Insertable<CameraBody> {
           other.archivedAt == this.archivedAt &&
           other.sensorWidthMm == this.sensorWidthMm &&
           other.sensorHeightMm == this.sensorHeightMm &&
-          other.defaultCircleOfConfusionMm == this.defaultCircleOfConfusionMm);
+          other.defaultCircleOfConfusionMm == this.defaultCircleOfConfusionMm &&
+          other.notes == this.notes);
 }
 
 class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
@@ -545,6 +581,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
   final Value<double> sensorWidthMm;
   final Value<double> sensorHeightMm;
   final Value<double?> defaultCircleOfConfusionMm;
+  final Value<String?> notes;
   final Value<int> rowid;
   const CameraBodiesCompanion({
     this.id = const Value.absent(),
@@ -558,6 +595,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
     this.sensorWidthMm = const Value.absent(),
     this.sensorHeightMm = const Value.absent(),
     this.defaultCircleOfConfusionMm = const Value.absent(),
+    this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CameraBodiesCompanion.insert({
@@ -572,6 +610,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
     required double sensorWidthMm,
     required double sensorHeightMm,
     this.defaultCircleOfConfusionMm = const Value.absent(),
+    this.notes = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -593,6 +632,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
     Expression<double>? sensorWidthMm,
     Expression<double>? sensorHeightMm,
     Expression<double>? defaultCircleOfConfusionMm,
+    Expression<String>? notes,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -608,6 +648,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
       if (sensorHeightMm != null) 'sensor_height_mm': sensorHeightMm,
       if (defaultCircleOfConfusionMm != null)
         'default_circle_of_confusion_mm': defaultCircleOfConfusionMm,
+      if (notes != null) 'notes': notes,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -624,6 +665,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
     Value<double>? sensorWidthMm,
     Value<double>? sensorHeightMm,
     Value<double?>? defaultCircleOfConfusionMm,
+    Value<String?>? notes,
     Value<int>? rowid,
   }) {
     return CameraBodiesCompanion(
@@ -639,6 +681,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
       sensorHeightMm: sensorHeightMm ?? this.sensorHeightMm,
       defaultCircleOfConfusionMm:
           defaultCircleOfConfusionMm ?? this.defaultCircleOfConfusionMm,
+      notes: notes ?? this.notes,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -681,6 +724,9 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
         defaultCircleOfConfusionMm.value,
       );
     }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -701,6 +747,7 @@ class CameraBodiesCompanion extends UpdateCompanion<CameraBody> {
           ..write('sensorWidthMm: $sensorWidthMm, ')
           ..write('sensorHeightMm: $sensorHeightMm, ')
           ..write('defaultCircleOfConfusionMm: $defaultCircleOfConfusionMm, ')
+          ..write('notes: $notes, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5510,6 +5557,7 @@ typedef $$CameraBodiesTableCreateCompanionBuilder =
       required double sensorWidthMm,
       required double sensorHeightMm,
       Value<double?> defaultCircleOfConfusionMm,
+      Value<String?> notes,
       Value<int> rowid,
     });
 typedef $$CameraBodiesTableUpdateCompanionBuilder =
@@ -5525,6 +5573,7 @@ typedef $$CameraBodiesTableUpdateCompanionBuilder =
       Value<double> sensorWidthMm,
       Value<double> sensorHeightMm,
       Value<double?> defaultCircleOfConfusionMm,
+      Value<String?> notes,
       Value<int> rowid,
     });
 
@@ -5589,6 +5638,11 @@ class $$CameraBodiesTableFilterComposer
 
   ColumnFilters<double> get defaultCircleOfConfusionMm => $composableBuilder(
     column: $table.defaultCircleOfConfusionMm,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -5656,6 +5710,11 @@ class $$CameraBodiesTableOrderingComposer
     column: $table.defaultCircleOfConfusionMm,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CameraBodiesTableAnnotationComposer
@@ -5713,6 +5772,9 @@ class $$CameraBodiesTableAnnotationComposer
     column: $table.defaultCircleOfConfusionMm,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 }
 
 class $$CameraBodiesTableTableManager
@@ -5758,6 +5820,7 @@ class $$CameraBodiesTableTableManager
                 Value<double> sensorHeightMm = const Value.absent(),
                 Value<double?> defaultCircleOfConfusionMm =
                     const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CameraBodiesCompanion(
                 id: id,
@@ -5771,6 +5834,7 @@ class $$CameraBodiesTableTableManager
                 sensorWidthMm: sensorWidthMm,
                 sensorHeightMm: sensorHeightMm,
                 defaultCircleOfConfusionMm: defaultCircleOfConfusionMm,
+                notes: notes,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -5787,6 +5851,7 @@ class $$CameraBodiesTableTableManager
                 required double sensorHeightMm,
                 Value<double?> defaultCircleOfConfusionMm =
                     const Value.absent(),
+                Value<String?> notes = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CameraBodiesCompanion.insert(
                 id: id,
@@ -5800,6 +5865,7 @@ class $$CameraBodiesTableTableManager
                 sensorWidthMm: sensorWidthMm,
                 sensorHeightMm: sensorHeightMm,
                 defaultCircleOfConfusionMm: defaultCircleOfConfusionMm,
+                notes: notes,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

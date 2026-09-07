@@ -27,6 +27,32 @@ flutter test --coverage
 flutter test integration_test -d <device-id>
 ```
 
+### Headless Android emulator on the local Linux workstation
+
+The installed emulator 36.4.9 crashed in `gles_swiftshader/libGLESv2.so` with
+software rendering on this workstation. A fresh Pixel 2 AVD using host graphics
+and Vulkan disabled boots successfully. Create the isolated test AVD once:
+
+```sh
+export ANDROID_AVD_HOME=/tmp/camera-assistant-avd
+mkdir -p "$ANDROID_AVD_HOME"
+"$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
+  --name camera_test --package 'system-images;android-36.1;google_apis_playstore;x86_64' \
+  --device pixel_2
+"$ANDROID_HOME/emulator/emulator" -avd camera_test -no-window -no-audio \
+  -no-snapshot -gpu host -feature -Vulkan -cores 2
+```
+
+Set `ANDROID_HOME` to the Android SDK directory if it is not already configured.
+The AVD is temporary and may need recreating after a host restart. In another
+terminal, use `adb devices` to obtain its ID and wait until
+`adb -s <device-id> shell getprop sys.boot_completed` returns `1`, then run the
+integration-test command above. Flutter needs writable SDK/build caches, and the
+emulator needs access to KVM and the host graphics driver outside the restricted
+agent sandbox. Equipment and calculator integration tests use an in-memory database.
+`planning_flow_test.dart` closes and reopens a real SQLite file to verify persisted plans;
+none of these tests alone verifies an Android process restart.
+
 Expected:
 
 - Formula fixtures and all validation/unit-conversion boundaries pass.
@@ -90,6 +116,16 @@ Expected:
 23. Save a night-sky plan from a device-derived location; verify the result and immutable snapshot contain
     reported location accuracy/update time, local and canonical UTC time, timezone confidence, elevation,
     horizon/refraction policy, explicit numeric accuracy, and catalog version/provenance/epoch/freshness.
+24. Select the Milky Way core at Greenwich for `2026-07-01 22:00 UTC`; verify a projected orientation
+    of `131.7° relative to horizon`, with the convention that 0° is horizontal and 90° vertical.
+    Repeat at Sydney (`−33.8688°, 151.2093°`) for `2026-07-01 12:00 UTC` and verify `55.4°`.
+    Save and reopen the plan; verify the precise orientation and its convention remain unchanged.
+    Other targets omit the Milky Way angle; near zenith/nadir it must say unavailable.
+25. Add camera notes, save, edit and duplicate the camera; verify notes remain separate from the source
+    note and survive every operation. Delete unused equipment through its confirmation dialog; when a
+    saved plan references equipment, verify Delete offers archiving and preserves the original plan.
+26. Calculate with each tool and verify its result includes a labeled input summary at normal and 200%
+    text sizes, alongside the outputs, assumptions and save/reset actions.
 
 ## Platform build gates
 

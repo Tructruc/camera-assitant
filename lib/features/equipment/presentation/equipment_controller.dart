@@ -190,6 +190,20 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
     await load();
   }
 
+  Future<void> delete(EquipmentListEntry entry) async {
+    switch (entry.kind) {
+      case EquipmentKind.camera:
+        await _repository.deleteCamera(entry.item.id);
+      case EquipmentKind.lens:
+        await _repository.deleteLens(entry.item.id);
+      case EquipmentKind.filter:
+        await _repository.deleteFilter(entry.item.id);
+      case EquipmentKind.accessory:
+        await _repository.deleteAccessory(entry.item.id);
+    }
+    await load();
+  }
+
   Future<void> restore(EquipmentListEntry entry) async {
     switch (entry.kind) {
       case EquipmentKind.camera:

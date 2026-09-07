@@ -130,7 +130,7 @@ class EquipmentListScreen extends ConsumerWidget {
           ),
           onDuplicate: () =>
               _openEditor(context, ref, state.items[index], duplicate: true),
-          onArchive: () => _archive(context, ref, state.items[index]),
+          onDelete: () => _remove(context, ref, state.items[index]),
           onRestore: () => controller.restore(state.items[index]),
         ),
       ),
@@ -201,15 +201,61 @@ class EquipmentListScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _archive(
+  Future<void> _remove(
     BuildContext context,
     WidgetRef ref,
     EquipmentListEntry entry,
   ) async {
-    if (!await _confirmReferencedMutation(context, ref, entry, 'archive')) {
+    final repository = ref.read(equipmentRepositoryProvider);
+    final impact = await repository.referenceImpact(entry.item.id);
+    if (!context.mounted) return;
+    if (impact.isReferenced) {
+      final archive = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Archive referenced equipment?'),
+          content: Text(
+            '${entry.item.name} cannot be permanently deleted because it is used by ${impact.snapshotCount} saved ${impact.snapshotCount == 1 ? 'result or plan' : 'results or plans'}. Archiving hides it from active equipment while saved snapshots keep their original applied values and will not be recalculated.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Archive anyway'),
+            ),
+          ],
+        ),
+      );
+      if (archive == true) {
+        await ref.read(equipmentControllerProvider.notifier).archive(entry);
+      }
       return;
     }
-    await ref.read(equipmentControllerProvider.notifier).archive(entry);
+    final delete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete equipment?'),
+        content: Text(
+          '${entry.item.name} is not used by a saved result or plan. This permanently removes it from this device.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+    if (delete == true) {
+      await ref.read(equipmentControllerProvider.notifier).delete(entry);
+    }
   }
 
   Future<bool> _confirmReferencedMutation(
@@ -249,21 +295,21 @@ class EquipmentListScreen extends ConsumerWidget {
   }
 }
 
-enum _EquipmentAction { edit, duplicate, archive, restore }
+enum _EquipmentAction { edit, duplicate, delete, restore }
 
 class _EquipmentCard extends StatelessWidget {
   const _EquipmentCard({
     required this.entry,
     required this.onEdit,
     required this.onDuplicate,
-    required this.onArchive,
+    required this.onDelete,
     required this.onRestore,
   });
 
   final EquipmentListEntry entry;
   final VoidCallback onEdit;
   final VoidCallback onDuplicate;
-  final VoidCallback onArchive;
+  final VoidCallback onDelete;
   final VoidCallback onRestore;
 
   @override
@@ -296,8 +342,8 @@ class _EquipmentCard extends StatelessWidget {
                   onEdit();
                 case _EquipmentAction.duplicate:
                   onDuplicate();
-                case _EquipmentAction.archive:
-                  onArchive();
+                case _EquipmentAction.delete:
+                  onDelete();
                 case _EquipmentAction.restore:
                   onRestore();
               }
@@ -315,8 +361,8 @@ class _EquipmentCard extends StatelessWidget {
               PopupMenuItem(
                 value: archived
                     ? _EquipmentAction.restore
-                    : _EquipmentAction.archive,
-                child: Text(archived ? 'Restore' : 'Archive'),
+                    : _EquipmentAction.delete,
+                child: Text(archived ? 'Restore' : 'Delete'),
               ),
             ],
           ),

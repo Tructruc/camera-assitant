@@ -21,13 +21,18 @@ void main() {
 
   tearDown(() => database.close());
 
-  CameraBody camera({String id = 'camera-1', String name = 'Camera'}) {
+  CameraBody camera({
+    String id = 'camera-1',
+    String name = 'Camera',
+    String? notes = 'Weather sealed',
+  }) {
     return CameraBody(
       id: id,
       name: name,
       sensorWidthMm: 36,
       sensorHeightMm: 24,
       defaultCircleOfConfusionMm: 0.03,
+      notes: notes,
       provenance: provenance,
       createdAt: createdAt,
       updatedAt: createdAt,
@@ -68,11 +73,62 @@ void main() {
     final storedLens = await repository.lensById('lens-1');
     final storedFilter = await repository.filterById('filter-1');
     expect(storedCamera?.sensorWidthMm, 36);
+    expect(storedCamera?.notes, 'Weather sealed');
     expect(storedCamera?.provenance, provenance);
     expect(storedLens?.notes, 'Adapted lens');
     expect(storedLens?.minimumFocusDistanceMm, 380);
     expect(storedFilter?.filterFactor, 8);
     expect(storedFilter?.notes, 'Square filter');
+  });
+
+  test('hard deletes unreferenced equipment and rejects missing ids', () async {
+    await repository.createCamera(camera());
+    await repository.createLens(
+      Lens(
+        id: 'lens-delete',
+        name: 'Delete lens',
+        minimumFocalLengthMm: 35,
+        maximumFocalLengthMm: 35,
+        provenance: provenance,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+      ),
+    );
+    await repository.createFilter(
+      NdFilter(
+        id: 'filter-delete',
+        name: 'Delete filter',
+        strengthStops: 3,
+        provenance: provenance,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+      ),
+    );
+    await repository.createAccessory(
+      OpticalAccessory(
+        id: 'accessory-delete',
+        name: 'Delete tube',
+        kind: OpticalAccessoryKind.extensionTube,
+        value: 12,
+        provenance: provenance,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+      ),
+    );
+
+    await repository.deleteCamera('camera-1');
+    await repository.deleteLens('lens-delete');
+    await repository.deleteFilter('filter-delete');
+    await repository.deleteAccessory('accessory-delete');
+
+    expect(await repository.cameraById('camera-1'), isNull);
+    expect(await repository.lensById('lens-delete'), isNull);
+    expect(await repository.filterById('filter-delete'), isNull);
+    expect(await repository.listAccessories(includeArchived: true), isEmpty);
+    await expectLater(
+      repository.deleteCamera('missing'),
+      throwsA(isA<StateError>()),
+    );
   });
 
   test('updates, archives, restores, and filters active cameras', () async {

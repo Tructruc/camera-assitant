@@ -154,6 +154,10 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         if (_rows case final rows?)
           CalculationResultView(
             title: '$_title result',
+            inputs: [
+              for (var index = 0; index < _fields.length; index++)
+                (_fields[index].$1, _controllers[index].text.trim()),
+            ],
             rows: rows,
             assumptions: _assumptions,
             guidance: _guidance,

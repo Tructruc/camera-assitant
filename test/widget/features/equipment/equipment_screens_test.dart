@@ -124,6 +124,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.widgetWithText(TextFormField, 'Source note'), findsOneWidget);
+    expect(find.widgetWithText(TextFormField, 'Notes'), findsOneWidget);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Camera name'),
@@ -136,6 +137,11 @@ void main() {
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Sensor height (mm)'),
       '24',
+    );
+    await tester.scrollUntilVisible(
+      find.text('Save camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.tap(find.text('Save camera'));
     await tester.pump();
@@ -227,6 +233,7 @@ void main() {
         name: 'Travel Camera',
         sensorWidthMm: 23.5,
         sensorHeightMm: 15.6,
+        notes: 'Keep on duplicate',
         provenance: const domain.EquipmentProvenance(
           source: domain.EquipmentSource.user,
         ),
@@ -244,15 +251,24 @@ void main() {
       find.widgetWithText(TextFormField, 'Travel Camera copy'),
       findsOneWidget,
     );
+    await tester.scrollUntilVisible(
+      find.text('Save camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Save camera'));
     await tester.pumpAndSettle();
 
     final cameras = await repository.listCameras();
     expect(cameras, hasLength(2));
     expect(cameras.map((item) => item.id).toSet(), hasLength(2));
+    expect(
+      cameras.where((item) => item.id != 'camera-copy-source').single.notes,
+      'Keep on duplicate',
+    );
   });
 
-  testWidgets('referenced equipment warns before archival', (
+  testWidgets('referenced equipment is archived instead of deleted', (
     WidgetTester tester,
   ) async {
     final camera = domain.CameraBody(
@@ -292,15 +308,20 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Actions for Referenced Camera'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Archive'));
+    await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
     expect(find.text('Archive referenced equipment?'), findsOneWidget);
     expect(find.textContaining('1 saved result or plan'), findsOneWidget);
     expect(find.textContaining('will not be recalculated'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.text('Archive anyway'));
     await tester.pumpAndSettle();
-    expect(await repository.listCameras(), hasLength(1));
+    expect(await repository.listCameras(), isEmpty);
+    expect(await repository.listCameras(includeArchived: true), hasLength(1));
+    expect(
+      await DriftSnapshotRepository(database).getById('referencing-plan'),
+      isNotNull,
+    );
   });
 
   testWidgets('picker identifies source and supports a one-off override', (
@@ -343,7 +364,7 @@ void main() {
     expect(find.text('Use a one-off Sensor width override'), findsOneWidget);
   });
 
-  testWidgets('create, restart, archive, and restore remain fully offline', (
+  testWidgets('create, restart, and permanent delete remain fully offline', (
     tester,
   ) async {
     await tester.pumpWidget(listApp());
@@ -364,6 +385,11 @@ void main() {
       find.widgetWithText(TextFormField, 'Sensor height (mm)'),
       '24',
     );
+    await tester.scrollUntilVisible(
+      find.text('Save camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Save camera'));
     await tester.pumpAndSettle();
     expect(find.text('Restart Camera'), findsOneWidget);
@@ -376,27 +402,18 @@ void main() {
 
     await tester.tap(find.byTooltip('Actions for Restart Camera'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Archive'));
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete equipment?'), findsOneWidget);
+    await tester.tap(find.text('Delete permanently'));
     await tester.pumpAndSettle();
     expect(find.text('Restart Camera'), findsNothing);
-    expect(await repository.listCameras(includeArchived: true), hasLength(1));
+    expect(await repository.listCameras(includeArchived: true), isEmpty);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pumpWidget(listApp());
     await tester.pumpAndSettle();
-    await tester.drag(
-      find.byType(SingleChildScrollView),
-      const Offset(-800, 0),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Archived'));
-    await tester.pumpAndSettle();
-    expect(find.text('Restart Camera'), findsOneWidget);
-    await tester.tap(find.byTooltip('Actions for Restart Camera'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Restore'));
-    await tester.pumpAndSettle();
-    expect(find.text('Restart Camera'), findsOneWidget);
+    expect(find.text('Restart Camera'), findsNothing);
     expect(find.textContaining('connect'), findsNothing);
     expect(find.textContaining('sign in'), findsNothing);
   });

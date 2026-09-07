@@ -74,6 +74,7 @@ final class CameraBody extends EquipmentItem {
     required super.createdAt,
     required super.updatedAt,
     double? defaultCircleOfConfusionMm,
+    this.notes,
     super.archivedAt,
   }) : sensorWidthMm = _positive(sensorWidthMm, 'sensorWidthMm'),
        sensorHeightMm = _positive(sensorHeightMm, 'sensorHeightMm'),
@@ -85,6 +86,7 @@ final class CameraBody extends EquipmentItem {
   final double sensorWidthMm;
   final double sensorHeightMm;
   final double? defaultCircleOfConfusionMm;
+  final String? notes;
 
   CameraBody archive(DateTime at) => _copy(archivedAt: _lifecycleTime(at));
 
@@ -97,6 +99,7 @@ final class CameraBody extends EquipmentItem {
     sensorWidthMm: sensorWidthMm,
     sensorHeightMm: sensorHeightMm,
     defaultCircleOfConfusionMm: defaultCircleOfConfusionMm,
+    notes: notes,
     provenance: provenance,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,

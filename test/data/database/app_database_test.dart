@@ -20,7 +20,7 @@ void main() {
   tearDown(() => database.close());
 
   test('current schema creates every equipment and snapshot table', () async {
-    expect(database.schemaVersion, 5);
+    expect(database.schemaVersion, 6);
 
     final rows = await database
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -92,7 +92,7 @@ void main() {
     final version = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 5);
+    expect(version.read<int>('user_version'), 6);
   });
 
   test('frozen schema v1 fixture remains readable without data loss', () async {
@@ -241,7 +241,7 @@ void main() {
     final version = await migrated
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 5);
+    expect(version.read<int>('user_version'), 6);
     final tables = await migrated
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
         .get();
@@ -294,8 +294,91 @@ void main() {
     final version = await migrated
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 5);
+    expect(version.read<int>('user_version'), 6);
   });
+
+  test(
+    'frozen v5 migration preserves all records, payloads and references',
+    () async {
+      final fixture = await File(
+        'test/fixtures/database/schema_v5.sql',
+      ).readAsString();
+      const tables = [
+        'camera_bodies',
+        'lenses',
+        'nd_filters',
+        'optical_accessories',
+        'user_preferences',
+        'saved_locations',
+        'calculation_snapshots',
+        'snapshot_equipment_references',
+      ];
+      final before = <String, List<Map<String, Object?>>>{};
+      final migrated = AppDatabase(
+        NativeDatabase.memory(
+          setup: (raw) {
+            raw.execute(fixture);
+            for (final table in tables) {
+              before[table] = [
+                for (final row in raw.select(
+                  'SELECT * FROM $table ORDER BY 1, 2',
+                ))
+                  Map<String, Object?>.from(row),
+              ];
+            }
+          },
+        ),
+      );
+      addTearDown(migrated.close);
+
+      for (final table in tables) {
+        final rows = await migrated
+            .customSelect('SELECT * FROM $table ORDER BY 1, 2')
+            .get();
+        expect(before[table], isNotEmpty);
+        final after = [
+          for (final row in rows) Map<String, Object?>.from(row.data),
+        ];
+        if (table == 'camera_bodies') {
+          for (final row in after) {
+            expect(row.containsKey('notes'), isTrue);
+            expect(row.remove('notes'), isNull);
+          }
+        }
+        expect(
+          after,
+          before[table],
+          reason: '$table must survive migration unchanged',
+        );
+      }
+      expect(
+        await migrated.customSelect('PRAGMA foreign_key_check').get(),
+        isEmpty,
+      );
+      final version = await migrated
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      expect(version.read<int>('user_version'), 6);
+      final stored = await DriftSnapshotRepository(
+        migrated,
+      ).getById('legacy-plan');
+      expect(stored, isA<SupportedSnapshot<domain.CalculationSnapshot>>());
+      final snapshot =
+          (stored! as SupportedSnapshot<domain.CalculationSnapshot>).snapshot;
+      expect(snapshot.formulaVersion, 1);
+      expect(snapshot.canonicalOutputs, {'altitudeDegrees': 42.5});
+      expect(snapshot.equipment, hasLength(4));
+      await migrated.customStatement(
+        "UPDATE camera_bodies SET notes = 'New camera notes' WHERE id = 'legacy-camera'",
+      );
+      final camera = await migrated
+          .customSelect(
+            "SELECT notes FROM camera_bodies WHERE id = 'legacy-camera'",
+          )
+          .getSingle();
+      expect(camera.read<String>('notes'), 'New camera notes');
+    },
+  );
 }
 
 Map<String, Object?> _object(Object? value) {

@@ -166,6 +166,7 @@ final class AstronomyOutput {
     required this.trailDurationSeconds,
     required this.trailRotationDegreesPerHour,
     required this.recommendedShutterSeconds,
+    this.milkyWayOrientationDegrees,
   });
   final double altitudeDegrees;
   final double azimuthDegrees;
@@ -178,6 +179,10 @@ final class AstronomyOutput {
   final double trailDurationSeconds;
   final double trailRotationDegreesPerHour;
   final double recommendedShutterSeconds;
+
+  /// Undirected projected Galactic-plane tangent relative to the horizon,
+  /// in [0, 180). Null for other targets or within 0.1° of zenith/nadir.
+  final double? milkyWayOrientationDegrees;
 }
 
 final class SkyPositionSample {
@@ -194,8 +199,16 @@ final class SkyPositionSample {
 final class AstronomyCalculator {
   const AstronomyCalculator();
   static const id = 'astronomy';
-  static const version = 1;
+  static const version = 2;
   static const _siderealDaySeconds = 86164.0905;
+  static const milkyWayOrientationConvention =
+      'Level, unmirrored view toward the core: 0° is horizontal, 90° is vertical; '
+      'angles increase upward from the right, modulo 180°. '
+      'Below 90° the band rises to the right; above 90° it rises to the left.';
+  static const milkyWayOrientationLimitations =
+      'Local Galactic-plane tangent at the core, not the shape of the entire band. '
+      'Camera roll, terrain, refraction and precession are excluded. '
+      'Unavailable within 0.1° of zenith or nadir; nearby angles are sensitive to position and time.';
 
   CalculationResult<AstronomyOutput> calculate(AstronomyInput input) {
     final values = <String, bool>{
@@ -244,8 +257,9 @@ final class AstronomyCalculator {
     final hourAngleDegrees = _signed(localSidereal - coordinates.$1);
     final hourAngle = _radians(hourAngleDegrees);
     final altitude = math.asin(
-      math.sin(latitude) * math.sin(declination) +
-          math.cos(latitude) * math.cos(declination) * math.cos(hourAngle),
+      (math.sin(latitude) * math.sin(declination) +
+              math.cos(latitude) * math.cos(declination) * math.cos(hourAngle))
+          .clamp(-1.0, 1.0),
     );
     final azimuth = _normalize(
       _degrees(
@@ -281,6 +295,10 @@ final class AstronomyCalculator {
     final selectedBase = input.selectedRule == StarShutterRule.rule500
         ? rule500
         : npf;
+    final isMilkyWay = input.target == CelestialTarget.milkyWayCore;
+    final orientation = isMilkyWay
+        ? _milkyWayOrientation(latitude, _radians(localSidereal), coordinates)
+        : null;
 
     return CalculationResult.valid(
       calculatorId: id,
@@ -298,6 +316,7 @@ final class AstronomyCalculator {
             _siderealDaySeconds * input.desiredTrailDegrees / 360,
         trailRotationDegreesPerHour: 360 * 3600 / _siderealDaySeconds,
         recommendedShutterSeconds: selectedBase * toleranceMultiplier,
+        milkyWayOrientationDegrees: orientation,
       ),
       assumptions: [
         CalculationAssumption(
@@ -319,14 +338,51 @@ final class AstronomyCalculator {
           key: 'earthRotation',
           value: 'USNO approximate mean sidereal time',
         ),
+        if (isMilkyWay) ...[
+          CalculationAssumption(
+            key: 'milkyWayOrientation',
+            value: milkyWayOrientationConvention,
+          ),
+          CalculationAssumption(
+            key: 'milkyWayOrientationModel',
+            value:
+                'J2000 north Galactic pole RA 192.85948°, Dec 27.12825°; $milkyWayOrientationLimitations',
+          ),
+        ],
       ],
-      warnings: const [
-        CalculationWarning(
+      warnings: [
+        const CalculationWarning(
           code: 'planningAccuracy',
           messageKey: 'astronomy.warning.planningOnly',
         ),
+        if (isMilkyWay && orientation == null)
+          const CalculationWarning(
+            code: 'milkyWayOrientationUndefined',
+            messageKey: 'astronomy.warning.orientationAtZenithOrNadir',
+          ),
       ],
     );
+  }
+
+  double? _milkyWayOrientation(
+    double latitude,
+    double localSidereal,
+    (double, double) coordinates,
+  ) {
+    final core = _unitVector(
+      _radians(coordinates.$1),
+      _radians(coordinates.$2),
+    );
+    final zenith = _unitVector(localSidereal, latitude);
+    final right = _cross(core, zenith);
+    final horizonScale = math.sqrt(_dot(right, right));
+    if (horizonScale <= math.sin(_radians(0.1))) return null;
+    final up = _cross(right, core);
+    final pole = _unitVector(_radians(192.85948), _radians(27.12825));
+    final tangent = _cross(pole, core);
+    // right and up have equal norms, so normalization cancels in atan2.
+    final angle = _degrees(math.atan2(_dot(tangent, up), _dot(tangent, right)));
+    return (angle % 180 + 180) % 180;
   }
 
   SkyPositionSample _positionSample(AstronomyInput input, DateTime instantUtc) {
@@ -341,8 +397,9 @@ final class AstronomyCalculator {
       ),
     );
     final altitude = math.asin(
-      math.sin(latitude) * math.sin(declination) +
-          math.cos(latitude) * math.cos(declination) * math.cos(hourAngle),
+      (math.sin(latitude) * math.sin(declination) +
+              math.cos(latitude) * math.cos(declination) * math.cos(hourAngle))
+          .clamp(-1.0, 1.0),
     );
     final azimuth = _normalize(
       _degrees(
@@ -500,6 +557,24 @@ final class AstronomyCalculator {
     );
   }
 }
+
+(double, double, double) _unitVector(double longitude, double latitude) => (
+  math.cos(latitude) * math.cos(longitude),
+  math.cos(latitude) * math.sin(longitude),
+  math.sin(latitude),
+);
+
+(double, double, double) _cross(
+  (double, double, double) a,
+  (double, double, double) b,
+) => (
+  a.$2 * b.$3 - a.$3 * b.$2,
+  a.$3 * b.$1 - a.$1 * b.$3,
+  a.$1 * b.$2 - a.$2 * b.$1,
+);
+
+double _dot((double, double, double) a, (double, double, double) b) =>
+    a.$1 * b.$1 + a.$2 * b.$2 + a.$3 * b.$3;
 
 bool _positive(double value) => value.isFinite && value > 0;
 double _radians(double value) => value * math.pi / 180;

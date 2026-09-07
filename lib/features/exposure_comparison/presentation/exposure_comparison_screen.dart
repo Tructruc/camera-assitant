@@ -75,6 +75,10 @@ class _ExposureComparisonScreenState
             ExposureDirection.equivalent => 'Equivalent exposure',
             ExposureDirection.darker => 'Candidate is darker',
           },
+          inputs: [
+            for (var index = 0; index < _fields.length; index++)
+              (_fields[index].$1, _controllers[index].text.trim()),
+          ],
           rows: <(String, String)>[
             (
               'Total difference',

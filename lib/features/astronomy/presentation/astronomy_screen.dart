@@ -275,12 +275,39 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           _planningContext(),
           CalculationResultView(
             title: '${_target.label} plan',
+            inputs: [
+              ('Target', _target.label),
+              (
+                'Observer',
+                '${_latitude.text.trim()}°, ${_longitude.text.trim()}° · ${_elevation.text.trim()} m',
+              ),
+              (
+                'Planning time',
+                '${PlanningTimeContext.parse(_timeZoneId).format(_instantUtc)} ($_timeZoneId)',
+              ),
+              (
+                'Optics',
+                '${_focalLength.text.trim()} mm · ${_cropFactor.text.trim()}× crop · f/${_aperture.text.trim()} · ${_pixelPitch.text.trim()} µm pixels',
+              ),
+              (
+                'Sharp-star rule',
+                '${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'} · ${_sharpnessTolerance.name}',
+              ),
+              ('Star-trail arc', '${_trailDegrees.text.trim()}°'),
+            ],
             rows: [
               (
                 'Altitude',
                 '${output.altitudeDegrees.toStringAsFixed(1)}° (${output.isAboveHorizon ? 'above horizon' : 'below horizon'})',
               ),
               ('Azimuth', '${output.azimuthDegrees.toStringAsFixed(1)}° true'),
+              if (_target == CelestialTarget.milkyWayCore)
+                (
+                  'Milky Way orientation',
+                  output.milkyWayOrientationDegrees != null
+                      ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(1)}° relative to horizon'
+                      : 'Unavailable near zenith or nadir',
+                ),
               ('Visibility cycle', _cycle(output.visibilityCycle)),
               (
                 '500 rule',
@@ -302,6 +329,12 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                   : 'Fixed ICRS/J2000 target coordinates',
               'Airless geometric horizon; terrain and refraction excluded',
               'Approximate mean sidereal time and planning-grade exposure rules',
+              if (_target == CelestialTarget.milkyWayCore) ...[
+                AstronomyCalculator.milkyWayOrientationConvention,
+                AstronomyCalculator.milkyWayOrientationLimitations,
+                if (!output.isAboveHorizon)
+                  'The core is below the geometric horizon; its orientation is mathematical, not a visible composition.',
+              ],
             ],
             guidance:
                 'The 500 and NPF values are estimates: inspect stars at your intended output size. Event instants are stored in UTC and displayed in the selected timezone. Terrain, refraction, precession, and proper motion are excluded.',
@@ -524,6 +557,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         'npfSeconds': output.npfSeconds,
         'trailDurationSeconds': output.trailDurationSeconds,
         'recommendedShutterSeconds': output.recommendedShutterSeconds,
+        if (_target == CelestialTarget.milkyWayCore)
+          'milkyWayOrientationDegrees': output.milkyWayOrientationDegrees,
         'events': [
           for (final event in output.events)
             {
@@ -562,6 +597,9 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             NorthReference.trueNorth.name,
         'magneticDeclinationDegrees': _value(_magneticDeclination),
         'angleUnit': 'degrees',
+        if (_target == CelestialTarget.milkyWayCore)
+          'milkyWayOrientationConvention':
+              AstronomyCalculator.milkyWayOrientationConvention,
       },
       assumptions: _result!.assumptions,
       warnings: _result!.warnings,

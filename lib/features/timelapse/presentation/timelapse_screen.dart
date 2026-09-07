@@ -65,6 +65,10 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
       if (_result?.output case final output?)
         CalculationResultView(
           title: 'Timelapse plan',
+          inputs: [
+            for (var index = 0; index < _fields.length; index++)
+              (_fields[index].$1, _controllers[index].text.trim()),
+          ],
           rows: [
             ('Frames', '${output.frameCount}'),
             (

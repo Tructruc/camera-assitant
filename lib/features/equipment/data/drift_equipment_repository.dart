@@ -67,6 +67,13 @@ final class DriftEquipmentRepository {
 
   Future<void> archiveCamera(String id) => _setCameraArchived(id, _now());
   Future<void> restoreCamera(String id) => _setCameraArchived(id, null);
+  Future<void> deleteCamera(String id) async {
+    await _requireUnreferenced(id);
+    final changed = await (_database.delete(
+      _database.cameraBodies,
+    )..where((table) => table.id.equals(id))).go();
+    _requireExisting(changed, id);
+  }
 
   Future<void> _setCameraArchived(String id, DateTime? archivedAt) async {
     final changed =
@@ -114,6 +121,13 @@ final class DriftEquipmentRepository {
 
   Future<void> archiveLens(String id) => _setLensArchived(id, _now());
   Future<void> restoreLens(String id) => _setLensArchived(id, null);
+  Future<void> deleteLens(String id) async {
+    await _requireUnreferenced(id);
+    final changed = await (_database.delete(
+      _database.lenses,
+    )..where((table) => table.id.equals(id))).go();
+    _requireExisting(changed, id);
+  }
 
   Future<void> _setLensArchived(String id, DateTime? archivedAt) async {
     final changed =
@@ -164,6 +178,13 @@ final class DriftEquipmentRepository {
 
   Future<void> archiveFilter(String id) => _setFilterArchived(id, _now());
   Future<void> restoreFilter(String id) => _setFilterArchived(id, null);
+  Future<void> deleteFilter(String id) async {
+    await _requireUnreferenced(id);
+    final changed = await (_database.delete(
+      _database.ndFilters,
+    )..where((table) => table.id.equals(id))).go();
+    _requireExisting(changed, id);
+  }
 
   Future<void> _setFilterArchived(String id, DateTime? archivedAt) async {
     final changed =
@@ -207,6 +228,13 @@ final class DriftEquipmentRepository {
 
   Future<void> archiveAccessory(String id) => _setAccessoryArchived(id, _now());
   Future<void> restoreAccessory(String id) => _setAccessoryArchived(id, null);
+  Future<void> deleteAccessory(String id) async {
+    await _requireUnreferenced(id);
+    final changed = await (_database.delete(
+      _database.opticalAccessories,
+    )..where((table) => table.id.equals(id))).go();
+    _requireExisting(changed, id);
+  }
 
   Future<void> _setAccessoryArchived(String id, DateTime? archivedAt) async {
     final changed =
@@ -232,6 +260,16 @@ final class DriftEquipmentRepository {
     return EquipmentReferenceImpact(snapshotCount: row.read(count) ?? 0);
   }
 
+  Future<void> _requireUnreferenced(String equipmentId) async {
+    final impact = await referenceImpact(equipmentId);
+    if (impact.isReferenced) {
+      throw StateError(
+        'Referenced equipment must be archived: $equipmentId '
+        '(${impact.snapshotCount} snapshots)',
+      );
+    }
+  }
+
   db.CameraBodiesCompanion _cameraCompanion(domain.CameraBody camera) =>
       db.CameraBodiesCompanion(
         id: Value<String>(camera.id),
@@ -242,6 +280,7 @@ final class DriftEquipmentRepository {
         defaultCircleOfConfusionMm: Value<double?>(
           camera.defaultCircleOfConfusionMm,
         ),
+        notes: Value<String?>(camera.notes),
         sourceType: Value<String>(_sourceToStorage(camera.provenance.source)),
         sourceNote: Value<String?>(camera.provenance.note),
         createdAt: Value<DateTime>(camera.createdAt),
@@ -311,6 +350,7 @@ domain.CameraBody _cameraFromRow(db.CameraBody row) => domain.CameraBody(
   sensorWidthMm: row.sensorWidthMm,
   sensorHeightMm: row.sensorHeightMm,
   defaultCircleOfConfusionMm: row.defaultCircleOfConfusionMm,
+  notes: row.notes,
   provenance: _provenance(row.sourceType, row.sourceNote),
   createdAt: row.createdAt.toUtc(),
   updatedAt: row.updatedAt.toUtc(),

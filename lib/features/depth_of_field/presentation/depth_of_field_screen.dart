@@ -115,6 +115,12 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
         if (_result?.output case final output?)
           CalculationResultView(
             title: 'Depth of field result',
+            inputs: [
+              ('Focal length', '${_focal.text.trim()} mm'),
+              ('Aperture', 'f/${_aperture.text.trim()}'),
+              ('Focus distance', '${_distance.text.trim()} mm'),
+              ('Circle of confusion', '${_coc.text.trim()} mm'),
+            ],
             rows: <(String, String)>[
               (
                 'Hyperfocal distance',

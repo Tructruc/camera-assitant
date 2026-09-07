@@ -69,6 +69,12 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
       if (_result?.output case final output?)
         CalculationResultView(
           title: 'Flash exposure result',
+          inputs: [
+            ('Guide number at ISO 100', '${_guideNumber.text.trim()} m'),
+            ('ISO', _iso.text.trim()),
+            ('Power fraction', _power.text.trim()),
+            ('Subject distance', '${_distance.text.trim()} m'),
+          ],
           rows: [
             (
               'Recommended aperture',

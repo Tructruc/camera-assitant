@@ -15,6 +15,8 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('plans flash and timelapse results offline', (tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
     final database = AppDatabase.inMemory();
     addTearDown(database.close);
     await tester.pumpWidget(
@@ -87,6 +89,10 @@ void main() {
   testWidgets('calculates manually and from saved equipment offline', (
     tester,
   ) async {
+    // Integration tests share a running app process. Dispose the previous
+    // navigator and provider tree before starting an independent journey.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
     final database = AppDatabase.inMemory();
     addTearDown(database.close);
     final repository = DriftEquipmentRepository(database);
@@ -110,6 +116,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Saved camera and lens values remain editable one-off inputs.
+    await tester.scrollUntilVisible(
+      find.text('Depth of field'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.text('Depth of field'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Saved lens (optional)'));
@@ -193,7 +204,10 @@ void main() {
     );
     await tester.tap(find.text('Calculate exposure'));
     await tester.pumpAndSettle();
-    expect(find.text('34.1 s'), findsOneWidget);
+    // The conventional label rounds to the selected stop increment while the
+    // raw exposure preserves the physical result (1/30 second times 2^10).
+    expect(find.text('32 s'), findsOneWidget);
+    expect(find.text('34.133333 s'), findsOneWidget);
     expect(find.textContaining('From 10-stop ND'), findsWidgets);
     await tester.scrollUntilVisible(
       find.text('Save result'),
@@ -246,6 +260,11 @@ void main() {
     expect(find.text('distanceUnit: metric'), findsOneWidget);
     expect(find.text('24-70 mm f/2.8'), findsOneWidget);
     expect(find.text('Full Frame Camera'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('immutable'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.textContaining('immutable'), findsOneWidget);
   });
 }

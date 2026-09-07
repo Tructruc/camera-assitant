@@ -155,6 +155,22 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
         if (_result?.output case final output?) ...[
           CalculationResultView(
             title: 'Panorama capture plan',
+            inputs: [
+              (
+                'Sensor',
+                '${_sensorWidth.text.trim()} × ${_sensorHeight.text.trim()} mm',
+              ),
+              ('Focal length', '${_focalLength.text.trim()} mm'),
+              ('Camera orientation', _orientation.name),
+              (
+                'Scene bounds',
+                '${_horizontalBounds.text.trim()}° × ${_verticalBounds.text.trim()}°',
+              ),
+              (
+                'Overlap',
+                '${_horizontalOverlap.text.trim()}% horizontal, ${_verticalOverlap.text.trim()}% vertical',
+              ),
+            ],
             rows: [
               ('Frame grid', '${output.columns} columns × ${output.rows} rows'),
               ('Total frames', '${output.frameCount}'),

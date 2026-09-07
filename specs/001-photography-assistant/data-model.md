@@ -26,6 +26,8 @@ Represents a user-owned or custom camera.
 - `defaultCircleOfConfusionMm`: optional positive override/derived value
 - `sourceType`: `user`, `bundled`, or `user_override`
 - `sourceNote`: optional provenance text
+- `notes`: optional user text, separate from provenance; schema version 6 adds this nullable field
+  without changing existing records, and editing/duplication preserves it
 - `createdAt`, `updatedAt`: UTC timestamps
 - `archivedAt`: optional UTC timestamp; referenced records are archived rather than hard-deleted
 
@@ -87,6 +89,10 @@ observer coordinates, formula version, optical inputs, applied equipment, assump
 It also embeds the saved/manual location source, reported accuracy and capture timestamp, local and UTC
 planning times, timezone confidence, elevation, horizon/refraction policy, catalog version/provenance/
 freshness, supported epoch, and the result's explicit planning-accuracy boundary.
+Formula version 2 additionally records `milkyWayOrientationDegrees` for the core target: the
+projected local Galactic-plane axis in `[0, 180)` relative to a level horizon. The value is null
+within 0.1° of zenith/nadir. Its convention and model limitations are embedded in the snapshot;
+earlier formula-version-1 plans remain unchanged and readable without an invented orientation.
 
 ## Alignment Result
 

@@ -111,6 +111,12 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
                     preferences.fractionStep,
                   )
                 : '${output.filteredTime.seconds.toStringAsFixed(6)} seconds',
+            inputs: <(String, String)>[
+              ('Base shutter time', '${_base.text.trim()} s'),
+              ('ND filter strengths', '${_stops.text.trim()} stops'),
+              if (_target.text.trim().isNotEmpty)
+                ('Target time', '${_target.text.trim()} s'),
+            ],
             rows: <(String, String)>[
               (
                 'Raw exposure',

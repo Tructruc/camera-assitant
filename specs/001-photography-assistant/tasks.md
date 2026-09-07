@@ -343,3 +343,15 @@ story phases, actionable description, and exact file path.
 - [X] T113 [US4] Persist user-selectable default star-sharpness and alignment angular tolerances through a tested schema migration, expose them accessibly in settings, and apply them as overridable planner defaults per the User Preferences entity and Constitution V (partial)
 - [X] T114 [US4] Replace the generic night-sky context block with complete location source/accuracy/timestamp, local/UTC time, timezone confidence, north reference, elevation, horizon/refraction, source freshness, and explicit expected-accuracy context preserved in immutable snapshots per FR-013 and SC-008 (partial)
 - [X] T115 [US4] Add versioned offline celestial-catalog metadata, provenance, supported epoch, maintenance policy, and explicit current/stale status to results and documentation per FR-009, FR-021, and plan: bundled dataset update policy (partial)
+
+## Phase 18: Convergence
+
+- [X] T116 [US1] Add a standardized, accessible input summary to every calculator result so users can interpret outputs without scrolling back through editable controls per US1/AC1 and FR-002 (partial)
+- [X] T117 [US2] Permanently delete unreferenced equipment through a confirmed inventory action while retaining the archive-and-warning path for referenced equipment per US2 independent test and the Equipment state-transition contract (partial)
+- [X] T118 [US2] Preserve optional camera notes through the domain model, schema migration, editor, duplication, and repository mapping with regression coverage per US2/AC2 (partial)
+- [X] T119 [US4] Calculate, display, and snapshot the Milky Way core's projected orientation with declared convention and reference coverage per US4 independent test and Constitution I (missing)
+
+Phase 18 validation (2026-09-07): 195 local tests pass, including independent Milky Way orientation
+fixtures, 200% text-scale presentation, camera-note preservation and the frozen v5-to-v6 migration.
+The Android planning integration test closes and reopens a real SQLite file and verifies the entire
+saved plan is unchanged. See `validation/android.md` for device evidence and remaining release gates.

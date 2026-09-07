@@ -232,6 +232,21 @@ aberration, precession/nutation, and topocentric parallax. A Jupiter fixture is 
 [NASA JPL approximate planetary positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html), and
 [SIMBAD Sirius record](https://simbad.cds.unistra.fr/simbad/sim-basic?Ident=Sirius).
 
+## Milky Way projected orientation
+
+**Decision**: Astronomy formula version 2 projects the local Galactic-plane tangent at the bundled
+core coordinate onto a level observer image plane. The adopted J2000 north Galactic pole is
+RA 192.85948°, Dec 27.12825°; its rounded values agree with the
+[Astropy frame definition](https://raw.githubusercontent.com/astropy/astropy/main/astropy/coordinates/builtin_frames/galactic.py).
+The calculation is original vector geometry and introduces no dependency or network access.
+
+**Convention and limits**: Store the undirected axis angle in `[0, 180)` upward from image right,
+with horizontal 0° and vertical 90°. Exclude points within 0.1° of zenith/nadir with an explicit
+unavailable result; angles nearby are sensitive to input error. This approximates the local band
+near the core and excludes roll, precession, refraction and terrain. Below-horizon angles do not
+imply visibility. Independently derived spherical-position-angle fixtures and their tolerances
+are documented in `test/fixtures/astronomy/README.md`. Old saved plans are never recalculated.
+
 ## Sun/Moon alignment search
 
 **Decision**: Solar equatorial coordinates use NOAA's published low-accuracy/Meeus model. Lunar

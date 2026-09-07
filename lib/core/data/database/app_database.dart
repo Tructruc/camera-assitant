@@ -41,6 +41,7 @@ class CameraBodies extends EquipmentTable {
     defaultCircleOfConfusionMm.isNull() |
         defaultCircleOfConfusionMm.isBiggerThanValue(0),
   )();
+  TextColumn get notes => text().nullable()();
 }
 
 class Lenses extends EquipmentTable {
@@ -185,7 +186,7 @@ final class AppDatabase extends _$AppDatabase {
   AppDatabase.inMemory() : super(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -257,6 +258,14 @@ final class AppDatabase extends _$AppDatabase {
             userPreferences,
             userPreferences.defaultAlignmentToleranceDegrees,
           );
+        }
+      }
+      if (from < 6) {
+        final cameraTable = await customSelect(
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'camera_bodies'",
+        ).getSingleOrNull();
+        if (cameraTable != null) {
+          await migrator.addColumn(cameraBodies, cameraBodies.notes);
         }
       }
     },

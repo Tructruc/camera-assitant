@@ -80,6 +80,9 @@ void main() {
     await tester.enterText(find.byKey(const Key('dof-focal')), '50');
     await tester.tap(find.text('Calculate'));
     await tester.pump();
+    expect(find.text('Input summary'), findsOneWidget);
+    expect(find.text('50 mm'), findsOneWidget);
+    expect(find.text('f/8'), findsOneWidget);
     expect(find.text('Near limit'), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, -900));
     await tester.pumpAndSettle();
@@ -202,6 +205,67 @@ void main() {
       );
       expect(find.text('Next events'), findsOneWidget);
       expect(find.textContaining('true'), findsWidgets);
+    },
+  );
+
+  testWidgets(
+    'Milky Way orientation is accessible and saved with its convention',
+    (tester) async {
+      await tester.pumpWidget(app(const AstronomyScreen(), textScale: 2));
+      await tester.scrollUntilVisible(
+        find.text('Plan night sky'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Plan night sky'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Milky Way orientation'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Milky Way orientation'), findsOneWidget);
+      expect(find.textContaining('relative to horizon'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.textContaining(AstronomyCalculator.milkyWayOrientationConvention),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        find.textContaining('0° is horizontal, 90° is vertical'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.text('Save result'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      final save = find.widgetWithText(FilledButton, 'Save result');
+      await tester.ensureVisible(save);
+      await tester.pumpAndSettle();
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      final snapshot = (await DriftSnapshotRepository(
+        database,
+      ).listNewestFirst()).single;
+      expect(snapshot.formulaVersion, 2);
+      expect(
+        snapshot.canonicalOutputs['milkyWayOrientationDegrees'],
+        inInclusiveRange(0, 180),
+      );
+      expect(
+        snapshot.displayContext['milkyWayOrientationConvention'],
+        AstronomyCalculator.milkyWayOrientationConvention,
+      );
+      expect(
+        snapshot.assumptions.map((item) => item.value),
+        contains(AstronomyCalculator.milkyWayOrientationConvention),
+      );
+      expect(
+        snapshot.assumptions.map((item) => item.value).join(' '),
+        contains('0.1°'),
+      );
     },
   );
 
