@@ -20,6 +20,7 @@ dart format --output=none --set-exit-if-changed lib test integration_test   # cl
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/planning_flow_test.dart     # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/preferences_flow_test.dart  # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/ar_fallback_flow_test.dart  # 1 passed
+./.tooling/flutterw --no-version-check test --no-pub integration_test/accessibility_flow_test.dart  # 1 passed
 ```
 
 `flutter test integration_test/<file>` runs the journeys against the host Flutter engine (a Linux debug
@@ -37,7 +38,7 @@ hardware run described in `quickstart.md`.
 | 5 | Swap exposures reverses the difference | `test/unit/features/exposure_comparison/exposure_calculator_test.dart`: swapping exposures negates stops and reciprocates the multiplier | Automated |
 | 6 | 3-stop + 7-stop ND on 1/30 s | `test/unit/features/long_exposure/long_exposure_calculator_test.dart`: stacked three and seven stops multiply by 1024; `integration_test/calculator_flows_test.dart` | Automated |
 | 7 | Save, edit/archive lens, restart, unchanged payloads | `integration_test/calculator_flows_test.dart`: calculates manually and from saved equipment offline; `snapshot_repository_test.dart`: metadata update never rewrites calculation payload columns | Automated; a real Android process restart is recorded separately in `android.md` |
-| 8 | 200% text and screen reader | `test/widget/features/calculators/text_scale_test.dart` (all thirteen screens), `test/widget/core/calculator_components_test.dart`: result exposes the exact calculation inputs accessibly | Automated at widget level; a device screen-reader walkthrough remains manual |
+| 8 | 200% text and screen reader | `integration_test/accessibility_flow_test.dart` completes the whole calculator journey at 200% text scale on a 400x800 viewport; `test/widget/features/calculators/text_scale_test.dart` (all thirteen screens); `test/widget/core/calculator_components_test.dart`: result exposes the exact calculation inputs accessibly | Automated; a device screen-reader walkthrough remains manual |
 | 9 | 36 × 24 mm at 50 mm field of view | `test/unit/features/optics/optics_calculators_test.dart`: field of view matches a 36 × 24 mm sensor with a 50 mm rectilinear lens; `expanded_calculators_reference_test.dart` | Automated |
 | 10 | f/8, 550 nm, 4 µm Airy disk | `optics_calculators_test.dart`: diffraction uses the first Airy minimum diameter; `expanded_calculators_reference_test.dart` (10.736 µm, 2.684 px) | Automated |
 | 11 | 0.5–1 m focus stack at 100 mm | `optics_calculators_test.dart`: focus stacking returns ordered positions covering the requested range | Automated |
@@ -55,7 +56,7 @@ hardware run described in `quickstart.md`.
 | 23 | Night-sky snapshot preserves planning context | `integration_test/preferences_flow_test.dart` asserts a saved plan keeps its `distanceUnit: metric` context after the display preference changes; `calculator_screens_test.dart`: night-sky plans preserve saved observer elevation; `saved_calculations_test.dart`: opens immutable details and edits metadata only; `solar_lunar_fixture_test.dart` for the astronomy tolerances | Automated |
 | 24 | Milky Way projected orientation | `test/unit/features/astronomy/milky_way_orientation_test.dart` (eight orientation, wrap, and singularity cases) | Automated |
 | 25 | Camera notes, delete, archive | `equipment_screens_test.dart`: archive action retires active equipment; referenced equipment is archived instead of deleted; editor preserves an existing teleconverter kind; `app_database_test.dart` v3 and v5 fixtures | Automated |
-| 26 | Labelled input summary at 200% | `calculator_components_test.dart`: result exposes the exact calculation inputs accessibly; `text_scale_test.dart` | Automated |
+| 26 | Labelled input summary at 200% | `integration_test/accessibility_flow_test.dart` reads the summary and saves at 200% scale; `calculator_components_test.dart`: result exposes the exact calculation inputs accessibly; `text_scale_test.dart` | Automated |
 | 27 | Editing invalidates until recalculation | `test/widget/features/calculators/calculation_invalidation_test.dart` (thirteen screens, cursor-only edits, provenance-only swap, save journey) | Automated |
 | 28 | Sun and Moon night-sky targets | `test/widget/features/calculators/result_reporting_test.dart`: the night-sky planner warns about solar safety for the Sun; `test/unit/features/astronomy/solar_lunar_fixture_test.dart`; `test/widget/features/saved_calculations/saved_calculations_test.dart`: renders saved warnings with a readable calculator label | Automated; the in-preview AR banner needs a device |
 

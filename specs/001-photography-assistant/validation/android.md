@@ -50,8 +50,11 @@ engine (1/1).
 
 `integration_test/ar_fallback_flow_test.dart` opens the live AR view on a host with no camera and asserts
 that it explains the missing capability while the numeric plan stays usable, covering SC-006 and FR-012
-end to end; it passes on the host engine (1/1). With these, the suite defines seven Android journeys
-rather than four.
+end to end; it passes on the host engine (1/1).
+
+`integration_test/accessibility_flow_test.dart` completes the calculator journey at 200% system text scale
+on a 400x800 viewport, reads the labelled input summary, and saves (quickstart scenarios 8 and 26); it
+passes on the host engine (1/1). With these, the suite defines eight Android journeys rather than four.
 
 The local suite additionally covers the independent orientation references and singularities, 200%
 text scaling, camera notes, permanent deletion guards, input-summary semantics, golden layout, and a
