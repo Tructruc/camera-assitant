@@ -109,6 +109,15 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         .whereType<Lens>()
         .toList();
     return CalculatorPage(
+      inputControllers: _controllers,
+      onInputsChanged: () {
+        if (_rows != null || _errors.isNotEmpty) {
+          setState(() {
+            _rows = null;
+            _errors = const {};
+          });
+        }
+      },
       children: [
         Text(_title, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),

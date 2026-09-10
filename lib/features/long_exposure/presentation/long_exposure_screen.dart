@@ -48,6 +48,15 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         .whereType<NdFilter>()
         .toList(growable: false);
     return CalculatorPage(
+      inputControllers: [_base, _stops, _target],
+      onInputsChanged: () {
+        if (_result != null || _errors.isNotEmpty) {
+          setState(() {
+            _result = null;
+            _errors = const {};
+          });
+        }
+      },
       children: <Widget>[
         Text(
           'Long exposure / ND',
@@ -63,6 +72,7 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
           value: _selectedFilter,
           onSelected: (filter) {
             setState(() {
+              _result = null;
               _selectedFilter = filter;
               if (filter != null) {
                 _stops.text = filter.strengthStops.toString();

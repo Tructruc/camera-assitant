@@ -43,6 +43,15 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
 
   @override
   Widget build(BuildContext context) => CalculatorPage(
+    inputControllers: _controllers,
+    onInputsChanged: () {
+      if (_result != null || _errors.isNotEmpty) {
+        setState(() {
+          _result = null;
+          _errors = const {};
+        });
+      }
+    },
     children: [
       Text(
         'Timelapse planner',

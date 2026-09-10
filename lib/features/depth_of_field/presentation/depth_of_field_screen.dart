@@ -54,6 +54,15 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
         .whereType<CameraBody>()
         .toList(growable: false);
     return CalculatorPage(
+      inputControllers: [_focal, _aperture, _distance, _coc],
+      onInputsChanged: () {
+        if (_result != null || _errors.isNotEmpty) {
+          setState(() {
+            _result = null;
+            _errors = const {};
+          });
+        }
+      },
       children: <Widget>[
         Text(
           'Depth of field',
@@ -172,6 +181,7 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
 
   void _applyLens(Lens? lens) {
     setState(() {
+      _result = null;
       _selectedLens = lens;
       if (lens != null) {
         _focal.text = lens.maximumFocalLengthMm.toString();
@@ -186,6 +196,7 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
 
   void _applyCamera(CameraBody? camera) {
     setState(() {
+      _result = null;
       _selectedCamera = camera;
       if (camera?.defaultCircleOfConfusionMm case final value?) {
         _coc.text = value.toString();

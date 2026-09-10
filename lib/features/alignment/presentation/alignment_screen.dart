@@ -90,6 +90,24 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       _defaultsApplied = true;
     }
     return CalculatorPage(
+      inputControllers: [
+        _latitude,
+        _longitude,
+        _observerElevation,
+        _targetElevation,
+        _targetDistance,
+        _bearing,
+        _tolerance,
+        _magneticDeclination,
+      ],
+      onInputsChanged: () {
+        if (_result != null || _errors.isNotEmpty) {
+          setState(() {
+            _result = null;
+            _errors = const {};
+          });
+        }
+      },
       children: [
         Text(
           'Sun & Moon alignment',

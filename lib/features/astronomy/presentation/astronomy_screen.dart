@@ -101,6 +101,25 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         .whereType<Lens>()
         .toList();
     return CalculatorPage(
+      inputControllers: [
+        _latitude,
+        _longitude,
+        _elevation,
+        _focalLength,
+        _cropFactor,
+        _aperture,
+        _pixelPitch,
+        _trailDegrees,
+        _magneticDeclination,
+      ],
+      onInputsChanged: () {
+        if (_result != null || _errors.isNotEmpty) {
+          setState(() {
+            _result = null;
+            _errors = const {};
+          });
+        }
+      },
       children: [
         Text(
           'Night-sky planner',

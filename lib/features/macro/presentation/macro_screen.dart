@@ -65,6 +65,23 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         .where((item) => item.kind == OpticalAccessoryKind.extensionTube)
         .toList();
     return CalculatorPage(
+      inputControllers: [
+        _primaryFocal,
+        _reversedFocal,
+        _extension,
+        _nativeMagnification,
+        _flangeDistance,
+        _aperture,
+        _sensorWidth,
+      ],
+      onInputsChanged: () {
+        if (_result != null || _errors.isNotEmpty) {
+          setState(() {
+            _result = null;
+            _errors = const {};
+          });
+        }
+      },
       children: [
         Text('Macro planner', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),
@@ -291,6 +308,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
 
   void _applyPrimaryLens(Lens? lens) {
     setState(() {
+      _result = null;
       _selectedPrimaryLens = lens;
       if (lens != null) {
         _primaryFocal.text = lens.maximumFocalLengthMm.toString();
@@ -305,6 +323,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
 
   void _applyReversedLens(Lens? lens) {
     setState(() {
+      _result = null;
       _selectedReversedLens = lens;
       if (lens != null) {
         _reversedFocal.text = lens.minimumFocalLengthMm.toString();
@@ -314,6 +333,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
 
   void _applyTube(OpticalAccessory? tube) {
     setState(() {
+      _result = null;
       _selectedTube = tube;
       if (tube != null) _extension.text = tube.value.toString();
     });

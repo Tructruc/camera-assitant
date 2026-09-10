@@ -355,3 +355,15 @@ Phase 18 validation (2026-09-07): 195 local tests pass, including independent Mi
 fixtures, 200% text-scale presentation, camera-note preservation and the frozen v5-to-v6 migration.
 The Android planning integration test closes and reopens a real SQLite file and verifies the entire
 saved plan is unchanged. See `validation/android.md` for device evidence and remaining release gates.
+
+## Phase 19: Result Input Consistency
+
+- [X] T120 [US1] Invalidate displayed and savable results when manual inputs or applied equipment change, including unchanged numeric values with changed equipment provenance; verify every calculator, cursor-only edits, recomputation, and an Android save journey per the Calculator state-transition contract and FR-002/FR-014.
+
+Phase 19 validation (2026-09-10): `test/widget/features/calculators/calculation_invalidation_test.dart`
+drives all twelve calculators plus the alignment planner through calculate, edit, invalidate, recompute,
+and save against an in-memory database; it also proves that caret/selection-only edits keep the result and
+that swapping to an optically identical saved lens invalidates through provenance alone. The offline
+integration journey `editing an input blocks saving until the result is recalculated` covers the same
+state transition on a real device build; it runs with the still-open Android/iOS quickstart passes because
+the agent sandbox has no KVM or writable SDK cache. Local suite, analyzer, and formatter are clean.

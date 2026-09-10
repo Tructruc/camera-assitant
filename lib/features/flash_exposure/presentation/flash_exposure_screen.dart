@@ -33,6 +33,15 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
 
   @override
   Widget build(BuildContext context) => CalculatorPage(
+    inputControllers: [_guideNumber, _iso, _power, _distance],
+    onInputsChanged: () {
+      if (_result != null || _errors.isNotEmpty) {
+        setState(() {
+          _result = null;
+          _errors = const {};
+        });
+      }
+    },
     children: [
       Text('Flash exposure', style: Theme.of(context).textTheme.headlineSmall),
       const SizedBox(height: 8),

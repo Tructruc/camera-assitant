@@ -21,7 +21,7 @@
 | Formatting of `lib`, `test`, `integration_test` | Applied and checked |
 | `git diff --check` | Passed |
 
-The four emulator journeys cover:
+The emulator journeys recorded in this run cover:
 
 1. Camera creation, provider-tree rebuild, referenced-equipment archive, restore, and preservation of
    the referencing saved plan. Uses an in-memory database.
@@ -31,6 +31,11 @@ The four emulator journeys cover:
 4. Milky Way orientation presentation and saved convention, closing and reopening a real SQLite file,
    identical snapshot content, and reopening that plan through the Saved screen. Uses an
    isolated temporary file on the emulator; the test removes its own file afterward.
+
+`integration_test/calculator_flows_test.dart` also defines
+`editing an input blocks saving until the result is recalculated`, which calculates a depth-of-field
+result, edits the focal length, verifies the result and the save action disappear, recalculates, and saves
+exactly one snapshot. It is covered by the local widget suite today and awaits the next device pass.
 
 The local suite additionally covers the independent orientation references and singularities, 200%
 text scaling, camera notes, permanent deletion guards, input-summary semantics, golden layout, and a

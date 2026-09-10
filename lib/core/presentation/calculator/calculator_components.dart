@@ -17,14 +17,73 @@ String formatDisplayLength(double millimetres, LengthDisplay display) {
       : '${millimetres.toStringAsFixed(1)} mm';
 }
 
-class CalculatorPage extends StatelessWidget {
-  const CalculatorPage({required this.children, super.key});
+class CalculatorPage extends StatefulWidget {
+  const CalculatorPage({
+    required this.children,
+    required this.inputControllers,
+    required this.onInputsChanged,
+    super.key,
+  });
 
   final List<Widget> children;
+  final List<TextEditingController> inputControllers;
+  final VoidCallback onInputsChanged;
+
+  @override
+  State<CalculatorPage> createState() => _CalculatorPageState();
+}
+
+class _CalculatorPageState extends State<CalculatorPage> {
+  final _inputText = <TextEditingController, String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _watchInputs();
+  }
+
+  @override
+  void didUpdateWidget(CalculatorPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _unwatchInputs();
+    _watchInputs();
+  }
+
+  void _watchInputs() {
+    for (final controller in widget.inputControllers) {
+      _inputText[controller] = controller.text;
+      controller.addListener(_inputChanged);
+    }
+  }
+
+  void _unwatchInputs() {
+    for (final controller in _inputText.keys) {
+      controller.removeListener(_inputChanged);
+    }
+    _inputText.clear();
+  }
+
+  void _inputChanged() {
+    var changed = false;
+    for (final controller in _inputText.keys) {
+      if (_inputText[controller] != controller.text) {
+        _inputText[controller] = controller.text;
+        changed = true;
+      }
+    }
+    // Cursor/selection/composing changes alone do not change the calculation.
+    if (changed) widget.onInputsChanged();
+  }
+
+  @override
+  void dispose() {
+    _unwatchInputs();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) =>
-      ListView(padding: const EdgeInsets.all(16), children: children);
+      ListView(padding: const EdgeInsets.all(16), children: widget.children);
 }
 
 class CalculatorNumberField extends StatelessWidget {

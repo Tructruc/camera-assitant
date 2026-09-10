@@ -267,4 +267,76 @@ void main() {
     );
     expect(find.textContaining('immutable'), findsOneWidget);
   });
+
+  testWidgets(
+    'editing an input blocks saving until the result is recalculated',
+    (tester) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            appDatabaseProvider.overrideWithValue(database),
+            equipmentRepositoryProvider.overrideWithValue(
+              DriftEquipmentRepository(database),
+            ),
+          ],
+          child: const PhotographyAssistantApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Depth of field'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Depth of field'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Calculate'));
+      await tester.pumpAndSettle();
+      expect(find.text('Save result'), findsOneWidget);
+
+      // Editing an input invalidates the displayed result and its save action.
+      await tester.scrollUntilVisible(
+        find.text('Focal length (mm)'),
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Focal length (mm)'),
+        '85',
+      );
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).first, const Offset(0, -10000));
+      await tester.pumpAndSettle();
+      expect(find.text('Save result'), findsNothing);
+
+      // Recalculation restores a savable result and the journey completes.
+      await tester.scrollUntilVisible(
+        find.text('Calculate'),
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Calculate'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Save result'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save result'));
+      await tester.pumpAndSettle();
+
+      final snapshots = await DriftSnapshotRepository(
+        database,
+      ).listNewestFirst();
+      expect(snapshots, hasLength(1));
+      expect(snapshots.single.canonicalInputs['focalLengthMm'], 85);
+    },
+  );
 }

@@ -58,6 +58,8 @@ Expected:
 - Formula fixtures and all validation/unit-conversion boundaries pass.
 - Database constraints, migrations, archival, and immutable snapshots pass in memory.
 - Widget states, semantics, 200% text scale, light/dark/low-light modes, and selected goldens pass.
+- Every calculator invalidates a displayed result and its save action on manual input or applied-equipment
+  change, ignores cursor-only edits, and only stores a snapshot after recalculation.
 - Integration journeys create equipment, apply it to each calculator, save a snapshot, restart offline,
   and reopen the unchanged result.
 
@@ -126,6 +128,10 @@ Expected:
     saved plan references equipment, verify Delete offers archiving and preserves the original plan.
 26. Calculate with each tool and verify its result includes a labeled input summary at normal and 200%
     text sizes, alongside the outputs, assumptions and save/reset actions.
+27. In every calculator, calculate a result, then edit one manual input and verify the displayed result and
+    the save action disappear until recalculation; move the caret or change the selection without editing
+    text and verify the result survives; apply a different saved item that supplies identical numeric
+    values and verify the changed provenance alone invalidates the result and its save action.
 
 ## Platform build gates
 

@@ -61,6 +61,23 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
         .whereType<Lens>()
         .toList();
     return CalculatorPage(
+      inputControllers: [
+        _sensorWidth,
+        _sensorHeight,
+        _focalLength,
+        _horizontalBounds,
+        _verticalBounds,
+        _horizontalOverlap,
+        _verticalOverlap,
+      ],
+      onInputsChanged: () {
+        if (_result != null || _errors.isNotEmpty) {
+          setState(() {
+            _result = null;
+            _errors = const {};
+          });
+        }
+      },
       children: <Widget>[
         Text(
           'Panorama planner',
