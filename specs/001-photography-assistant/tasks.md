@@ -467,3 +467,11 @@ night-sky and macro planners, the alignment planner discloses that it does not a
 alignment-only ephemeris was renamed to `AlignmentSkyEphemeris` to avoid a duplicate class name, and the
 quickstart, evidence record, and Android log were refreshed. `flutter test` is 272 passed, the analyzer and
 formatter are clean, and all four host integration journeys pass.
+
+T058/T061 progress (2026-09-10): the automated half of the quickstart journey is recorded scenario by
+scenario in `validation/quickstart-evidence.md`, and seven host-runnable integration journeys now execute
+it end to end — calculator flows, optics flows, equipment flow, planning flow, preferences and
+saved-plan freezing, AR-unavailable fallback, and the 200% text-scale accessibility journey — for nine test
+cases in total. The remaining work is genuinely device-bound: scenario 21 (live AR against real camera and
+compass hardware), physical permission grants and denials, Android and iOS process death, and the T062
+representative-photographer sessions. `validation/ios.md` records that no iOS evidence exists yet.
