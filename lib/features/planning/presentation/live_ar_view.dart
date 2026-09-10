@@ -5,6 +5,10 @@ import '../../../core/data/repositories/preferences_repository.dart';
 import '../data/device_planning_service.dart';
 import '../domain/north_reference.dart';
 
+/// The camera plugin exposes no lens field of view, so reticle placement
+/// assumes this value on both axes and states the assumption on screen.
+const double arAssumedFieldOfViewDegrees = 60;
+
 class LiveArView extends StatefulWidget {
   const LiveArView({
     required this.azimuthDegrees,
@@ -126,7 +130,7 @@ class _LiveArViewState extends State<LiveArView> {
                               ? 'Declination is invalid. Enter a value from 90° west to 90° east; the reticle is hidden.'
                               : heading == null
                               ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
-                              : 'Heading ${heading.toStringAsFixed(1)}° magnetic • pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°\nTarget ${displayedTarget!.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'} / ${widget.altitudeDegrees.toStringAsFixed(1)}° altitude\n${_referenceLabel()}\n${_accuracyLabel(reading!)}',
+                              : 'Heading ${heading.toStringAsFixed(1)}° magnetic • pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°\nTarget ${displayedTarget!.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'} / ${widget.altitudeDegrees.toStringAsFixed(1)}° altitude\n${_referenceLabel()}\n${_accuracyLabel(reading!)}\nOverlay assumes a ${arAssumedFieldOfViewDegrees.toStringAsFixed(0)}° field of view on both axes; confirm framing in the live view.',
                           style: const TextStyle(color: Colors.white),
                         ),
                       ),
@@ -194,17 +198,16 @@ final class _ArOverlayPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (heading == null) return;
     final difference = ((targetAzimuth - heading! + 540) % 360) - 180;
-    final x = (size.width / 2 + difference / 60 * size.width).clamp(
-      24.0,
-      size.width - 24,
-    );
+    final x =
+        (size.width / 2 + difference / arAssumedFieldOfViewDegrees * size.width)
+            .clamp(24.0, size.width - 24);
     final altitudeDifference = pitch == null
         ? targetAltitude
         : targetAltitude - pitch!;
-    final y = (size.height / 2 - altitudeDifference / 60 * size.height).clamp(
-      24.0,
-      size.height - 24,
-    );
+    final y =
+        (size.height / 2 -
+                altitudeDifference / arAssumedFieldOfViewDegrees * size.height)
+            .clamp(24.0, size.height - 24);
     final paint = Paint()
       ..color = Colors.orangeAccent
       ..style = PaintingStyle.stroke

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:camera/camera.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
@@ -87,6 +88,48 @@ final class DevicePlanningService {
       LocationPermission.deniedForever => CapabilityStatus.denied,
       _ => CapabilityStatus.permissionRequired,
     };
+  }
+
+  /// Reports what the live views can offer without triggering a permission
+  /// prompt: only the user opening AR may ask for camera or orientation access.
+  Future<PlanningCapabilities> detectCapabilities() async {
+    try {
+      final location = await locationStatus();
+      final orientation = FlutterCompass.events == null
+          ? CapabilityStatus.unsupported
+          : CapabilityStatus.available;
+      final camera = await _cameraStatus();
+      return PlanningCapabilities(
+        location: location,
+        orientation: orientation,
+        camera: camera,
+        augmentedReality:
+            camera == CapabilityStatus.available &&
+                orientation == CapabilityStatus.available
+            ? CapabilityStatus.available
+            : CapabilityStatus.unsupported,
+      );
+    } on Object {
+      // Detection must never break a planner; an unknown device falls back to
+      // the honest "not yet known" capability set.
+      return const PlanningCapabilities.fallback();
+    }
+  }
+
+  Future<CapabilityStatus> _cameraStatus() async {
+    try {
+      final cameras = await availableCameras();
+      return cameras.isEmpty
+          ? CapabilityStatus.unsupported
+          : CapabilityStatus.available;
+    } on CameraException catch (error) {
+      return switch (error.code) {
+        'CameraAccessDenied' ||
+        'CameraAccessDeniedWithoutPrompt' ||
+        'CameraAccessRestricted' => CapabilityStatus.permissionRequired,
+        _ => CapabilityStatus.unsupported,
+      };
+    }
   }
 }
 

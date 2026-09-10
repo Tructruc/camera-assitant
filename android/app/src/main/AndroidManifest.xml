@@ -1,7 +1,26 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- camera_android_camerax 0.7.2 merges in RECORD_AUDIO and a legacy
+         WRITE_EXTERNAL_STORAGE permission (maxSdkVersion 28). This app records
+         no audio (the live AR view initializes its controller with
+         enableAudio: false) and writes only to app-private storage through
+         path_provider, so both are removed from the merged release manifest. -->
+    <uses-permission
+        android:name="android.permission.RECORD_AUDIO"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        tools:node="remove" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- camera_android_camerax also merges in "android.hardware.camera.any",
+         which defaults to required and would filter camera-less devices even
+         though every AR path is capability-gated. -->
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false"
+        tools:node="replace" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
     <application
         android:label="photography_assistant"

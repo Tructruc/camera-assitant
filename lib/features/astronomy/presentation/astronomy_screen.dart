@@ -113,7 +113,11 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         _magneticDeclination,
       ],
       onInputsChanged: () {
-        if (_result != null || _errors.isNotEmpty) {
+        // A selected location without an elevation keeps a disclosure note
+        // visible, so the note must track manual edits too.
+        if (_selectedLocation != null ||
+            _result != null ||
+            _errors.isNotEmpty) {
           setState(() {
             _result = null;
             _errors = const {};
@@ -147,13 +151,26 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             setState(() {
               _latitude.text = location.latitudeDegrees.toString();
               _longitude.text = location.longitudeDegrees.toString();
-              _elevation.text = (location.elevationMetres ?? 0).toString();
+              // Never invent an elevation: keep the field as entered and
+              // disclose the missing value below instead.
+              if (location.elevationMetres case final elevation?) {
+                _elevation.text = elevation.toString();
+              }
               _timeZoneId = location.timeZoneId;
               _selectedLocation = location;
               _result = null;
             });
           },
         ),
+        if (_selectedLocation case final location?
+            when location.elevationMetres == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'This saved location has no elevation, so the observer elevation above is unchanged. '
+              'Verify it before relying on horizon, rise, or set times.',
+            ),
+          ),
         const SizedBox(height: 12),
         DropdownMenu<CelestialTarget>(
           label: const Text('Search celestial targets'),
@@ -756,9 +773,13 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     final northReference =
         ref.watch(preferencesProvider).valueOrNull?.northReference ??
         NorthReference.trueNorth;
+    // A caller may inject capabilities; otherwise use the detected device state.
+    final capabilities =
+        widget.capabilities ??
+        ref.watch(planningCapabilitiesProvider).valueOrNull;
     if (_view == PlanningView.augmentedReality &&
-        widget.capabilities != null &&
-        !widget.capabilities!.canShowAr) {
+        capabilities != null &&
+        !capabilities.canShowAr) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(12),

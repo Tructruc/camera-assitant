@@ -373,6 +373,50 @@ void main() {
     );
   });
 
+  testWidgets('archive action retires active equipment from the inventory', (
+    WidgetTester tester,
+  ) async {
+    final camera = domain.CameraBody(
+      id: 'camera-archivable',
+      name: 'Archivable Camera',
+      sensorWidthMm: 36,
+      sensorHeightMm: 24,
+      provenance: const domain.EquipmentProvenance(
+        source: domain.EquipmentSource.user,
+      ),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    await repository.createCamera(camera);
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Actions for Archivable Camera'));
+    await tester.pumpAndSettle();
+    expect(find.text('Archive'), findsOneWidget);
+    await tester.tap(find.text('Archive'));
+    await tester.pumpAndSettle();
+
+    expect(await repository.listCameras(), isEmpty);
+    expect(await repository.listCameras(includeArchived: true), hasLength(1));
+
+    // The archived inventory offers restore, never a second archive.
+    final archivedChip = find.widgetWithText(FilterChip, 'Archived');
+    await tester.ensureVisible(archivedChip);
+    await tester.pumpAndSettle();
+    await tester.tap(archivedChip);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byTooltip('Actions for Archivable Camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byTooltip('Actions for Archivable Camera'));
+    await tester.pumpAndSettle();
+    expect(find.text('Restore'), findsOneWidget);
+    expect(find.text('Archive'), findsNothing);
+  });
+
   testWidgets('picker identifies source and supports a one-off override', (
     WidgetTester tester,
   ) async {

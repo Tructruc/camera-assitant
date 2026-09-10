@@ -101,7 +101,11 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         _magneticDeclination,
       ],
       onInputsChanged: () {
-        if (_result != null || _errors.isNotEmpty) {
+        // A selected location without an elevation keeps a disclosure note
+        // visible, so the note must track manual edits too.
+        if (_selectedLocation != null ||
+            _result != null ||
+            _errors.isNotEmpty) {
           setState(() {
             _result = null;
             _errors = const {};
@@ -144,6 +148,15 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             });
           },
         ),
+        if (_selectedLocation case final location?
+            when location.elevationMetres == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'This saved location has no elevation, so the observer elevation above is unchanged. '
+              'Verify it before relying on horizon or terrain-limited candidates.',
+            ),
+          ),
         const SizedBox(height: 12),
         SegmentedButton<AlignmentBody>(
           segments: const [
@@ -368,9 +381,13 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     final northReference =
         ref.watch(preferencesProvider).valueOrNull?.northReference ??
         NorthReference.trueNorth;
+    // A caller may inject capabilities; otherwise use the detected device state.
+    final capabilities =
+        widget.capabilities ??
+        ref.watch(planningCapabilitiesProvider).valueOrNull;
     if (_view == PlanningView.augmentedReality &&
-        widget.capabilities != null &&
-        !widget.capabilities!.canShowAr) {
+        capabilities != null &&
+        !capabilities.canShowAr) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -400,7 +417,12 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         children: [
           for (final candidate in output.candidates.take(8))
             Text(
-              '${PlanningTimeContext.parse(_timeZoneId).format(candidate.instantUtc)} — az ${candidate.azimuthDegrees.toStringAsFixed(1)}°, alt ${candidate.altitudeDegrees.toStringAsFixed(1)}°, error ${candidate.angularErrorDegrees.toStringAsFixed(2)}°',
+              alignmentCandidateSummary(
+                candidate,
+                PlanningTimeContext.parse(
+                  _timeZoneId,
+                ).format(candidate.instantUtc),
+              ),
             ),
         ],
       ),
@@ -689,3 +711,14 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     );
   }
 }
+
+/// One-line numeric summary of a candidate, including whether it is actually
+/// above the geometric horizon.
+String alignmentCandidateSummary(
+  AlignmentCandidate candidate,
+  String formattedLocalTime,
+) =>
+    '$formattedLocalTime — az ${candidate.azimuthDegrees.toStringAsFixed(1)}°, '
+    'alt ${candidate.altitudeDegrees.toStringAsFixed(1)}°, '
+    'error ${candidate.angularErrorDegrees.toStringAsFixed(2)}° · '
+    '${candidate.aboveHorizon ? 'above horizon' : 'below horizon'}';

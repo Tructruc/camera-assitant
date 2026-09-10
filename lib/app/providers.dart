@@ -13,7 +13,9 @@ import '../core/data/repositories/preferences_repository.dart';
 import '../core/domain/calculation_snapshot.dart';
 import '../core/domain/repositories/snapshot_repository.dart';
 import '../features/equipment/data/drift_equipment_repository.dart';
+import '../features/planning/data/device_planning_service.dart';
 import '../features/planning/data/saved_location_repository.dart';
+import '../features/planning/domain/planning_capabilities.dart';
 import '../features/planning/domain/saved_location.dart';
 
 final Provider<AppDatabase> appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -55,4 +57,14 @@ savedSnapshotsProvider =
 final StreamProvider<AppPreferences> preferencesProvider =
     StreamProvider<AppPreferences>((ref) {
       return ref.watch(preferencesRepositoryProvider).watch();
+    });
+
+final Provider<DevicePlanningService> devicePlanningServiceProvider =
+    Provider<DevicePlanningService>((ref) => const DevicePlanningService());
+
+/// Capability state for the live planner views. Detection never prompts for a
+/// permission; only the user opening a live view may do that.
+final FutureProvider<PlanningCapabilities> planningCapabilitiesProvider =
+    FutureProvider<PlanningCapabilities>((ref) {
+      return ref.watch(devicePlanningServiceProvider).detectCapabilities();
     });

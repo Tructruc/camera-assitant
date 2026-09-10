@@ -130,6 +130,7 @@ class EquipmentListScreen extends ConsumerWidget {
           ),
           onDuplicate: () =>
               _openEditor(context, ref, state.items[index], duplicate: true),
+          onArchive: () => _archive(context, ref, state.items[index]),
           onDelete: () => _remove(context, ref, state.items[index]),
           onRestore: () => controller.restore(state.items[index]),
         ),
@@ -258,6 +259,17 @@ class EquipmentListScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _archive(
+    BuildContext context,
+    WidgetRef ref,
+    EquipmentListEntry entry,
+  ) async {
+    if (!await _confirmReferencedMutation(context, ref, entry, 'archive')) {
+      return;
+    }
+    await ref.read(equipmentControllerProvider.notifier).archive(entry);
+  }
+
   Future<bool> _confirmReferencedMutation(
     BuildContext context,
     WidgetRef ref,
@@ -295,13 +307,14 @@ class EquipmentListScreen extends ConsumerWidget {
   }
 }
 
-enum _EquipmentAction { edit, duplicate, delete, restore }
+enum _EquipmentAction { edit, duplicate, archive, delete, restore }
 
 class _EquipmentCard extends StatelessWidget {
   const _EquipmentCard({
     required this.entry,
     required this.onEdit,
     required this.onDuplicate,
+    required this.onArchive,
     required this.onDelete,
     required this.onRestore,
   });
@@ -309,6 +322,7 @@ class _EquipmentCard extends StatelessWidget {
   final EquipmentListEntry entry;
   final VoidCallback onEdit;
   final VoidCallback onDuplicate;
+  final VoidCallback onArchive;
   final VoidCallback onDelete;
   final VoidCallback onRestore;
 
@@ -342,6 +356,8 @@ class _EquipmentCard extends StatelessWidget {
                   onEdit();
                 case _EquipmentAction.duplicate:
                   onDuplicate();
+                case _EquipmentAction.archive:
+                  onArchive();
                 case _EquipmentAction.delete:
                   onDelete();
                 case _EquipmentAction.restore:
@@ -358,6 +374,11 @@ class _EquipmentCard extends StatelessWidget {
                 value: _EquipmentAction.duplicate,
                 child: Text('Duplicate'),
               ),
+              if (!archived)
+                const PopupMenuItem(
+                  value: _EquipmentAction.archive,
+                  child: Text('Archive'),
+                ),
               PopupMenuItem(
                 value: archived
                     ? _EquipmentAction.restore
