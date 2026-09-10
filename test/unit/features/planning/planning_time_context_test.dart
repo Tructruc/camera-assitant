@@ -137,4 +137,28 @@ void main() {
     expect(context.format(DateTime.utc(2026, 8, 21, 20, 30)), contains('UTC'));
     expect(context.confidenceLabel, contains('unsupported'));
   });
+
+  test('device offsets become exact fixed-offset identifiers', () {
+    expect(deviceTimeZoneId(Duration.zero), 'UTC');
+    expect(deviceTimeZoneId(const Duration(hours: 2)), 'UTC+02:00');
+    expect(
+      deviceTimeZoneId(const Duration(hours: -5, minutes: -30)),
+      'UTC-05:30',
+    );
+    expect(
+      deviceTimeZoneId(const Duration(hours: 5, minutes: 45)),
+      'UTC+05:45',
+    );
+    expect(deviceTimeZoneId(const Duration(hours: 14)), 'UTC+14:00');
+
+    // The produced identifier must parse back to the same offset.
+    final parsed = PlanningTimeContext.parse(
+      deviceTimeZoneId(const Duration(hours: -5, minutes: -30)),
+    );
+    expect(parsed.canConvertOffline, isTrue);
+    expect(
+      parsed.toUtc(DateTime(2026, 6, 1, 12)),
+      DateTime.utc(2026, 6, 1, 17, 30),
+    );
+  });
 }

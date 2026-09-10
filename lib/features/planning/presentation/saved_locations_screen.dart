@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../app/providers.dart';
 import '../data/device_planning_service.dart';
+import '../domain/planning_time_context.dart';
 import '../domain/saved_location.dart';
 
 class SavedLocationsScreen extends ConsumerWidget {
@@ -113,7 +114,13 @@ class SavedLocationsScreen extends ConsumerWidget {
           (location?.elevationMetres ?? reading?.elevationMetres)?.toString() ??
           '',
     );
-    final timezone = TextEditingController(text: location?.timeZoneId ?? 'UTC');
+    // Default a new site to the device's real offset instead of UTC, so its
+    // local planning times are not silently wrong (FR-013).
+    final timezone = TextEditingController(
+      text:
+          location?.timeZoneId ??
+          deviceTimeZoneId(DateTime.now().timeZoneOffset),
+    );
     final saved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

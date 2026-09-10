@@ -2,6 +2,20 @@ import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+/// An exact fixed UTC offset identifier for a device clock offset, such as
+/// `UTC+02:00`, `UTC-05:30`, or `UTC`. A new saved location defaults to this
+/// rather than to `UTC`, so a device-derived site does not silently report the
+/// wrong local time; the planner labels a fixed offset honestly because
+/// daylight-saving transitions are not applied to it.
+String deviceTimeZoneId(Duration offset) {
+  if (offset == Duration.zero) return 'UTC';
+  final sign = offset.isNegative ? '-' : '+';
+  final absolute = offset.abs();
+  final hours = absolute.inHours.toString().padLeft(2, '0');
+  final minutes = absolute.inMinutes.remainder(60).toString().padLeft(2, '0');
+  return 'UTC$sign$hours:$minutes';
+}
+
 final class PlanningTimeContext {
   const PlanningTimeContext._({
     required this.timeZoneId,
