@@ -38,6 +38,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
   Map<String, String> _errors = const {};
   List<(String, String)>? _rows;
   List<String> _assumptions = const [];
+  List<CalculationWarning> _warnings = const [];
   String _guidance = '';
   Map<String, Object?> _outputs = const {};
   CameraBody? _camera;
@@ -134,6 +135,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
           if (_camera case final camera?)
             AppliedEquipmentNotice(
               equipmentName: camera.name,
+              sourceLabel: camera.provenance.source.label,
               appliedValues: widget.tool == _OpticsTool.fieldOfView
                   ? '${_controllers[0].text} × ${_controllers[1].text} mm sensor'
                   : '${_controllers[2].text} mm circle of confusion',
@@ -149,6 +151,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         if (_lens case final lens?)
           AppliedEquipmentNotice(
             equipmentName: lens.name,
+            sourceLabel: lens.provenance.source.label,
             appliedValues: _lensAppliedValues,
           ),
         for (var index = 0; index < _fields.length; index++)
@@ -169,6 +172,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
             ],
             rows: rows,
             assumptions: _assumptions,
+            warnings: _warningMessages,
             guidance: _guidance,
             onSave: _save,
             onReset: _reset,
@@ -215,6 +219,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
             'Rectilinear lens with nominal focal length',
             'Sensor dimensions define the active image area',
           ];
+          _warnings = result.warnings;
           _guidance =
               'Focus breathing, distortion, and lens corrections can change real coverage.';
         }
@@ -251,6 +256,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
             'Circular aperture and first Airy minimum',
             'Single selected wavelength; real light is broadband',
           ];
+          _warnings = result.warnings;
           _guidance = value.airyDiskPixels >= 2
               ? 'Diffraction spans at least two pixels; compare sharpness against the depth of field you need.'
               : 'Sensor sampling is coarser than the calculated Airy disk at this wavelength.';
@@ -284,6 +290,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
             'Distances are measured from the lens principal plane',
             'Focus breathing and rail motion are not modeled',
           ];
+          _warnings = result.warnings;
           _guidance =
               'Capture in the listed near-to-far order. Add extra frames for uncertain distance scales or moving subjects.';
         }
@@ -292,19 +299,21 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
   }
 
   void _applyErrors(Iterable<(String, String)> errors) {
-    _errors = {
-      for (final error in errors)
-        error.$1: error.$2 == 'greater_than_near'
-            ? 'Enter a distance greater than the near distance.'
-            : error.$2 == 'range'
-            ? 'Enter overlap from 0 up to, but not including, 100%.'
-            : 'Enter a positive finite value.',
-    };
+    _errors = {for (final error in errors) error.$1: _errorMessage(error.$2)};
     if (_errors.isNotEmpty) {
       _rows = null;
       _outputs = const {};
+      _warnings = const [];
     }
   }
+
+  String _errorMessage(String code) => switch (code) {
+    'greater_than_near' => 'Enter a distance greater than the near distance.',
+    'not_beyond_focal_length' =>
+      'Enter a distance greater than the focal length.',
+    'range' => 'Enter overlap from 0 up to, but not including, 100%.',
+    _ => 'Enter a positive finite value.',
+  };
 
   Future<void> _save() => saveCalculationSnapshot(
     context,
@@ -440,15 +449,28 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
     ],
   };
 
-  List<CalculationWarning> get _snapshotWarnings =>
-      widget.tool == _OpticsTool.diffraction &&
-          _outputs['airyDiskPixels'] is double &&
-          (_outputs['airyDiskPixels']! as double) >= 2
-      ? const [
-          CalculationWarning(
-            code: 'sampling_visible',
-            messageKey: 'diffraction.warning.samplingVisible',
-          ),
-        ]
-      : const [];
+  List<CalculationWarning> get _snapshotWarnings => [
+    ..._warnings,
+    if (widget.tool == _OpticsTool.diffraction &&
+        _outputs['airyDiskPixels'] is double &&
+        (_outputs['airyDiskPixels']! as double) >= 2)
+      const CalculationWarning(
+        code: 'sampling_visible',
+        messageKey: 'diffraction.warning.samplingVisible',
+      ),
+  ];
+
+  List<String> get _warningMessages => [
+    for (final warning in _warnings) _warningMessage(warning.code),
+    if (widget.tool == _OpticsTool.diffraction &&
+        _outputs['airyDiskPixels'] is double &&
+        (_outputs['airyDiskPixels']! as double) >= 2)
+      'The Airy disk spans at least two pixels, so diffraction is visible at this aperture and pixel pitch.',
+  ];
+
+  String _warningMessage(String code) => switch (code) {
+    'frame_limit' =>
+      'The focus stack reached the 1,000-frame planning limit. The far distance is included, but increase overlap or split the stack before shooting.',
+    _ => 'This result has a limitation the calculator reported as $code.',
+  };
 }

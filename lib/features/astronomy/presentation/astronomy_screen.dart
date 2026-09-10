@@ -203,8 +203,19 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           onSelected: (camera) => setState(() {
             _camera = camera;
             _result = null;
+            if (camera != null) {
+              // The planner consumes a crop factor, so derive it from the
+              // saved sensor width instead of recording an unused dimension.
+              _cropFactor.text = (36 / camera.sensorWidthMm).toStringAsFixed(2);
+            }
           }),
         ),
+        if (_camera case final camera?)
+          AppliedEquipmentNotice(
+            equipmentName: camera.name,
+            sourceLabel: camera.provenance.source.label,
+            appliedValues: '${_cropFactor.text}× crop factor',
+          ),
         EquipmentPicker<Lens>(
           label: 'Saved lens (optional)',
           items: lenses,
@@ -215,6 +226,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         if (_lens case final lens?)
           AppliedEquipmentNotice(
             equipmentName: lens.name,
+            sourceLabel: lens.provenance.source.label,
             appliedValues: '${_focalLength.text} mm focal length',
           ),
         CalculatorNumberField(
@@ -625,8 +637,9 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       equipment: [
         if (_camera case final camera?)
           _equipment(camera, SnapshotEquipmentType.camera, {
+            // The applied input is the crop factor derived from this width.
+            'cropFactor': _value(_cropFactor),
             'sensorWidthMm': camera.sensorWidthMm,
-            'sensorHeightMm': camera.sensorHeightMm,
           }),
         if (_lens case final lens?)
           _equipment(lens, SnapshotEquipmentType.lens, {

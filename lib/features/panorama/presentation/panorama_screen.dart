@@ -98,6 +98,7 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
         if (_selectedCamera case final camera?)
           AppliedEquipmentNotice(
             equipmentName: camera.name,
+            sourceLabel: camera.provenance.source.label,
             appliedValues:
                 '${_sensorWidth.text} × ${_sensorHeight.text} mm sensor',
           ),
@@ -111,6 +112,7 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
         if (_selectedLens case final lens?)
           AppliedEquipmentNotice(
             equipmentName: lens.name,
+            sourceLabel: lens.provenance.source.label,
             appliedValues: '${_focalLength.text} mm focal length',
           ),
         CalculatorNumberField(

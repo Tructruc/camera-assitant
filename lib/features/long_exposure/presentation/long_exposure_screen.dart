@@ -50,7 +50,9 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
     return CalculatorPage(
       inputControllers: [_base, _stops, _target],
       onInputsChanged: () {
-        if (_result != null || _errors.isNotEmpty) {
+        // A selected filter makes the applied-stops notice depend on the field
+        // text, so rebuild even before a result exists.
+        if (_selectedFilter != null || _result != null || _errors.isNotEmpty) {
           setState(() {
             _result = null;
             _errors = const {};
@@ -83,7 +85,12 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         if (_selectedFilter case final filter?)
           AppliedEquipmentNotice(
             equipmentName: filter.name,
-            appliedValues: '${filter.strengthStops} stops',
+            sourceLabel: filter.provenance.source.label,
+            // The calculation applies the editable field, which may already be
+            // a one-off override of the saved filter strength.
+            appliedValues: _stops.text.trim().isEmpty
+                ? 'no stops applied yet'
+                : '${_stops.text.trim()} stops applied',
           ),
         const SizedBox(height: 12),
         CalculatorNumberField(

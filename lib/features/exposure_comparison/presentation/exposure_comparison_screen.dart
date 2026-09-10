@@ -111,6 +111,10 @@ class _ExposureComparisonScreenState
             'Each stop doubles or halves exposure',
             'Scene light and transmission remain unchanged',
           ],
+          guidance:
+              'Limitation: this comparison ignores lens transmission, sensor noise behaviour, '
+              'reciprocity failure on long exposures, and any change in scene light or flash '
+              'output between the two settings.',
           onSave: () => _save(output),
           onReset: _reset,
         ),

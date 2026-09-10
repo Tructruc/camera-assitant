@@ -184,7 +184,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
     EquipmentKind.accessory => <Widget>[
       DropdownButtonFormField<OpticalAccessoryKind>(
         decoration: const InputDecoration(labelText: 'Accessory type'),
-        initialValue: OpticalAccessoryKind.extensionTube,
+        initialValue: _accessoryKind,
         items: const [
           DropdownMenuItem(
             value: OpticalAccessoryKind.extensionTube,

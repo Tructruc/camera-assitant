@@ -32,6 +32,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
   Lens? _selectedPrimaryLens;
   Lens? _selectedReversedLens;
   OpticalAccessory? _selectedTube;
+  CameraBody? _selectedCamera;
 
   @override
   void dispose() {
@@ -63,6 +64,11 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         .map((entry) => entry.item)
         .whereType<OpticalAccessory>()
         .where((item) => item.kind == OpticalAccessoryKind.extensionTube)
+        .toList();
+    final cameras = entries
+        .where((entry) => entry.kind == EquipmentKind.camera)
+        .map((entry) => entry.item)
+        .whereType<CameraBody>()
         .toList();
     return CalculatorPage(
       inputControllers: [
@@ -127,6 +133,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         if (_selectedPrimaryLens case final lens?)
           AppliedEquipmentNotice(
             equipmentName: lens.name,
+            sourceLabel: lens.provenance.source.label,
             appliedValues: '${_primaryFocal.text} mm at f/${_aperture.text}',
           ),
         if (_configuration == MacroConfiguration.extensionTube) ...[
@@ -140,6 +147,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
           if (_selectedTube case final tube?)
             AppliedEquipmentNotice(
               equipmentName: tube.name,
+              sourceLabel: tube.provenance.source.label,
               appliedValues: '${_extension.text} mm extension',
             ),
           CalculatorNumberField(
@@ -169,6 +177,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
           if (_selectedReversedLens case final lens?)
             AppliedEquipmentNotice(
               equipmentName: lens.name,
+              sourceLabel: lens.provenance.source.label,
               appliedValues: '${_reversedFocal.text} mm reversed',
             ),
           CalculatorNumberField(
@@ -193,6 +202,7 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
           if (_selectedReversedLens case final lens?)
             AppliedEquipmentNotice(
               equipmentName: lens.name,
+              sourceLabel: lens.provenance.source.label,
               appliedValues: '${_reversedFocal.text} mm reversed',
             ),
           CalculatorNumberField(
@@ -206,6 +216,19 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
             errorText: _errors['reversedFocalLengthMm'],
           ),
         ],
+        EquipmentPicker<CameraBody>(
+          label: 'Saved camera (optional)',
+          items: cameras,
+          itemLabel: (item) => item.name,
+          value: _selectedCamera,
+          onSelected: _applyCamera,
+        ),
+        if (_selectedCamera case final camera?)
+          AppliedEquipmentNotice(
+            equipmentName: camera.name,
+            sourceLabel: camera.provenance.source.label,
+            appliedValues: '${_sensorWidth.text} mm sensor width',
+          ),
         CalculatorNumberField(
           label: 'Nominal aperture (f-number)',
           controller: _aperture,
@@ -339,6 +362,14 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
     });
   }
 
+  void _applyCamera(CameraBody? camera) {
+    setState(() {
+      _result = null;
+      _selectedCamera = camera;
+      if (camera != null) _sensorWidth.text = camera.sensorWidthMm.toString();
+    });
+  }
+
   Future<void> _save(MacroOutput output) => saveCalculationSnapshot(
     context,
     ref,
@@ -370,6 +401,10 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         if (_selectedTube case final tube?)
           _equipment(tube, SnapshotEquipmentType.opticalAccessory, {
             'extensionLengthMm': _value(_extension),
+          }),
+        if (_selectedCamera case final camera?)
+          _equipment(camera, SnapshotEquipmentType.camera, {
+            'sensorWidthMm': camera.sensorWidthMm,
           }),
       ],
     ),

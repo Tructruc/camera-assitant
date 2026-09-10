@@ -7,6 +7,15 @@ import '../../../core/domain/validation/validation.dart';
 
 enum EquipmentSource { user, bundled, userOverride }
 
+/// Human-readable provenance labels shown wherever applied equipment is used.
+extension EquipmentSourceLabel on EquipmentSource {
+  String get label => switch (this) {
+    EquipmentSource.user => 'user-entered',
+    EquipmentSource.bundled => 'bundled catalog',
+    EquipmentSource.userOverride => 'user override',
+  };
+}
+
 final class EquipmentProvenance {
   const EquipmentProvenance({required this.source, this.note});
   final EquipmentSource source;

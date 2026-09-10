@@ -368,3 +368,51 @@ integration journey `editing an input blocks saving until the result is recalcul
 state transition on a host build of the app (`flutter test integration_test/calculator_flows_test.dart`,
 3/3 journeys passed); physical Android/iOS execution stays with the open quickstart passes T058/T059
 because the agent sandbox has no KVM device. Local suite (210 tests), analyzer, and formatter are clean.
+
+## Phase 20: Convergence
+
+Converge pass (2026-09-10) assessed the committed tree at `d6d16bf` against all 24 functional
+requirements, 12 success criteria, and the seven user stories. Nothing violates a constitution MUST
+principle, so the findings below are ordered by user impact rather than by blocker severity.
+
+- [ ] T121 [US4] Add Sun and Moon rise/set/transit events, visibility cycles, and path sampling to the celestial planner so the alignment planner is not the only Sun/Moon model per FR-009 (partial)
+- [ ] T122 [US4] Commit externally traceable reference fixtures for Sun, Moon, and Sirius positions plus one rise/set/transit event set, asserted at the declared tolerance per SC-004 and FR-022 (partial)
+- [ ] T123 [P] [US1] Add offline integration journeys with device evidence for macro, panorama, field of view, diffraction, and focus stacking per FR-022 and SC-012 (missing)
+- [X] T124 [US4] Stop recording unapplied camera sensor values in night-sky snapshots by applying camera-derived crop factor and pixel pitch, or by recording only what the calculation used, per FR-008 (contradicts)
+- [X] T125 [P] [US2] Bind the accessory-type editor to the edited item's kind so teleconverter edits and duplicates keep their type per US2/AC2 (contradicts)
+- [X] T126 [US1] Show the ND filter value actually applied by the calculation rather than the inventory value after a one-off override per FR-008 (contradicts)
+- [ ] T127 [P] [US4] Remove the unused `RECORD_AUDIO` and legacy `WRITE_EXTERNAL_STORAGE` permissions that the camera plugin merges into the release manifest per FR-017 (contradicts)
+- [ ] T128 [P] [US1] Re-run and record the privacy audit at the current HEAD, including location, sensor, and camera SDKs and the iOS usage descriptions, per FR-016 and SC-010 (contradicts)
+- [ ] T129 [US4] Detect planning capability state and pass it to both planners so the documented AR-unavailable path is reachable per FR-012 (partial)
+- [X] T130 [US3] Add a saved camera picker to the macro planner so the required sensor width carries provenance per FR-008 (partial)
+- [X] T131 [US1] Show the applied equipment source and note, not just the name and values, in the provenance notice per FR-008 (partial)
+- [X] T132 [US3] Surface and persist the focus-stack frame-limit limitation instead of dropping it before presentation per FR-002 and FR-021 (partial)
+- [X] T133 [US1] Map the not-beyond-focal-length validation code to its corrective field message per US1/AC2 (partial)
+- [X] T134 [US5] Render saved warning payloads, including solar safety guidance, on the saved plan detail per FR-018 and US5/AC3 (partial)
+- [ ] T135 [US4] Disclose the elevation fallback when a saved location has none instead of silently substituting or reusing a value per FR-021 and US5/AC2 (partial)
+- [ ] T136 [US4] Replace or explicitly disclose the fixed 60° field-of-view assumption used to place AR targets per FR-013 and FR-021 (partial)
+- [ ] T137 [P] [US1] Commit cited reference fixtures with boundary values for optics, macro, panorama, flash, and timelapse per SC-001 and FR-022 (partial)
+- [ ] T138 [P] [US1] Add parameterized 200%-text-scale and semantics coverage for every calculator and planner screen per FR-019 (partial)
+- [ ] T139 [P] [US1] Add fixtures covering the v0 creation and v3-to-v4 preference migration paths per FR-022 (partial)
+- [ ] T140 [US2] Add an Archive action for active equipment with the referenced-item warning and remove the unreachable archive branch per US2/AC3 and T099 (partial)
+- [ ] T141 [US3] Apply converter magnification in a compatible planner or document it as inventory-only per FR-007 and FR-008 (partial)
+- [X] T142 [US7] Map all twelve calculator identifiers to readable labels in the saved-results list per FR-014 (partial)
+- [ ] T143 [US5] Show horizon state in the numeric alignment candidate list per FR-011 and US5/AC1 (partial)
+- [X] T144 [US1] Add an explicit limitations line to the exposure-comparison result per FR-002 and US1/AC1 (partial)
+- [X] T145 [US1] Display the front and rear depth around the focus plane per the depth-of-field contract (partial)
+- [ ] T146 [P] [US1] Extend the offline network guard to inventory, saved-plan reopening, and both planners per FR-015 and SC-010 (partial)
+- [ ] T147 [US2] Implement or narrow the equipment repository interface and provide a deterministic in-memory fake per the equipment repository contract (partial)
+- [ ] T148 [P] [US1] Extend release performance budgets beyond the three foundation calculators and state what remains device-only per SC-009 (partial)
+- [ ] T149 [US1] Resolve or justify the unrequested desktop release workflow, orphaned override control, unused domain helper, and planet constants that expose zero-valued positions per scope and FR-021 hygiene (unrequested)
+- [ ] T150 [US1] Extend equipment-provenance invalidation coverage beyond depth of field to the remaining equipment-consuming calculators per T120 and FR-008 (partial)
+
+Phase 20 validation (2026-09-10): the first convergence batch closed T124-T126, T130-T134, T142, T144, and
+T145. Equipment provenance now names its source everywhere it is applied, the night-sky planner derives
+and records the crop factor it actually consumes, the macro planner can apply a saved camera, the ND
+notice follows one-off overrides, focus-stack and saved-plan warnings (including solar safety) reach the
+user, validation messages are code-specific, and depth of field shows the depth on each side of focus.
+Coverage: `test/widget/features/calculators/result_reporting_test.dart` plus additions to the saved
+calculator and equipment widget suites; the depth-of-field golden was recaptured at 800x1400 so the whole
+result card stays inside the frame. `flutter test` (219 passed), `flutter analyze --fatal-infos`, and
+`dart format --set-exit-if-changed` are clean. The remaining Phase 20 tasks stay open, with T121 (Sun and
+Moon events) and T122 (externally traceable fixtures) needing the most engineering.

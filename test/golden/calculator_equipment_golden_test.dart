@@ -39,7 +39,9 @@ void main() {
   );
 
   testWidgets('depth-of-field result remains visually stable', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(800, 1200));
+    // Tall enough that the whole result, including the derived depth rows and
+    // the save/reset actions, stays inside the captured frame.
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(subject(const DepthOfFieldScreen()));
     await tester.scrollUntilVisible(

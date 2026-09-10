@@ -7,6 +7,7 @@ import 'package:photography_assistant/core/data/database/app_database.dart'
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
 import 'package:photography_assistant/core/domain/repositories/snapshot_repository.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/saved_calculations/presentation/saved_calculations_screen.dart';
 
 void main() {
@@ -151,6 +152,39 @@ void main() {
       find.textContaining('original stored data was preserved'),
       findsOneWidget,
     );
+    await _disposeSubject(tester);
+  });
+
+  testWidgets('renders saved warnings with a readable calculator label', (
+    tester,
+  ) async {
+    await repository.save(
+      CalculationSnapshot(
+        id: 'snapshot-sun',
+        calculatorId: 'sun_moon_alignment',
+        formulaVersion: 1,
+        createdAt: DateTime.utc(2026, 8, 21),
+        title: 'Sun alignment',
+        canonicalInputs: const <String, Object?>{'targetBearingDegrees': 180.0},
+        canonicalOutputs: const <String, Object?>{'candidateCount': 2},
+        displayContext: const <String, Object?>{'northReference': 'trueNorth'},
+        warnings: const <CalculationWarning>[
+          CalculationWarning(
+            code: 'solarSafety',
+            messageKey: 'alignment.warning.solarSafety',
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Sun & Moon alignment'), findsOneWidget);
+    await tester.tap(find.text('Sun alignment'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Warnings'), findsOneWidget);
+    expect(find.textContaining('certified solar filter'), findsOneWidget);
     await _disposeSubject(tester);
   });
 }

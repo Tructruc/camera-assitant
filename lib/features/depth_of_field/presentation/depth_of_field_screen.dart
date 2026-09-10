@@ -91,11 +91,13 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
         if (_selectedLens case final lens?)
           AppliedEquipmentNotice(
             equipmentName: lens.name,
+            sourceLabel: lens.provenance.source.label,
             appliedValues: '${_focal.text} mm at f/${_aperture.text}',
           ),
         if (_selectedCamera case final camera?)
           AppliedEquipmentNotice(
             equipmentName: camera.name,
+            sourceLabel: camera.provenance.source.label,
             appliedValues: 'circle of confusion ${_coc.text} mm',
           ),
         CalculatorNumberField(
@@ -151,6 +153,22 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
                     ? 'Infinity'
                     : _distanceText(
                         output.farLimit.millimetres,
+                        preferences.lengthDisplay,
+                      ),
+              ),
+              (
+                'Depth in front of focus',
+                _distanceText(
+                  output.frontDepth.millimetres,
+                  preferences.lengthDisplay,
+                ),
+              ),
+              (
+                'Depth behind focus',
+                output.rearDepth.isInfinite
+                    ? 'Infinity'
+                    : _distanceText(
+                        output.rearDepth.millimetres,
                         preferences.lengthDisplay,
                       ),
               ),

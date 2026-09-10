@@ -175,6 +175,55 @@ void main() {
     );
   });
 
+  testWidgets('editor preserves an existing teleconverter kind', (
+    WidgetTester tester,
+  ) async {
+    final converter = domain.OpticalAccessory(
+      id: 'converter-1',
+      name: '1.4× Converter',
+      kind: domain.OpticalAccessoryKind.teleconverter,
+      value: 1.4,
+      provenance: const domain.EquipmentProvenance(
+        source: domain.EquipmentSource.user,
+      ),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    domain.EquipmentItem? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EquipmentEditorScreen(
+          kind: EquipmentKind.accessory,
+          item: converter,
+          onSave: (item) async => saved = item,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The dropdown must reflect the edited item, not the first menu entry.
+    expect(
+      find.widgetWithText(TextFormField, 'Magnification factor (×)'),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(TextFormField, 'Extension length (mm)'),
+      findsNothing,
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('Update optical accessory'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Update optical accessory'));
+    await tester.pumpAndSettle();
+    expect(
+      (saved! as domain.OpticalAccessory).kind,
+      domain.OpticalAccessoryKind.teleconverter,
+    );
+  });
+
   testWidgets('editor prefills and updates every value of an existing lens', (
     WidgetTester tester,
   ) async {

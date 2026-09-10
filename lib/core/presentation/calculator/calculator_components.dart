@@ -116,16 +116,24 @@ class AppliedEquipmentNotice extends StatelessWidget {
   const AppliedEquipmentNotice({
     required this.equipmentName,
     required this.appliedValues,
+    this.sourceLabel,
     super.key,
   });
 
   final String equipmentName;
   final String appliedValues;
 
+  /// Display label for the saved item's declared provenance source.
+  final String? sourceLabel;
+
   @override
   Widget build(BuildContext context) => Semantics(
     container: true,
-    label: 'Applied equipment $equipmentName, $appliedValues',
+    label: <String>[
+      'Applied equipment $equipmentName',
+      appliedValues,
+      if (sourceLabel case final source?) 'source $source',
+    ].join(', '),
     child: Card(
       color: Theme.of(context).colorScheme.secondaryContainer,
       child: Padding(
@@ -137,7 +145,12 @@ class AppliedEquipmentNotice extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'From $equipmentName: $appliedValues\nYou can edit these values for this calculation only.',
+                <String>[
+                  'From $equipmentName'
+                      '${sourceLabel == null ? '' : ' ($sourceLabel)'}'
+                      ': $appliedValues',
+                  'You can edit these values for this calculation only.',
+                ].join('\n'),
               ),
             ),
           ],
@@ -156,6 +169,7 @@ class CalculationResultView extends StatelessWidget {
     required this.onReset,
     required this.onSave,
     this.guidance,
+    this.warnings = const <String>[],
     super.key,
   });
 
@@ -163,6 +177,9 @@ class CalculationResultView extends StatelessWidget {
   final List<(String, String)> inputs;
   final List<(String, String)> rows;
   final List<String> assumptions;
+
+  /// User-facing limitations the calculator reported for this result.
+  final List<String> warnings;
   final String? guidance;
   final VoidCallback onReset;
   final VoidCallback onSave;
@@ -232,6 +249,24 @@ class CalculationResultView extends StatelessWidget {
             Text('Assumptions', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 6),
             for (final assumption in assumptions) Text('• $assumption'),
+            if (warnings.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 12),
+              Semantics(
+                container: true,
+                label: 'Warnings: ${warnings.join('; ')}',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Text(
+                      'Warnings',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    for (final warning in warnings) Text('• $warning'),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Wrap(
               spacing: 8,

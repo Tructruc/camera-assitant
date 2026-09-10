@@ -151,6 +151,25 @@ class _SavedCalculationDetailScreenState
           for (final item in _snapshot.assumptions)
             Text('• ${item.key}: ${item.value}'),
         ],
+        if (_snapshot.warnings.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 12),
+          Semantics(
+            container: true,
+            label:
+                'Warnings: ${_snapshot.warnings.map((item) => _warningText(item.code)).join('; ')}',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  'Warnings',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                for (final item in _snapshot.warnings)
+                  Text('• ${_warningText(item.code)}'),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         const Text(
           'This saved result is immutable and is not recalculated when equipment or settings change.',
@@ -311,9 +330,43 @@ String _calculatorLabel(String id) => switch (id) {
   'depth_of_field' => 'Depth of field',
   'exposure_comparison' => 'Exposure comparison',
   'long_exposure_nd' => 'Long exposure / ND',
+  'field_of_view' => 'Field of view',
+  'diffraction' => 'Diffraction guidance',
+  'focus_stacking' => 'Focus stack planner',
+  'flash_exposure' => 'Flash exposure',
+  'timelapse' => 'Timelapse planner',
+  'macro' => 'Macro planner',
+  'panorama' => 'Panorama planner',
+  'astronomy' => 'Night-sky planner',
+  'sun_moon_alignment' => 'Sun & Moon alignment',
   _ => id,
 };
 String _date(DateTime value) =>
     '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 String _mapText(Map<String, Object?> values) =>
     values.entries.map((entry) => '${entry.key}: ${entry.value}').join(', ');
+
+/// Saved payloads store warning codes, so the detail view restates them.
+String _warningText(String code) => switch (code) {
+  'solarSafety' =>
+    'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter. This plan is an estimate, not a safety guarantee.',
+  'close_focus' =>
+    'Close focus reduces the accuracy of the thin-lens estimate.',
+  'sampling_visible' || 'sampling' =>
+    'The Airy disk spans at least two pixels at these settings, so diffraction is visible.',
+  'frame_limit' =>
+    'The focus stack reached the 1,000-frame planning limit; increase overlap or split the stack.',
+  'exposure_exceeds_interval' =>
+    'The calculated exposure is longer than the chosen capture interval.',
+  'aperture_outside_typical_range' =>
+    'The aperture is outside the typical range for this equipment.',
+  'power_range' => 'Flash power is outside the supported range.',
+  'configuration_estimate' =>
+    'This macro configuration is an estimate; the stated model limitations apply.',
+  'distortion' => 'Distortion and field curvature are not modeled.',
+  'planningAccuracy' =>
+    'Accuracy is limited for this plan; treat the estimate with the stated uncertainty.',
+  'milkyWayOrientationUndefined' =>
+    'The Milky Way orientation is undefined for this target position.',
+  _ => 'This result reported a limitation ($code).',
+};
