@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/validation/validation.dart';
 import 'planetary_ephemeris.dart';
+import 'solar_lunar_ephemeris.dart';
 
 enum CatalogFreshness { current, stale }
 
@@ -78,7 +79,11 @@ enum CelestialTarget {
   venus('Venus', TargetCategory.planet, 0, 0, 224.701, 181.98, 0.723),
   mars('Mars', TargetCategory.planet, 0, 0, 686.98, 355.43, 1.524),
   jupiter('Jupiter', TargetCategory.planet, 0, 0, 4332.59, 34.35, 5.203),
-  saturn('Saturn', TargetCategory.planet, 0, 0, 10759.22, 50.08, 9.537);
+  saturn('Saturn', TargetCategory.planet, 0, 0, 10759.22, 50.08, 9.537),
+  // Sun and Moon are appended so the planet index mapping below stays valid.
+  // They carry no static coordinates; resolve them through [equatorialAt].
+  sun('Sun', TargetCategory.sun, 0, 0),
+  moon('Moon', TargetCategory.moon, 0, 0);
 
   const CelestialTarget(
     this.label,
@@ -97,18 +102,37 @@ enum CelestialTarget {
   final double? longitudeAtEpochDegrees;
   final double? orbitalRadiusAu;
 
-  bool get isMoving => orbitalPeriodDays != null;
+  bool get isMoving => this == sun || this == moon || orbitalPeriodDays != null;
 
-  (double, double) equatorialAt(DateTime instantUtc) {
-    if (!isMoving) return (rightAscensionDegrees, declinationDegrees);
-    return const PlanetaryEphemeris().equatorial(
+  bool get isSolarLunar => this == sun || this == moon;
+
+  (double, double) equatorialAt(DateTime instantUtc) => switch (this) {
+    CelestialTarget.sun => const SolarLunarEphemeris().equatorial(
+      SolarLunarBody.sun,
+      instantUtc,
+    ),
+    CelestialTarget.moon => const SolarLunarEphemeris().equatorial(
+      SolarLunarBody.moon,
+      instantUtc,
+    ),
+    _ when orbitalPeriodDays != null => const PlanetaryEphemeris().equatorial(
       PlanetId.values[index - CelestialTarget.mercury.index],
       instantUtc,
-    );
-  }
+    ),
+    _ => (rightAscensionDegrees, declinationDegrees),
+  };
 }
 
-enum TargetCategory { milkyWay, planet, star, nebula, galaxy, cluster }
+enum TargetCategory {
+  milkyWay,
+  planet,
+  star,
+  nebula,
+  galaxy,
+  cluster,
+  sun,
+  moon,
+}
 
 enum CelestialEventType { rise, transit, set }
 
@@ -157,6 +181,8 @@ final class AstronomyOutput {
   const AstronomyOutput({
     required this.altitudeDegrees,
     required this.azimuthDegrees,
+    required this.rightAscensionDegrees,
+    required this.declinationDegrees,
     required this.isAboveHorizon,
     required this.visibilityCycle,
     required this.events,
@@ -170,6 +196,12 @@ final class AstronomyOutput {
   });
   final double altitudeDegrees;
   final double azimuthDegrees;
+
+  /// Right ascension and declination actually used for [altitudeDegrees],
+  /// [azimuthDegrees], and [events]: topocentric for the Sun and Moon, whose
+  /// observer parallax reaches about 1° for the Moon, and geocentric otherwise.
+  final double rightAscensionDegrees;
+  final double declinationDegrees;
   final bool isAboveHorizon;
   final VisibilityCycle visibilityCycle;
   final List<CelestialEvent> events;
@@ -248,7 +280,7 @@ final class AstronomyCalculator {
     }
 
     final latitude = _radians(input.observerLatitudeDegrees);
-    final coordinates = input.target.equatorialAt(input.instantUtc);
+    final coordinates = _topocentric(input, input.instantUtc);
     final declination = _radians(coordinates.$2);
     final localSidereal = _normalize(
       _greenwichSiderealDegrees(input.instantUtc) +
@@ -306,6 +338,8 @@ final class AstronomyCalculator {
       output: AstronomyOutput(
         altitudeDegrees: _degrees(altitude),
         azimuthDegrees: azimuth,
+        rightAscensionDegrees: coordinates.$1,
+        declinationDegrees: coordinates.$2,
         isAboveHorizon: altitude > 0,
         visibilityCycle: eventPlan.$1,
         events: eventPlan.$2,
@@ -321,9 +355,15 @@ final class AstronomyCalculator {
       assumptions: [
         CalculationAssumption(
           key: 'coordinates',
-          value: input.target.isMoving
-              ? 'JPL 1800-2050 approximate Keplerian geocentric model'
-              : 'ICRS/J2000 fixed target',
+          value: switch (input.target) {
+            CelestialTarget.sun =>
+              'USNO-style analytic solar ephemeris; geocentric, mean equinox of date',
+            CelestialTarget.moon =>
+              'USNO-style analytic lunar ephemeris; geocentric, mean equinox of date',
+            _ when input.target.isMoving =>
+              'JPL 1800-2050 approximate Keplerian geocentric model',
+            _ => 'ICRS/J2000 fixed target',
+          },
         ),
         CalculationAssumption(
           key: 'observerElevation',
@@ -334,6 +374,12 @@ final class AstronomyCalculator {
           key: 'horizon',
           value: 'airless geometric zero degrees',
         ),
+        if (input.target.isSolarLunar)
+          const CalculationAssumption(
+            key: 'parallax',
+            value:
+                'observer parallax applied to the topocentric coordinates; the Moon moves by up to about 1°',
+          ),
         CalculationAssumption(
           key: 'earthRotation',
           value: 'USNO approximate mean sidereal time',
@@ -355,6 +401,11 @@ final class AstronomyCalculator {
           code: 'planningAccuracy',
           messageKey: 'astronomy.warning.planningOnly',
         ),
+        if (input.target == CelestialTarget.sun)
+          const CalculationWarning(
+            code: 'solarSafety',
+            messageKey: 'astronomy.warning.solarSafety',
+          ),
         if (isMilkyWay && orientation == null)
           const CalculationWarning(
             code: 'milkyWayOrientationUndefined',
@@ -385,9 +436,57 @@ final class AstronomyCalculator {
     return (angle % 180 + 180) % 180;
   }
 
+  /// Geocentric catalog or ephemeris coordinates with observer parallax
+  /// applied where the body is close enough for it to matter.
+  ///
+  /// Fixed targets have no measurable parallax. The Sun shifts by about 0.002°
+  /// and the Moon by up to about 1°, so the Moon would otherwise dominate the
+  /// planning error. The Moon is also the only target whose distance the shared
+  /// ephemeris models directly.
+  (double, double) _topocentric(AstronomyInput input, DateTime instantUtc) {
+    final target = input.target;
+    if (!target.isSolarLunar) return target.equatorialAt(instantUtc);
+    final geocentric = const SolarLunarEphemeris().coordinates(
+      target == CelestialTarget.sun ? SolarLunarBody.sun : SolarLunarBody.moon,
+      instantUtc,
+    );
+    final latitude = _radians(input.observerLatitudeDegrees);
+    // Meeus, Astronomical Algorithms, chapter 11: u is the reduced latitude and
+    // the observer height is scaled by the equatorial radius.
+    final u = math.atan(0.99664719 * math.tan(latitude));
+    final heightRatio = input.observerElevationMetres / 6378137.0;
+    final rhoSin = 0.99664719 * math.sin(u) + heightRatio * math.sin(latitude);
+    final rhoCos = math.cos(u) + heightRatio * math.cos(latitude);
+    // Distance is in Earth equatorial radii, so 1/distance is sin(parallax).
+    final sinParallax = 1 / geocentric.$3;
+    final hourAngle = _radians(
+      _signed(
+        _greenwichSiderealDegrees(instantUtc) +
+            input.observerLongitudeDegrees -
+            geocentric.$1,
+      ),
+    );
+    final declination = _radians(geocentric.$2);
+    final denominator =
+        math.cos(declination) - rhoCos * sinParallax * math.cos(hourAngle);
+    final deltaRightAscension = math.atan2(
+      -rhoCos * sinParallax * math.sin(hourAngle),
+      denominator,
+    );
+    final topocentricDeclination = math.atan2(
+      (math.sin(declination) - rhoSin * sinParallax) *
+          math.cos(deltaRightAscension),
+      denominator,
+    );
+    return (
+      _normalize(geocentric.$1 + _degrees(deltaRightAscension)),
+      _degrees(topocentricDeclination),
+    );
+  }
+
   SkyPositionSample _positionSample(AstronomyInput input, DateTime instantUtc) {
     final latitude = _radians(input.observerLatitudeDegrees);
-    final coordinates = input.target.equatorialAt(instantUtc);
+    final coordinates = _topocentric(input, instantUtc);
     final declination = _radians(coordinates.$2);
     final hourAngle = _radians(
       _signed(
@@ -533,7 +632,7 @@ final class AstronomyCalculator {
     if (type != CelestialEventType.transit) {
       return _positionSample(input, instantUtc).altitudeDegrees;
     }
-    final coordinates = input.target.equatorialAt(instantUtc);
+    final coordinates = _topocentric(input, instantUtc);
     return _signed(
       _greenwichSiderealDegrees(instantUtc) +
           input.observerLongitudeDegrees -

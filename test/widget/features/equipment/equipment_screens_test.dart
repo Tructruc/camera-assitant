@@ -401,7 +401,7 @@ void main() {
     expect(await repository.listCameras(includeArchived: true), hasLength(1));
 
     // The archived inventory offers restore, never a second archive.
-    final archivedChip = find.widgetWithText(FilterChip, 'Archived');
+    final archivedChip = find.widgetWithText(FilterChip, 'Include archived');
     await tester.ensureVisible(archivedChip);
     await tester.pumpAndSettle();
     await tester.tap(archivedChip);
@@ -417,7 +417,7 @@ void main() {
     expect(find.text('Archive'), findsNothing);
   });
 
-  testWidgets('picker identifies source and supports a one-off override', (
+  testWidgets('picker returns the selected saved equipment', (
     WidgetTester tester,
   ) async {
     final camera = domain.CameraBody(
@@ -431,21 +431,17 @@ void main() {
       createdAt: timestamp,
       updatedAt: timestamp,
     );
+    domain.CameraBody? selected;
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: ListView(
             children: <Widget>[
               EquipmentPicker<domain.CameraBody>(
-                label: 'Camera',
+                label: 'Saved camera (optional)',
                 items: <domain.CameraBody>[camera],
                 itemLabel: (item) => item.name,
-                onSelected: (_) {},
-              ),
-              EquipmentOverrideControl(
-                label: 'Sensor width',
-                equipmentValue: '36 mm',
-                onOverrideChanged: (_) {},
+                onSelected: (item) => selected = item,
               ),
             ],
           ),
@@ -453,8 +449,11 @@ void main() {
       ),
     );
 
-    expect(find.text('From saved equipment: 36 mm'), findsOneWidget);
-    expect(find.text('Use a one-off Sensor width override'), findsOneWidget);
+    await tester.tap(find.text('Saved camera (optional)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Camera').last);
+    await tester.pumpAndSettle();
+    expect(selected?.id, 'camera-1');
   });
 
   testWidgets('create, restart, and permanent delete remain fully offline', (

@@ -123,6 +123,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<SavedLocation>(
+          isExpanded: true,
           key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
           decoration: const InputDecoration(
             labelText: 'Saved location (optional)',

@@ -14,6 +14,28 @@ accepted within a conservative 0.25° planning tolerance.
 Runtime code and the small coordinate catalog are original project code/data and do not copy SOFA or JPL
 software. External services are used only to create and audit test fixtures, never while the app runs.
 
+## Sun, Moon, and Sirius references
+
+`test/fixtures/astronomy_fixtures.dart` records the exact query behind each value, and
+`test/unit/features/astronomy/solar_lunar_fixture_test.dart` asserts them:
+
+| Fixture | Source and query | Retrieved value | Asserted tolerance |
+|---------|------------------|-----------------|--------------------|
+| `horizonsSunGeocentric` | JPL Horizons geocentric airless apparent Sun, 2026-03-20 12:00 UTC, `COMMAND=10`, `CENTER=500@399`, `QUANTITIES=2` | RA 359.894843697°, Dec −0.045488014° | 0.25° |
+| `horizonsMoonGeocentric` | JPL Horizons geocentric airless apparent Moon, 2026-06-01 00:00 UTC, `COMMAND=301`, `CENTER=500@399`, `QUANTITIES=2` | RA 255.881235454°, Dec −27.674687081° | 2.0° (lunar series) |
+| `horizonsSunTopocentric` | JPL Horizons observer table, Greenwich `SITE_COORD=0,51.4779,0`, 2026-03-20 12:00 UTC, `QUANTITIES=4`, `APPARENT=AIRLESS` | az 177.626176859°, alt 38.450718735° | 0.25° |
+| `horizonsMoonTopocentric` | JPL Horizons observer table, Greenwich, 2026-06-01 00:00 UTC | az 174.247568346°, alt 9.763824493° | 2.0° |
+| `simbadSiriusIcrs` | SIMBAD TAP, `* alf CMa` ICRS J2000 | RA 101.28715533°, Dec −16.71611586° | 0.01° |
+| `usnoGreenwichSun` | USNO Astronomical Applications one-day table, Greenwich, 2026-03-20, `tz=0` | rise 06:03, transit 12:07, set 18:13 UTC | 2 min (transit) |
+| `usnoGreenwichMoon` | USNO one-day table, Greenwich, 2026-03-20, `tz=0` | rise 06:16, transit 13:15, set 20:35 UTC | 10 min (transit), 20 min (rise/set) |
+
+The planner reports an airless geometric horizon, while published rise and set times apply standard
+refraction and the solar semidiameter (−0.8333° for the Sun). The fixture test therefore asserts the
+model's altitude at the published solar rise/set instants is −0.8333° instead of comparing the crossing
+times directly. Lunar rise and set use the USNO lunar horizon convention, so only the meridian transit is
+asserted tightly. Circumpolar and never-rises boundaries are covered at ±80° latitude on the June
+solstice.
+
 ## Milky Way orientation (astronomy formula version 2)
 
 The local band axis is the tangent to constant Galactic latitude at the catalog core position

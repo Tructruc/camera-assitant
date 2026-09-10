@@ -6,6 +6,7 @@ import '../../../app/providers.dart';
 import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
+import '../../../core/domain/validation/validation.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
@@ -135,6 +136,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<SavedLocation>(
+          isExpanded: true,
           key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
           decoration: const InputDecoration(
             labelText: 'Saved location (optional)',
@@ -190,6 +192,27 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             _result = null;
           }),
         ),
+        if (_target == CelestialTarget.sun) ...[
+          const SizedBox(height: 12),
+          const Card(
+            color: Color(0xffffe0b2),
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter. This plan is an estimate, not a safety guarantee.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         CalculatorNumberField(
           label: 'Observer latitude (degrees)',
@@ -272,6 +295,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           errorText: _errors['desiredTrailDegrees'],
         ),
         DropdownButtonFormField<StarShutterRule>(
+          isExpanded: true,
           decoration: const InputDecoration(labelText: 'Sharp-star rule'),
           initialValue: _shutterRule,
           items: const [
@@ -372,9 +396,15 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
               ),
             ],
             assumptions: [
-              _target.isMoving
-                  ? 'JPL 1800–2050 approximate Keplerian model; moving-target events are solved against updated coordinates and remain planning-grade'
-                  : 'Fixed ICRS/J2000 target coordinates',
+              switch (_target) {
+                CelestialTarget.sun =>
+                  'USNO-style analytic solar ephemeris; geocentric, mean equinox of date',
+                CelestialTarget.moon =>
+                  'USNO-style analytic lunar ephemeris; geocentric, mean equinox of date',
+                _ when _target.isMoving =>
+                  'JPL 1800–2050 approximate Keplerian model; moving-target events are solved against updated coordinates and remain planning-grade',
+                _ => 'Fixed ICRS/J2000 target coordinates',
+              },
               'Airless geometric horizon; terrain and refraction excluded',
               'Approximate mean sidereal time and planning-grade exposure rules',
               if (_target == CelestialTarget.milkyWayCore) ...[
@@ -384,6 +414,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                   'The core is below the geometric horizon; its orientation is mathematical, not a visible composition.',
               ],
             ],
+            warnings: _warningMessages(_result!.warnings),
             guidance:
                 'The 500 and NPF values are estimates: inspect stars at your intended output size. Event instants are stored in UTC and displayed in the selected timezone. Terrain, refraction, precession, and proper motion are excluded.',
             onSave: () => _save(output),
@@ -585,8 +616,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         'observerElevationMetres': _value(_elevation),
         'instantUtc': _instantUtc.toIso8601String(),
         'target': _target.name,
-        'rightAscensionDegrees': _target.equatorialAt(_instantUtc).$1,
-        'declinationDegrees': _target.equatorialAt(_instantUtc).$2,
+        // Coordinates actually used by the calculation: topocentric for the Sun
+        // and Moon, geocentric otherwise.
+        'rightAscensionDegrees': output.rightAscensionDegrees,
+        'declinationDegrees': output.declinationDegrees,
         'focalLengthMm': _value(_focalLength),
         'cropFactor': _value(_cropFactor),
         'aperture': _value(_aperture),
@@ -689,6 +722,22 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     TargetCategory.nebula => 'Nebula',
     TargetCategory.galaxy => 'Galaxy',
     TargetCategory.cluster => 'Cluster',
+    TargetCategory.sun => 'Sun · certified solar filter required',
+    TargetCategory.moon => 'Moon',
+  };
+
+  List<String> _warningMessages(List<CalculationWarning> warnings) => [
+    for (final warning in warnings) _warningMessage(warning.code),
+  ];
+
+  String _warningMessage(String code) => switch (code) {
+    'planningAccuracy' =>
+      'Planning-grade estimate: confirm the target and events against the real sky before relying on them.',
+    'solarSafety' =>
+      'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter.',
+    'milkyWayOrientationUndefined' =>
+      'The Milky Way orientation is unavailable within 0.1° of zenith or nadir.',
+    _ => 'This result reported a limitation ($code).',
   };
   String _duration(double seconds) {
     final duration = Duration(seconds: seconds.round());
@@ -734,9 +783,16 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     return 'catalog ${catalog.version} ${catalog.freshnessLabel(DateTime.now().toUtc())}; bundled ${catalog.bundledAtUtc}; ${catalog.updatePolicy}';
   }
 
-  String get _expectedAccuracy => _target.isMoving
-      ? 'Planning-grade: approximately ±0.25° position and ±10 minutes for events'
-      : 'Planning-grade: approximately ±0.25° position and ±2 minutes for events';
+  String get _expectedAccuracy => switch (_target) {
+    CelestialTarget.sun =>
+      'Planning-grade: approximately ±0.25° position and ±2 minutes for events',
+    CelestialTarget.moon =>
+      'Planning-grade: approximately ±2° position and ±20 minutes for events; the bundled analytic lunar series omits the smaller periodic terms',
+    _ when _target.isMoving =>
+      'Planning-grade: approximately ±0.25° position and ±10 minutes for events',
+    _ =>
+      'Planning-grade: approximately ±0.25° position and ±2 minutes for events',
+  };
 
   Widget _planningContext() {
     final time = PlanningTimeContext.parse(_timeZoneId);

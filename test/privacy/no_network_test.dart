@@ -5,34 +5,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/app.dart';
 import 'package:photography_assistant/app/providers.dart';
-import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/core/data/database/app_database.dart'
+    hide CalculationSnapshot;
+import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
+import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 
+import '../fixtures/equipment_fixtures.dart';
+
 void main() {
+  Widget app(AppDatabase database) => ProviderScope(
+    overrides: <Override>[
+      appDatabaseProvider.overrideWithValue(database),
+      preferencesProvider.overrideWith(
+        (ref) => Stream<AppPreferences>.value(const AppPreferences()),
+      ),
+      equipmentRepositoryProvider.overrideWithValue(
+        DriftEquipmentRepository(database),
+      ),
+    ],
+    child: const PhotographyAssistantApp(),
+  );
+
+  void rejectNetwork(WidgetTester tester) {
+    final previous = HttpOverrides.current;
+    HttpOverrides.global = _RejectNetworkOverrides();
+    addTearDown(() => HttpOverrides.global = previous);
+  }
+
   testWidgets('primary journey never creates a Dart network client', (
     tester,
   ) async {
     final database = AppDatabase.inMemory();
     addTearDown(database.close);
-    final previous = HttpOverrides.current;
-    HttpOverrides.global = _RejectNetworkOverrides();
-    addTearDown(() => HttpOverrides.global = previous);
+    rejectNetwork(tester);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: <Override>[
-          appDatabaseProvider.overrideWithValue(database),
-          preferencesProvider.overrideWith(
-            (ref) => Stream<AppPreferences>.value(const AppPreferences()),
-          ),
-          equipmentRepositoryProvider.overrideWithValue(
-            DriftEquipmentRepository(database),
-          ),
-        ],
-        child: const PhotographyAssistantApp(),
-      ),
-    );
+    await tester.pumpWidget(app(database));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Depth of field'),
@@ -51,6 +60,108 @@ void main() {
 
     expect(find.text('Near limit'), findsOneWidget);
     expect(find.textContaining('network request attempted'), findsNothing);
+  });
+
+  testWidgets('inventory and saved plans never create a Dart network client', (
+    tester,
+  ) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    rejectNetwork(tester);
+    await DriftEquipmentRepository(
+      database,
+    ).createCamera(fullFrameCameraFixture());
+    await DriftSnapshotRepository(database).save(
+      CalculationSnapshot(
+        id: 'offline-snapshot',
+        calculatorId: 'depth_of_field',
+        formulaVersion: 1,
+        createdAt: DateTime.utc(2026, 9, 10),
+        title: 'Offline result',
+        canonicalInputs: const <String, Object?>{'focalLengthMm': 50.0},
+        canonicalOutputs: const <String, Object?>{'nearLimitMm': 4500.0},
+        displayContext: const <String, Object?>{'distanceUnit': 'metric'},
+      ),
+    );
+
+    await tester.pumpWidget(app(database));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Equipment').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Full Frame Camera'), findsOneWidget);
+
+    await tester.tap(find.text('Saved').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Offline result'));
+    await tester.pumpAndSettle();
+    expect(find.text('Original inputs'), findsOneWidget);
+
+    expect(find.textContaining('network request attempted'), findsNothing);
+    // Let Riverpod dispose the local database streams while the fake clock can
+    // still drain Drift's cleanup timers.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('both planners never create a Dart network client', (
+    tester,
+  ) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    rejectNetwork(tester);
+
+    await tester.pumpWidget(app(database));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Sun & Moon alignment'),
+      250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Sun & Moon alignment'));
+    await tester.pumpAndSettle();
+    final search = find.byKey(const Key('alignment-search'));
+    await tester.scrollUntilVisible(
+      search,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(search);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Search resolution'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Search resolution'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Night-sky planner'),
+      -250,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Night-sky planner'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Plan night sky'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Plan night sky'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Save result'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Input summary'), findsOneWidget);
+
+    expect(find.textContaining('network request attempted'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
   });
 }
 

@@ -42,7 +42,7 @@ class EquipmentListScreen extends ConsumerWidget {
                       const SizedBox(width: 8),
                     ],
                     FilterChip(
-                      label: const Text('Archived'),
+                      label: const Text('Include archived'),
                       selected: state.includeArchived,
                       onSelected: controller.setIncludeArchived,
                     ),

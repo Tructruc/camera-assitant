@@ -379,6 +379,45 @@ void main() {
       expect(camera.read<String>('notes'), 'New camera notes');
     },
   );
+
+  test('frozen v3 fixture migrates preferences and adds camera notes', () async {
+    final fixture = await File(
+      'test/fixtures/database/schema_v3.sql',
+    ).readAsString();
+    final migrated = AppDatabase(
+      NativeDatabase.memory(setup: (raw) => raw.execute(fixture)),
+    );
+    addTearDown(migrated.close);
+
+    final preferences = await migrated
+        .customSelect('SELECT * FROM user_preferences ORDER BY id')
+        .getSingle();
+    // The v4 north-reference column and the v5 planner defaults are added with
+    // their documented defaults while the stored preferences survive.
+    expect(preferences.read<String>('length_display'), 'imperial');
+    expect(preferences.read<String>('north_reference'), 'trueNorth');
+    expect(preferences.read<String>('default_star_sharpness'), 'balanced');
+    expect(
+      preferences.read<double>('default_alignment_tolerance_degrees'),
+      3.0,
+    );
+
+    final camera = await migrated
+        .customSelect("SELECT * FROM camera_bodies WHERE id = 'legacy-camera'")
+        .getSingle();
+    expect(camera.read<String>('name'), 'Legacy camera');
+    expect(camera.data.containsKey('notes'), isTrue);
+    expect(camera.read<String?>('notes'), isNull);
+
+    final version = await migrated
+        .customSelect('PRAGMA user_version')
+        .getSingle();
+    expect(version.read<int>('user_version'), 6);
+    expect(
+      await migrated.customSelect('PRAGMA foreign_key_check').get(),
+      isEmpty,
+    );
+  });
 }
 
 Map<String, Object?> _object(Object? value) {

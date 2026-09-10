@@ -375,9 +375,9 @@ Converge pass (2026-09-10) assessed the committed tree at `d6d16bf` against all 
 requirements, 12 success criteria, and the seven user stories. Nothing violates a constitution MUST
 principle, so the findings below are ordered by user impact rather than by blocker severity.
 
-- [ ] T121 [US4] Add Sun and Moon rise/set/transit events, visibility cycles, and path sampling to the celestial planner so the alignment planner is not the only Sun/Moon model per FR-009 (partial)
-- [ ] T122 [US4] Commit externally traceable reference fixtures for Sun, Moon, and Sirius positions plus one rise/set/transit event set, asserted at the declared tolerance per SC-004 and FR-022 (partial)
-- [ ] T123 [P] [US1] Add offline integration journeys with device evidence for macro, panorama, field of view, diffraction, and focus stacking per FR-022 and SC-012 (missing)
+- [X] T121 [US4] Add Sun and Moon rise/set/transit events, visibility cycles, and path sampling to the celestial planner so the alignment planner is not the only Sun/Moon model per FR-009 (partial)
+- [X] T122 [US4] Commit externally traceable reference fixtures for Sun, Moon, and Sirius positions plus one rise/set/transit event set, asserted at the declared tolerance per SC-004 and FR-022 (partial)
+- [X] T123 [P] [US1] Add offline integration journeys with device evidence for macro, panorama, field of view, diffraction, and focus stacking per FR-022 and SC-012 (missing)
 - [X] T124 [US4] Stop recording unapplied camera sensor values in night-sky snapshots by applying camera-derived crop factor and pixel pitch, or by recording only what the calculation used, per FR-008 (contradicts)
 - [X] T125 [P] [US2] Bind the accessory-type editor to the edited item's kind so teleconverter edits and duplicates keep their type per US2/AC2 (contradicts)
 - [X] T126 [US1] Show the ND filter value actually applied by the calculation rather than the inventory value after a one-off override per FR-008 (contradicts)
@@ -391,21 +391,21 @@ principle, so the findings below are ordered by user impact rather than by block
 - [X] T134 [US5] Render saved warning payloads, including solar safety guidance, on the saved plan detail per FR-018 and US5/AC3 (partial)
 - [X] T135 [US4] Disclose the elevation fallback when a saved location has none instead of silently substituting or reusing a value per FR-021 and US5/AC2 (partial)
 - [X] T136 [US4] Replace or explicitly disclose the fixed 60° field-of-view assumption used to place AR targets per FR-013 and FR-021 (partial)
-- [ ] T137 [P] [US1] Commit cited reference fixtures with boundary values for optics, macro, panorama, flash, and timelapse per SC-001 and FR-022 (partial)
-- [ ] T138 [P] [US1] Add parameterized 200%-text-scale and semantics coverage for every calculator and planner screen per FR-019 (partial)
-- [ ] T139 [P] [US1] Add fixtures covering the v0 creation and v3-to-v4 preference migration paths per FR-022 (partial)
+- [X] T137 [P] [US1] Commit cited reference fixtures with boundary values for optics, macro, panorama, flash, and timelapse per SC-001 and FR-022 (partial)
+- [X] T138 [P] [US1] Add parameterized 200%-text-scale and semantics coverage for every calculator and planner screen per FR-019 (partial)
+- [X] T139 [P] [US1] Add fixtures covering the v0 creation and v3-to-v4 preference migration paths per FR-022 (partial)
 - [X] T140 [US2] Add an Archive action for active equipment with the referenced-item warning and remove the unreachable archive branch per US2/AC3 and T099 (partial)
-- [ ] T141 [US3] Apply converter magnification in a compatible planner or document it as inventory-only per FR-007 and FR-008 (partial)
+- [X] T141 [US3] Apply converter magnification in a compatible planner or document it as inventory-only per FR-007 and FR-008 (partial)
 - [X] T142 [US7] Map all twelve calculator identifiers to readable labels in the saved-results list per FR-014 (partial)
 - [X] T143 [US5] Show horizon state in the numeric alignment candidate list per FR-011 and US5/AC1 (partial)
 - [X] T144 [US1] Add an explicit limitations line to the exposure-comparison result per FR-002 and US1/AC1 (partial)
 - [X] T145 [US1] Display the front and rear depth around the focus plane per the depth-of-field contract (partial)
-- [ ] T146 [P] [US1] Extend the offline network guard to inventory, saved-plan reopening, and both planners per FR-015 and SC-010 (partial)
-- [ ] T147 [US2] Implement or narrow the equipment repository interface and provide a deterministic in-memory fake per the equipment repository contract (partial)
-- [ ] T148 [P] [US1] Extend release performance budgets beyond the three foundation calculators and state what remains device-only per SC-009 (partial)
-- [ ] T149 [US1] Resolve or justify the unrequested desktop release workflow, orphaned override control, unused domain helper, and planet constants that expose zero-valued positions per scope and FR-021 hygiene (unrequested)
-- [ ] T150 [US1] Extend equipment-provenance invalidation coverage beyond depth of field to the remaining equipment-consuming calculators per T120 and FR-008 (partial)
-- [ ] T151 [P] [US4] Keep camera-less devices installable by declaring the merged `android.hardware.camera.any` feature as not required, and assert in `mobile-builds` that the released manifest drops the audio and legacy storage permissions, per FR-012, FR-017, and FR-022 (contradicts)
+- [X] T146 [P] [US1] Extend the offline network guard to inventory, saved-plan reopening, and both planners per FR-015 and SC-010 (partial)
+- [X] T147 [US2] Implement or narrow the equipment repository interface and provide a deterministic in-memory fake per the equipment repository contract (partial)
+- [X] T148 [P] [US1] Extend release performance budgets beyond the three foundation calculators and state what remains device-only per SC-009 (partial)
+- [X] T149 [US1] Resolve or justify the unrequested desktop release workflow, orphaned override control, unused domain helper, and planet constants that expose zero-valued positions per scope and FR-021 hygiene (unrequested)
+- [X] T150 [US1] Extend equipment-provenance invalidation coverage beyond depth of field to the remaining equipment-consuming calculators per T120 and FR-008 (partial)
+- [X] T151 [P] [US4] Keep camera-less devices installable by declaring the merged `android.hardware.camera.any` feature as not required, and assert in `mobile-builds` that the released manifest drops the audio and legacy storage permissions, per FR-012, FR-017, and FR-022 (contradicts)
 
 Phase 20 validation (2026-09-10): the first convergence batch closed T124-T126, T130-T134, T142, T144, and
 T145. Equipment provenance now names its source everywhere it is applied, the night-sky planner derives
@@ -428,3 +428,27 @@ for active equipment with the referenced-item warning. `validation/privacy.md` w
 at HEAD. Coverage: `test/widget/features/planning/planning_disclosure_test.dart`,
 `test/unit/features/alignment/alignment_candidate_summary_test.dart`, and new equipment and service cases;
 `flutter test` (224 passed), `flutter analyze --fatal-infos`, and `dart format` are clean.
+
+Phase 20 validation, third batch (2026-09-10): T123, T137-T139, T141, and T146-T151 are closed.
+`test/privacy/no_network_test.dart` now rejects a Dart HTTP client across the inventory, saved-plan reopen,
+and both planners; `test/performance/release_budgets_test.dart` measures every released calculator;
+`test/widget/features/calculators/text_scale_test.dart` drives all thirteen screens at 200% text scale with
+semantics enabled; `test/fixtures/database/schema_v3.sql` covers the v3-to-v6 upgrade with its defaults;
+`test/unit/features/expanded_calculators_reference_test.dart` carries cited formula fixtures with boundary
+cases; `integration_test/optics_flows_test.dart` runs the field-of-view, diffraction, focus-stack, macro,
+and panorama journeys offline; and the provenance-swap invalidation loop now covers a camera, an extension
+tube, and an ND filter. The unused equipment override control, the unimplemented repository interface, the
+claimable `bundled` source, and the misleading archived chip are gone, and `mobile-builds` now asserts the
+merged release manifest drops the removed permissions and keeps `android.hardware.camera.any` optional.
+
+Phase 20 validation, fourth batch (2026-09-10): T121 and T122 are closed, which completes every Phase 20
+task; only the manual device and usability passes T058, T059, T061, and T062 remain open. The Sun and Moon
+are now first-class night-sky targets backed by one shared `SolarLunarEphemeris` (extracted from the
+alignment planner), so rise, transit, set, visibility cycles, and path sampling work for them exactly as
+for the catalog targets, and selecting the Sun surfaces the certified-solar-filter guidance that is also
+persisted in the snapshot. `test/unit/features/astronomy/solar_lunar_fixture_test.dart` asserts JPL
+Horizons geocentric and topocentric Sun/Moon coordinates, the SIMBAD Sirius position, and USNO rise,
+transit, and set tables within the declared tolerances, including circumpolar and never-rises boundaries
+and the -0.8333 degree refraction-plus-semidiameter convention that explains the published solar times.
+The 200% text-scale sweep also found and fixed a real defect: every dropdown now expands within its field,
+so the macro configuration control no longer overflows on a narrow screen.

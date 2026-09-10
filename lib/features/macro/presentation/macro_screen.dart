@@ -92,10 +92,12 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         Text('Macro planner', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),
         const Text(
-          'Compare extension tubes, a reversed lens, or two coupled lenses without implying calibrated optical precision.',
+          'Compare extension tubes, a reversed lens, or two coupled lenses without implying calibrated optical precision. '
+          'Teleconverters are inventory-only: multiply the focal length you enter by the converter factor.',
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<MacroConfiguration>(
+          isExpanded: true,
           decoration: const InputDecoration(labelText: 'Configuration'),
           initialValue: _configuration,
           items: const [

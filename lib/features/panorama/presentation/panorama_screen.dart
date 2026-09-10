@@ -131,6 +131,7 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
           errorText: _errors['focalLengthMm'],
         ),
         DropdownButtonFormField<CameraOrientation>(
+          isExpanded: true,
           decoration: const InputDecoration(labelText: 'Camera orientation'),
           initialValue: _orientation,
           items: const [

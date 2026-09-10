@@ -5,6 +5,7 @@ import 'dart:math' as math;
 
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/validation/validation.dart';
+import '../../astronomy/domain/solar_lunar_ephemeris.dart' as solar;
 
 enum AlignmentBody { sun, moon }
 
@@ -256,15 +257,21 @@ final class AlignmentCalculator {
 
 final class SolarLunarEphemeris {
   const SolarLunarEphemeris();
+
+  /// Observer-relative position, resolved from the shared astronomy ephemeris
+  /// so both planners use one Sun/Moon model.
   SkyPosition position({
     required AlignmentBody body,
     required DateTime instantUtc,
     required double latitudeDegrees,
     required double longitudeDegrees,
   }) {
-    final equatorial = body == AlignmentBody.sun
-        ? _sun(instantUtc)
-        : _moon(instantUtc);
+    final equatorial = const solar.SolarLunarEphemeris().equatorial(
+      body == AlignmentBody.sun
+          ? solar.SolarLunarBody.sun
+          : solar.SolarLunarBody.moon,
+      instantUtc,
+    );
     final localSidereal = _normalize(_gmst(instantUtc) + longitudeDegrees);
     final hourAngle = _radians(_signed(localSidereal - equatorial.$1));
     final latitude = _radians(latitudeDegrees);
@@ -286,74 +293,6 @@ final class SolarLunarEphemeris {
     return SkyPosition(
       azimuthDegrees: azimuth,
       altitudeDegrees: _degrees(altitude),
-    );
-  }
-
-  (double, double) _sun(DateTime time) {
-    final days = _julian(time) - 2451545;
-    final anomaly = _radians(_normalize(357.529 + 0.98560028 * days));
-    final longitude = _radians(
-      _normalize(
-        280.459 +
-            0.98564736 * days +
-            1.915 * math.sin(anomaly) +
-            0.020 * math.sin(2 * anomaly),
-      ),
-    );
-    final obliquity = _radians(23.439 - 0.00000036 * days);
-    return (
-      _normalize(
-        _degrees(
-          math.atan2(
-            math.cos(obliquity) * math.sin(longitude),
-            math.cos(longitude),
-          ),
-        ),
-      ),
-      _degrees(math.asin(math.sin(obliquity) * math.sin(longitude))),
-    );
-  }
-
-  (double, double) _moon(DateTime time) {
-    final days = _julian(time) - 2451543.5;
-    final node = _radians(_normalize(125.1228 - 0.0529538083 * days));
-    const inclination = 5.1454;
-    final periapsis = _normalize(318.0634 + 0.1643573223 * days);
-    const eccentricity = 0.0549;
-    final anomalyDegrees = _normalize(115.3654 + 13.0649929509 * days);
-    final anomaly = _radians(anomalyDegrees);
-    final eccentricAnomaly =
-        anomalyDegrees +
-        _degrees(
-          eccentricity *
-              math.sin(anomaly) *
-              (1 + eccentricity * math.cos(anomaly)),
-        );
-    final x = 60.2666 * (math.cos(_radians(eccentricAnomaly)) - eccentricity);
-    final y =
-        60.2666 *
-        math.sqrt(1 - eccentricity * eccentricity) *
-        math.sin(_radians(eccentricAnomaly));
-    final trueAnomaly = _degrees(math.atan2(y, x));
-    final radius = math.sqrt(x * x + y * y);
-    final argument = _radians(trueAnomaly + periapsis);
-    final inc = _radians(inclination);
-    final xe =
-        radius *
-        (math.cos(node) * math.cos(argument) -
-            math.sin(node) * math.sin(argument) * math.cos(inc));
-    final ye =
-        radius *
-        (math.sin(node) * math.cos(argument) +
-            math.cos(node) * math.sin(argument) * math.cos(inc));
-    final ze = radius * math.sin(argument) * math.sin(inc);
-    final obliquity = _radians(23.4393 - 3.563e-7 * days);
-    final xeq = xe;
-    final yeq = ye * math.cos(obliquity) - ze * math.sin(obliquity);
-    final zeq = ye * math.sin(obliquity) + ze * math.cos(obliquity);
-    return (
-      _normalize(_degrees(math.atan2(yeq, xeq))),
-      _degrees(math.atan2(zeq, math.sqrt(xeq * xeq + yeq * yeq))),
     );
   }
 }

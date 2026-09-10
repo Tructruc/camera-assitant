@@ -59,3 +59,11 @@ The Android APK uses the persistent repository signing key so it can update an e
 The Android App Bundle is retained as a workflow artifact. The iOS ZIP is an unsigned simulator build;
 physical iPhone installation requires a separately configured Apple signing identity and provisioning
 profile.
+
+### Desktop targets
+
+The `linux`, `windows`, and `macos` runners and `Desktop builds` are development aids, not first-release
+artifacts. Android and iOS remain the release platforms (FR-023); desktop builds keep the portable
+domain/data contracts compiling and let the integration journeys run on a host machine without an
+emulator. Desktop prereleases are unsigned and carry no support commitment until a desktop release is
+specified.

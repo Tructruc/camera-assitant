@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
-    hide CameraBody, SavedLocation;
+    hide CameraBody, NdFilter, OpticalAccessory, SavedLocation;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/presentation/calculator/calculator_components.dart';
 import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
@@ -11,7 +11,14 @@ import 'package:photography_assistant/features/astronomy/presentation/astronomy_
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 import 'package:photography_assistant/features/equipment/domain/equipment.dart'
-    show EquipmentProvenance, EquipmentSource, Lens;
+    show
+        CameraBody,
+        EquipmentProvenance,
+        EquipmentSource,
+        Lens,
+        NdFilter,
+        OpticalAccessory,
+        OpticalAccessoryKind;
 import 'package:photography_assistant/features/exposure_comparison/presentation/exposure_comparison_screen.dart';
 import 'package:photography_assistant/features/flash_exposure/presentation/flash_exposure_screen.dart';
 import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
@@ -310,4 +317,148 @@ void main() {
       await unmount(tester);
     },
   );
+
+  // T150: the provenance-only invalidation rule must hold for every equipment
+  // kind, not just the depth-of-field lens case.
+  for (final (name, screen, pickerLabel, action, firstName, secondName)
+      in <(String, Widget, String, String, String, String)>[
+        (
+          'field of view camera',
+          const FieldOfViewScreen(),
+          'Saved camera (optional)',
+          'Calculate',
+          'Camera A',
+          'Camera B',
+        ),
+        (
+          'macro extension tube',
+          const MacroScreen(),
+          'Saved extension tube (optional)',
+          'Calculate macro setup',
+          'Tube A',
+          'Tube B',
+        ),
+        (
+          'ND filter',
+          const LongExposureScreen(),
+          'Saved ND filter (optional)',
+          'Calculate exposure',
+          'Filter A',
+          'Filter B',
+        ),
+      ]) {
+    testWidgets('swapping an identical $name still invalidates the result', (
+      tester,
+    ) async {
+      final repository = DriftEquipmentRepository(database);
+      final now = DateTime.utc(2026, 9, 10);
+      final provenance = EquipmentProvenance(
+        source: EquipmentSource.user,
+        note: now.toIso8601String(),
+      );
+      await repository.createCamera(
+        CameraBody(
+          id: 'camera-a',
+          name: 'Camera A',
+          sensorWidthMm: 36,
+          sensorHeightMm: 24,
+          provenance: provenance,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await repository.createCamera(
+        CameraBody(
+          id: 'camera-b',
+          name: 'Camera B',
+          sensorWidthMm: 36,
+          sensorHeightMm: 24,
+          provenance: provenance,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await repository.createAccessory(
+        OpticalAccessory(
+          id: 'tube-a',
+          name: 'Tube A',
+          kind: OpticalAccessoryKind.extensionTube,
+          value: 25,
+          provenance: provenance,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await repository.createAccessory(
+        OpticalAccessory(
+          id: 'tube-b',
+          name: 'Tube B',
+          kind: OpticalAccessoryKind.extensionTube,
+          value: 25,
+          provenance: provenance,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await repository.createFilter(
+        NdFilter(
+          id: 'filter-a',
+          name: 'Filter A',
+          strengthStops: 10,
+          provenance: provenance,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await repository.createFilter(
+        NdFilter(
+          id: 'filter-b',
+          name: 'Filter B',
+          strengthStops: 10,
+          provenance: provenance,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      await tester.pumpWidget(app(screen));
+      await tester.pumpAndSettle();
+      final picker = find.text(pickerLabel);
+      await reveal(tester, picker);
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(firstName).last);
+      await tester.pumpAndSettle();
+
+      final calculate = find.widgetWithText(FilledButton, action);
+      await reveal(tester, calculate);
+      await tester.tap(calculate);
+      await tester.pumpAndSettle();
+      await reveal(tester, find.widgetWithText(FilledButton, 'Save result'));
+      expect(find.byType(CalculationResultView), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        picker,
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(secondName).last);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('From $secondName'), findsWidgets);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -10000));
+      await tester.pumpAndSettle();
+      expect(find.byType(CalculationResultView), findsNothing);
+      expect(find.widgetWithText(FilledButton, 'Save result'), findsNothing);
+      expect(
+        await DriftSnapshotRepository(database).listNewestFirst(),
+        isEmpty,
+      );
+
+      await unmount(tester);
+    });
+  }
 }

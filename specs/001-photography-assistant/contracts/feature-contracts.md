@@ -115,7 +115,9 @@ native magnification, aperture, and sensor width; reversed-lens mode accepts rev
 flange/extension distance, aperture, and sensor width; coupled-lens mode accepts both focal lengths,
 aperture, and sensor width. Each returns magnification, effective aperture, subject width, exposure
 compensation, formula version, and an unavoidable configuration-estimate warning. Saved equipment values
-and provenance are embedded and remain immutable after inventory edits.
+and provenance are embedded and remain immutable after inventory edits. Teleconverters are inventory-only:
+the model does not apply their magnification factor, and the user multiplies the entered focal length by
+that factor when a converter is in the stack. The planner states this limitation beside its inputs.
 
 ## Panorama contract
 

@@ -122,10 +122,10 @@ void main() {
       const Offset(-800, 0),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Archived'));
+    await tester.tap(find.text('Include archived'));
     await tester.pumpAndSettle();
     expect(find.text('Integration Camera'), findsOneWidget);
-    expect(find.text('Archived'), findsWidgets);
+    expect(find.textContaining('Archived'), findsWidgets);
 
     await tester.tap(find.byTooltip('Actions for Integration Camera'));
     await tester.pumpAndSettle();

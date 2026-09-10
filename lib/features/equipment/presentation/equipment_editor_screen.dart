@@ -113,9 +113,12 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
             ..._kindFields(),
             const SizedBox(height: 12),
             DropdownButtonFormField<EquipmentSource>(
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'Value source'),
               initialValue: _source,
-              items: EquipmentSource.values
+              // No bundled equipment catalog ships yet, so "bundled" is not
+              // offered as a new claim. Existing rows keep loading and showing it.
+              items: _selectableSources
                   .map(
                     (source) => DropdownMenuItem<EquipmentSource>(
                       value: source,
@@ -183,6 +186,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
     ],
     EquipmentKind.accessory => <Widget>[
       DropdownButtonFormField<OpticalAccessoryKind>(
+        isExpanded: true,
         decoration: const InputDecoration(labelText: 'Accessory type'),
         initialValue: _accessoryKind,
         items: const [
@@ -359,3 +363,9 @@ String _sourceLabel(EquipmentSource source) => switch (source) {
   EquipmentSource.bundled => 'Bundled specification',
   EquipmentSource.userOverride => 'User override',
 };
+
+/// Sources a user may newly claim; see the dropdown comment above.
+const List<EquipmentSource> _selectableSources = <EquipmentSource>[
+  EquipmentSource.user,
+  EquipmentSource.userOverride,
+];
