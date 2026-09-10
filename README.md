@@ -9,9 +9,15 @@ An offline-first Flutter application for dependable photographic planning on And
 > and do not rely on the app for safety-critical decisions. The software is provided without warranty;
 > inspect the source and release provenance before installing or using it.
 
-The first release includes reusable camera, lens, and ND-filter inventory; depth-of-field and
-hyperfocal calculations; exposure comparison; long-exposure/ND timing; and immutable saved results.
-Calculations preserve canonical values and expose their assumptions, warnings, and formula version.
+Delivered scope: reusable camera, lens, ND-filter, optical-accessory, and converter inventory;
+depth-of-field and hyperfocal; exposure comparison; long-exposure/ND timing; diffraction guidance; field
+of view; focus-stack planning; flash exposure; timelapse planning; macro (extension-tube, reversed-lens,
+and coupled-lens) planning; panorama planning; and an offline celestial planner for the Sun, Moon, planets,
+the Milky Way core, and a bundled deep-sky catalog, with rise/transit/set events and sharp-star shutter
+guidance. Sun and Moon alignment searches add dated composition candidates, and the planning views offer
+numeric, timeline, compass, offline-map, and capability-gated live-AR presentations. Calculations preserve
+canonical values and expose their assumptions, warnings, formula version, applied equipment, and
+limitations; saved results and plans are immutable.
 
 ## Development
 
