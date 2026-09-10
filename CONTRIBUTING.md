@@ -15,6 +15,16 @@ Changes to persistence must also retain every frozen fixture under `test/fixture
 fixture for each new schema version and verify that older equipment, preferences, calculations, and
 reference links remain readable.
 
+### Flutter SDK outside the writable tree
+
+The Flutter launcher rewrites `bin/cache/engine.stamp` on every invocation, so a read-only SDK checkout
+fails with `Read-only file system` before any command runs. Point `FLUTTER_ROOT` at a small writable mirror
+of the SDK (real files for `bin/` scripts and the small cache stamps, symlinks for `.git`, `packages/`,
+`artifacts`, `dart-sdk`, and the other large cache directories) and set
+`FLUTTER_PREBUILT_ENGINE_VERSION` to the existing `bin/cache/engine.stamp` value so no git lookup or
+artifact download is attempted. `HOME` and `PUB_CACHE` must also resolve inside the writable tree. Treat
+that mirror as local tooling: keep it out of version control.
+
 ## Branch and pull-request workflow
 
 The active development branch is `v2`. As verified on 21 August 2026, GitHub branch protection is not
