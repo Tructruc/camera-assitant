@@ -95,6 +95,35 @@ void main() {
     expect(version.read<int>('user_version'), 6);
   });
 
+  test(
+    'a fresh database receives every index and the default preferences',
+    () async {
+      // `onCreate` is the only schema-creation path (drift reports a new database
+      // as created, never as an upgrade), so it must build everything the later
+      // upgrade steps assume: the unique indexes and the seeded preferences row.
+      final indexes = await database
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'",
+          )
+          .get();
+      expect(
+        indexes.map((row) => row.read<String>('name')).toSet(),
+        containsAll(<String>[
+          'active_camera_name',
+          'active_lens_name',
+          'active_nd_filter_name',
+          'active_optical_accessory_name',
+          'saved_location_name',
+        ]),
+      );
+
+      final preferences = await database
+          .customSelect('SELECT COUNT(*) AS count FROM user_preferences')
+          .getSingle();
+      expect(preferences.read<int>('count'), 1);
+    },
+  );
+
   test('frozen schema v1 fixture remains readable without data loss', () async {
     final fixture = _object(
       jsonDecode(

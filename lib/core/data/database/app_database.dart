@@ -217,9 +217,11 @@ final class AppDatabase extends _$AppDatabase {
       );
     },
     onUpgrade: (Migrator migrator, int from, int to) async {
-      if (from < 1) {
-        await migrator.createAll();
-      }
+      // A brand-new database is reported as created and always goes through
+      // `onCreate`, which is the single place that also creates the unique
+      // indexes and the default preferences row. There is therefore no
+      // `from < 1` branch here: it could only run for a database drift never
+      // reports as an upgrade, and it would have produced an incomplete schema.
       if (from < 2) {
         await migrator.createTable(opticalAccessories);
         await migrator.alterTable(TableMigration(snapshotEquipmentReferences));
