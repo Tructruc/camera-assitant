@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../domain/flash_exposure_calculator.dart';
 
@@ -109,6 +110,10 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
           ],
           guidance:
               'Use this as a starting exposure. Check the histogram and highlights, especially with bounce or modifiers.',
+          warnings: <String>[
+            for (final warning in _result!.warnings)
+              calculationWarningText(warning.code),
+          ],
           onSave: () => _save(output),
           onReset: _reset,
         ),

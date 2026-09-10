@@ -175,6 +175,48 @@ void main() {
     );
   });
 
+  testWidgets('editor preserves a legacy bundled source', (
+    WidgetTester tester,
+  ) async {
+    // Rows saved before the bundled catalog was withdrawn still carry this
+    // source. The dropdown must offer their current value, or Flutter asserts
+    // and the editor would silently rewrite the provenance.
+    final camera = domain.CameraBody(
+      id: 'camera-bundled',
+      name: 'Bundled Camera',
+      sensorWidthMm: 36,
+      sensorHeightMm: 24,
+      provenance: const domain.EquipmentProvenance(
+        source: domain.EquipmentSource.bundled,
+      ),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    domain.EquipmentItem? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EquipmentEditorScreen(
+          kind: EquipmentKind.camera,
+          item: camera,
+          onSave: (item) async => saved = item,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Bundled specification'), findsWidgets);
+
+    await tester.scrollUntilVisible(
+      find.text('Update camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Update camera'));
+    await tester.pumpAndSettle();
+    expect(saved!.provenance.source, domain.EquipmentSource.bundled);
+  });
+
   testWidgets('editor preserves an existing teleconverter kind', (
     WidgetTester tester,
   ) async {

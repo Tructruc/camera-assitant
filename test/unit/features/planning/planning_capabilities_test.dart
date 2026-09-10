@@ -39,4 +39,55 @@ void main() {
       isTrue,
     );
   });
+
+  test('raw platform observations map to capability states', () {
+    final ready = planningCapabilitiesFrom(
+      location: CapabilityStatus.available,
+      camera: CapabilityStatus.available,
+      compassAvailable: true,
+    );
+    expect(ready.canShowAr, isTrue);
+    expect(ready.augmentedReality, CapabilityStatus.available);
+    expect(ready.augmentedRealityLimitation, contains('available'));
+
+    final noCompass = planningCapabilitiesFrom(
+      location: CapabilityStatus.permissionRequired,
+      camera: CapabilityStatus.available,
+      compassAvailable: false,
+    );
+    expect(noCompass.orientation, CapabilityStatus.unsupported);
+    expect(noCompass.canShowAr, isFalse);
+    expect(
+      noCompass.augmentedRealityLimitation,
+      contains('orientation sensor'),
+    );
+
+    final cameraDenied = planningCapabilitiesFrom(
+      location: CapabilityStatus.unsupported,
+      camera: CapabilityStatus.denied,
+      compassAvailable: true,
+    );
+    // Location never gates AR, and a denied camera must be described as denied
+    // rather than as an unsupported device.
+    expect(cameraDenied.augmentedReality, CapabilityStatus.unsupported);
+    expect(cameraDenied.augmentedRealityLimitation, contains('denied'));
+    expect(cameraDenied.augmentedRealityLimitation, contains('camera'));
+
+    final cameraUnasked = planningCapabilitiesFrom(
+      location: CapabilityStatus.available,
+      camera: CapabilityStatus.permissionRequired,
+      compassAvailable: true,
+    );
+    expect(
+      cameraUnasked.augmentedRealityLimitation,
+      contains('not been granted yet'),
+    );
+  });
+
+  test('the fallback set explains itself without claiming a device fault', () {
+    const fallback = PlanningCapabilities.fallback();
+    expect(fallback.canShowAr, isFalse);
+    expect(fallback.augmentedRealityLimitation, contains('camera'));
+    expect(fallback.augmentedRealityLimitation, isNot(contains('no usable')));
+  });
 }

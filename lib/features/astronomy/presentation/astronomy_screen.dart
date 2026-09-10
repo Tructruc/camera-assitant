@@ -8,6 +8,7 @@ import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/domain/validation/validation.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
@@ -730,15 +731,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     for (final warning in warnings) _warningMessage(warning.code),
   ];
 
-  String _warningMessage(String code) => switch (code) {
-    'planningAccuracy' =>
-      'Planning-grade estimate: confirm the target and events against the real sky before relying on them.',
-    'solarSafety' =>
-      'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter.',
-    'milkyWayOrientationUndefined' =>
-      'The Milky Way orientation is unavailable within 0.1° of zenith or nadir.',
-    _ => 'This result reported a limitation ($code).',
-  };
+  String _warningMessage(String code) => calculationWarningText(code);
   String _duration(double seconds) {
     final duration = Duration(seconds: seconds.round());
     return '${duration.inHours} h ${duration.inMinutes.remainder(60)} min';
@@ -836,11 +829,11 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     if (_view == PlanningView.augmentedReality &&
         capabilities != null &&
         !capabilities.canShowAr) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(12),
+          padding: const EdgeInsets.all(12),
           child: Text(
-            'AR unavailable. Numeric, timeline, compass, and offline-map views remain usable without camera or orientation permission.',
+            'AR unavailable. ${capabilities.augmentedRealityLimitation} Numeric, timeline, compass, and offline-map views remain usable without camera or orientation permission.',
           ),
         ),
       );
@@ -895,7 +888,9 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           child: LiveArView(
             azimuthDegrees: output.azimuthDegrees,
             altitudeDegrees: output.altitudeDegrees,
-            isSun: false,
+            // The Sun is a selectable night-sky target, so the live overlay must
+            // repeat the certified-solar-filter warning inside the preview.
+            isSun: _target == CelestialTarget.sun,
             northReference: northReference,
             magneticDeclinationDegrees: _value(_magneticDeclination),
           ),

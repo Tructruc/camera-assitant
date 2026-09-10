@@ -157,7 +157,17 @@ void main() {
             ),
           )
           .output!;
+      // Overlap changes the plan: removing it widens the movement between
+      // frames, and both plans must still cover the requested bounds.
+      expect(
+        at(0).horizontalIncrementDegrees,
+        greaterThan(at(30).horizontalIncrementDegrees),
+      );
       expect(at(0).frames.length, lessThanOrEqualTo(at(30).frames.length));
+      for (final overlap in <double>[0, 30]) {
+        expect(at(overlap).horizontalCoverageDegrees, greaterThanOrEqualTo(90));
+        expect(at(overlap).verticalCoverageDegrees, greaterThanOrEqualTo(45));
+      }
     });
   });
 

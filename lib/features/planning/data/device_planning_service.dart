@@ -95,19 +95,13 @@ final class DevicePlanningService {
   Future<PlanningCapabilities> detectCapabilities() async {
     try {
       final location = await locationStatus();
-      final orientation = FlutterCompass.events == null
-          ? CapabilityStatus.unsupported
-          : CapabilityStatus.available;
       final camera = await _cameraStatus();
-      return PlanningCapabilities(
+      // Reading the compass stream does not subscribe to the sensor, so this
+      // stays permission-neutral; the mapping itself is pure and unit tested.
+      return planningCapabilitiesFrom(
         location: location,
-        orientation: orientation,
         camera: camera,
-        augmentedReality:
-            camera == CapabilityStatus.available &&
-                orientation == CapabilityStatus.available
-            ? CapabilityStatus.available
-            : CapabilityStatus.unsupported,
+        compassAvailable: FlutterCompass.events != null,
       );
     } on Object {
       // Detection must never break a planner; an unknown device falls back to

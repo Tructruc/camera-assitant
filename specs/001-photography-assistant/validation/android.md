@@ -39,6 +39,11 @@ exactly one snapshot. Added on 2026-09-10 and executed successfully on a host bu
 integration target (`flutter test integration_test/calculator_flows_test.dart`, 3/3 journeys passed,
 Linux debug bundle); Android device execution still belongs to the T058/T061 quickstart pass.
 
+`integration_test/optics_flows_test.dart` was added on the same date and covers field of view,
+diffraction guidance, the focus stack planner, the macro planner, and the panorama planner offline in one
+journey. It passes on the host engine (1/1) and likewise awaits the next device pass. With it, the suite
+defines five Android journeys rather than four.
+
 The local suite additionally covers the independent orientation references and singularities, 200%
 text scaling, camera notes, permanent deletion guards, input-summary semantics, golden layout, and a
 frozen v5-to-v6 migration retaining equipment, preferences, locations, payloads and reference links.

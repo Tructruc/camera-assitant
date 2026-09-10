@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
@@ -218,6 +219,10 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
             ],
             guidance:
                 'Coverage includes a minimum geometric margin. Allow extra room for lens distortion, leveling errors, and the final crop.',
+            warnings: <String>[
+              for (final warning in _result!.warnings)
+                calculationWarningText(warning.code),
+            ],
             onSave: () => _save(output),
             onReset: _reset,
           ),

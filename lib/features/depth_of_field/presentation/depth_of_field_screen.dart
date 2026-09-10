@@ -6,6 +6,7 @@ import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
@@ -190,6 +191,10 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
             guidance: _result!.warnings.isEmpty
                 ? 'Near and far limits are estimates, not guaranteed sharpness.'
                 : 'Close focus reduces thin-lens model accuracy.',
+            warnings: <String>[
+              for (final warning in _result!.warnings)
+                calculationWarningText(warning.code),
+            ],
             onSave: () => _save(output, preferences),
             onReset: _reset,
           ),

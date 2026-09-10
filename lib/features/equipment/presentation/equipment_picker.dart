@@ -1,4 +1,4 @@
-/// Reusable saved-equipment selection and one-off override controls.
+/// Reusable saved-equipment selection control.
 library;
 
 import 'package:flutter/material.dart';

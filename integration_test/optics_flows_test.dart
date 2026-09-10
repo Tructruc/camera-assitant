@@ -28,6 +28,7 @@ void main() {
     WidgetTester tester, {
     required String action,
     required String expected,
+    bool save = false,
   }) async {
     await tester.scrollUntilVisible(
       find.text(action),
@@ -43,6 +44,18 @@ void main() {
     );
     expect(find.byType(CalculationResultView), findsOneWidget);
     expect(find.textContaining(expected), findsWidgets);
+    if (save) {
+      // Nudge the list so the action row is fully inside the viewport before
+      // tapping; a partially visible button swallows the tap.
+      await tester.drag(find.byType(ListView).first, const Offset(0, -200));
+      await tester.pumpAndSettle();
+      final saveButton = find.widgetWithText(FilledButton, 'Save result');
+      await tester.ensureVisible(saveButton);
+      await tester.pumpAndSettle();
+      await tester.tap(saveButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Result saved on this device.'), findsOneWidget);
+    }
     await tester.pageBack();
     await tester.pumpAndSettle();
   }
@@ -92,9 +105,13 @@ void main() {
       tester,
       action: 'Plan panorama',
       expected: 'Total frames',
+      save: true,
     );
 
-    // The journeys saved nothing above, so the store stays empty offline.
-    expect(await DriftSnapshotRepository(database).listNewestFirst(), isEmpty);
+    // The saved panorama survives the whole offline journey.
+    final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
+    expect(snapshots, hasLength(1));
+    expect(snapshots.single.calculatorId, 'panorama');
+    expect(snapshots.single.canonicalInputs['focalLengthMm'], 50);
   });
 }

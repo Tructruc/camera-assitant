@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../domain/timelapse_calculator.dart';
 
@@ -99,6 +100,10 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
           guidance: output.maximumDutyCycle >= 1
               ? 'The longest exposure does not fit inside the interval. Increase the interval or shorten the exposure.'
               : 'Leave additional interval margin for image processing and storage writes.',
+          warnings: <String>[
+            for (final warning in _result!.warnings)
+              calculationWarningText(warning.code),
+          ],
           onSave: () => _save(output),
           onReset: _reset,
         ),

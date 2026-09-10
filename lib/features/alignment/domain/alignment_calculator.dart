@@ -114,11 +114,11 @@ final class AlignmentSearchOutput {
 }
 
 final class AlignmentCalculator {
-  const AlignmentCalculator({this.ephemeris = const SolarLunarEphemeris()});
+  const AlignmentCalculator({this.ephemeris = const AlignmentSkyEphemeris()});
   static const id = 'sun_moon_alignment';
   static const version = 2;
   static const maximumRange = Duration(days: 366);
-  final SolarLunarEphemeris ephemeris;
+  final AlignmentSkyEphemeris ephemeris;
 
   CalculationResult<AlignmentSearchOutput> search(AlignmentSearchInput input) {
     final validity = <String, bool>{
@@ -255,8 +255,11 @@ final class AlignmentCalculator {
   }
 }
 
-final class SolarLunarEphemeris {
-  const SolarLunarEphemeris();
+/// Observer-relative Sun and Moon positions for alignment searches.
+/// Named apart from the astronomy [solar.SolarLunarEphemeris] it delegates to,
+/// so a file importing both planners is unambiguous.
+final class AlignmentSkyEphemeris {
+  const AlignmentSkyEphemeris();
 
   /// Observer-relative position, resolved from the shared astronomy ephemeris
   /// so both planners use one Sun/Moon model.

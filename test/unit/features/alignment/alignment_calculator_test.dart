@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/features/alignment/domain/alignment_calculator.dart';
 
 void main() {
-  const ephemeris = SolarLunarEphemeris();
+  const ephemeris = AlignmentSkyEphemeris();
 
   test('derives geodesic target bearing and distance', () {
     final geometry = TargetGeometry.fromCoordinates(

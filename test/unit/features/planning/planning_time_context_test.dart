@@ -56,6 +56,30 @@ void main() {
     );
   });
 
+  test('converts the leap day and the antimeridian boundary', () {
+    // 2028 is a leap year, so 29 February must convert like any other date.
+    final paris = PlanningTimeContext.parse('Europe/Paris');
+    expect(
+      paris.toUtc(DateTime(2028, 2, 29, 12)),
+      DateTime.utc(2028, 2, 29, 11),
+    );
+    expect(
+      paris.localCivilTime(DateTime.utc(2028, 3, 1)),
+      DateTime(2028, 3, 1, 1),
+    );
+
+    // A fixed offset east of the date line keeps the local date ahead of UTC.
+    final kiritimati = PlanningTimeContext.parse('UTC+14');
+    expect(
+      kiritimati.toUtc(DateTime(2026, 3, 1, 2)),
+      DateTime.utc(2026, 2, 28, 12),
+    );
+    expect(
+      kiritimati.localCivilTime(DateTime.utc(2026, 2, 28, 12)),
+      DateTime(2026, 3, 1, 2),
+    );
+  });
+
   test('converts inclusive local date ranges across daylight saving', () {
     final context = PlanningTimeContext.parse('Europe/Paris');
     final springRange = context.inclusiveLocalDateRange(

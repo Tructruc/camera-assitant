@@ -452,3 +452,18 @@ transit, and set tables within the declared tolerances, including circumpolar an
 and the -0.8333 degree refraction-plus-semidiameter convention that explains the published solar times.
 The 200% text-scale sweep also found and fixed a real defect: every dropdown now expands within its field,
 so the macro configuration control no longer overflows on a narrow screen.
+
+Post-completion audit (2026-09-10): an independent convergence pass over `c816578` found two regressions the
+batch itself introduced, both fixed here. The equipment editor no longer crashes when it opens a row that
+still carries the withdrawn `bundled` source, because the dropdown now offers the row's current value; and
+the night-sky AR overlay passes `isSun` for the Sun target so the in-preview certified-solar-filter warning
+is live again. The same pass asked for capability detection to be testable, so the raw platform
+observations now map to `PlanningCapabilities` through a pure `planningCapabilitiesFrom` seam with unit
+coverage of the available, permission-required, denied, and unsupported branches, and the AR-unavailable
+cards name the specific missing capability instead of blaming the device. Warning wording moved into one
+`calculationWarningText` map shared by live results and reopened saved plans, and warnings are now fed to
+every result view rather than only optics and astronomy. Applied-camera snapshots are asserted for the
+night-sky and macro planners, the alignment planner discloses that it does not apply lunar parallax, the
+alignment-only ephemeris was renamed to `AlignmentSkyEphemeris` to avoid a duplicate class name, and the
+quickstart, evidence record, and Android log were refreshed. `flutter test` is 272 passed, the analyzer and
+formatter are clean, and all four host integration journeys pass.

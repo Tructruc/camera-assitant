@@ -136,6 +136,10 @@ Expected:
     the save action disappear until recalculation; move the caret or change the selection without editing
     text and verify the result survives; apply a different saved item that supplies identical numeric
     values and verify the changed provenance alone invalidates the result and its save action.
+28. Select the Sun as the night-sky target and verify the certified-solar-filter warning is shown before
+    calculating, repeats in the result's warning list, and is stored in the saved plan. Select the Moon and
+    verify rise, transit, set, and the sampled path are reported without the solar warning. Save the Sun
+    plan and confirm the warning reappears when the plan is reopened from Saved.
 
 ## Platform build gates
 

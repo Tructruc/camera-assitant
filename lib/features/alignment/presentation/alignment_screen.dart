@@ -389,19 +389,19 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     if (_view == PlanningView.augmentedReality &&
         capabilities != null &&
         !capabilities.canShowAr) {
-      return const Card(
+      return Card(
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'AR unavailable',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Text(
-                'This device or session does not provide the required camera and orientation capabilities. Numeric, timeline, compass, and map plans remain fully usable; no permission is requested until a supported live view is opened.',
+                '${capabilities.augmentedRealityLimitation} Numeric, timeline, compass, and map plans remain fully usable; no permission is requested until a supported live view is opened.',
               ),
             ],
           ),
@@ -677,8 +677,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
   }
 
   String get _expectedAccuracy => _body == AlignmentBody.sun
-      ? 'About ±1° position; candidate times sampled every 10 minutes'
-      : 'About ±1.5° position; candidate times sampled every 10 minutes';
+      ? 'About ±1° position; candidate times sampled every 10 minutes. Geocentric model: topocentric parallax is not applied.'
+      : 'About ±1.5° position; candidate times sampled every 10 minutes. Geocentric model: lunar parallax up to about 1° is not applied, which is inside this tolerance.';
 
   Widget _planningContext() {
     final time = PlanningTimeContext.parse(_timeZoneId);

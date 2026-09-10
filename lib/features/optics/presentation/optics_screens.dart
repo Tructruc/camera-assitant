@@ -6,6 +6,7 @@ import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/domain/validation/validation.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
@@ -468,9 +469,5 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
       'The Airy disk spans at least two pixels, so diffraction is visible at this aperture and pixel pitch.',
   ];
 
-  String _warningMessage(String code) => switch (code) {
-    'frame_limit' =>
-      'The focus stack reached the 1,000-frame planning limit. The far distance is included, but increase overlap or split the stack before shooting.',
-    _ => 'This result has a limitation the calculator reported as $code.',
-  };
+  String _warningMessage(String code) => calculationWarningText(code);
 }

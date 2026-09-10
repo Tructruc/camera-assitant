@@ -117,15 +117,22 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
               decoration: const InputDecoration(labelText: 'Value source'),
               initialValue: _source,
               // No bundled equipment catalog ships yet, so "bundled" is not
-              // offered as a new claim. Existing rows keep loading and showing it.
-              items: _selectableSources
-                  .map(
-                    (source) => DropdownMenuItem<EquipmentSource>(
-                      value: source,
-                      child: Text(_sourceLabel(source)),
-                    ),
-                  )
-                  .toList(growable: false),
+              // offered as a new claim. A row that already carries it must stay
+              // selectable, though: Flutter asserts that the current value has
+              // exactly one matching item, and silently rewriting the source of
+              // an existing row would corrupt its provenance.
+              items:
+                  <EquipmentSource>[
+                        ..._selectableSources,
+                        if (!_selectableSources.contains(_source)) _source,
+                      ]
+                      .map(
+                        (source) => DropdownMenuItem<EquipmentSource>(
+                          value: source,
+                          child: Text(_sourceLabel(source)),
+                        ),
+                      )
+                      .toList(growable: false),
               onChanged: (value) => setState(() => _source = value ?? _source),
             ),
             const SizedBox(height: 12),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/domain/repositories/snapshot_repository.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 
 class SavedCalculationsScreen extends ConsumerWidget {
   const SavedCalculationsScreen({super.key});
@@ -156,7 +157,7 @@ class _SavedCalculationDetailScreenState
           Semantics(
             container: true,
             label:
-                'Warnings: ${_snapshot.warnings.map((item) => _warningText(item.code)).join('; ')}',
+                'Warnings: ${_snapshot.warnings.map((item) => calculationWarningText(item.code)).join('; ')}',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
@@ -165,7 +166,7 @@ class _SavedCalculationDetailScreenState
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 for (final item in _snapshot.warnings)
-                  Text('• ${_warningText(item.code)}'),
+                  Text('• ${calculationWarningText(item.code)}'),
               ],
             ),
           ),
@@ -345,28 +346,3 @@ String _date(DateTime value) =>
     '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 String _mapText(Map<String, Object?> values) =>
     values.entries.map((entry) => '${entry.key}: ${entry.value}').join(', ');
-
-/// Saved payloads store warning codes, so the detail view restates them.
-String _warningText(String code) => switch (code) {
-  'solarSafety' =>
-    'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter. This plan is an estimate, not a safety guarantee.',
-  'close_focus' =>
-    'Close focus reduces the accuracy of the thin-lens estimate.',
-  'sampling_visible' || 'sampling' =>
-    'The Airy disk spans at least two pixels at these settings, so diffraction is visible.',
-  'frame_limit' =>
-    'The focus stack reached the 1,000-frame planning limit; increase overlap or split the stack.',
-  'exposure_exceeds_interval' =>
-    'The calculated exposure is longer than the chosen capture interval.',
-  'aperture_outside_typical_range' =>
-    'The aperture is outside the typical range for this equipment.',
-  'power_range' => 'Flash power is outside the supported range.',
-  'configuration_estimate' =>
-    'This macro configuration is an estimate; the stated model limitations apply.',
-  'distortion' => 'Distortion and field curvature are not modeled.',
-  'planningAccuracy' =>
-    'Accuracy is limited for this plan; treat the estimate with the stated uncertainty.',
-  'milkyWayOrientationUndefined' =>
-    'The Milky Way orientation is undefined for this target position.',
-  _ => 'This result reported a limitation ($code).',
-};

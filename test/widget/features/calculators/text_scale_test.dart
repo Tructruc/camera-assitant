@@ -62,8 +62,8 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byType(Scrollable), findsWidgets);
 
-      // Every screen keeps at least one labelled control for screen readers.
-      expect(find.bySemanticsLabel(RegExp('.+')), findsWidgets);
+      // Every screen keeps labelled controls for screen readers, not just one.
+      expect(find.bySemanticsLabel(RegExp('.+')), findsAtLeastNWidgets(2));
 
       // The longest content stays reachable by scrolling to the end.
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));

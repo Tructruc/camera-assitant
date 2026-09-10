@@ -6,6 +6,7 @@ import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
@@ -272,6 +273,10 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
             ],
             guidance:
                 'Treat this as configuration guidance. Confirm framing, working distance, and exposure with the actual lenses.',
+            warnings: <String>[
+              for (final warning in _result!.warnings)
+                calculationWarningText(warning.code),
+            ],
             onSave: () => _save(output),
             onReset: _reset,
           ),

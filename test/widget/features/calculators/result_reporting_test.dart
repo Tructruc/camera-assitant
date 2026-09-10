@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CameraBody, NdFilter, SavedLocation;
+import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
+import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
 import 'package:photography_assistant/core/presentation/calculator/calculator_components.dart';
 import 'package:photography_assistant/features/astronomy/presentation/astronomy_screen.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
@@ -231,6 +233,91 @@ void main() {
 
     expect(find.byType(AppliedEquipmentNotice), findsOneWidget);
     expect(find.textContaining('(bundled catalog)'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('the night-sky planner warns about solar safety for the Sun', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const AstronomyScreen()));
+    await tester.pumpAndSettle();
+
+    final targetPicker = find.text('Search celestial targets');
+    await reveal(tester, targetPicker);
+    await tester.tap(targetPicker);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Sun ·').last);
+    await tester.pumpAndSettle();
+
+    // The warning is present before the user calculates, not only afterwards.
+    expect(find.textContaining('certified solar filter'), findsWidgets);
+    // The same warning reaches the result and the saved plan through the
+    // calculator's structured warning, which the unit fixture test and the
+    // saved-plan warning test cover.
+    await unmount(tester);
+  });
+
+  testWidgets('applied cameras are recorded in night-sky and macro snapshots', (
+    tester,
+  ) async {
+    await repository.createCamera(savedCamera());
+
+    await tester.pumpWidget(app(const AstronomyScreen()));
+    await tester.pumpAndSettle();
+    final cameraPicker = find.text('Saved camera (optional)');
+    await reveal(tester, cameraPicker);
+    await tester.tap(cameraPicker);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Full Frame Camera').last);
+    await tester.pumpAndSettle();
+    final planNightSky = find.widgetWithText(FilledButton, 'Plan night sky');
+    await reveal(tester, planNightSky);
+    await tester.tap(planNightSky);
+    await tester.pumpAndSettle();
+    final save = find.widgetWithText(FilledButton, 'Save result');
+    await reveal(tester, save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    final astronomySnapshot = await DriftSnapshotRepository(
+      database,
+    ).listNewestFirst();
+    final astronomyCamera = astronomySnapshot.single.equipment.single;
+    expect(astronomyCamera.id, 'camera-ff');
+    expect(
+      astronomyCamera.type,
+      // The applied input is the crop factor this camera derives.
+      SnapshotEquipmentType.camera,
+    );
+    expect(astronomyCamera.values['cropFactor'], 1.0);
+    expect(astronomyCamera.values['sensorWidthMm'], 36);
+    await unmount(tester);
+
+    await tester.pumpWidget(app(const MacroScreen()));
+    await tester.pumpAndSettle();
+    final macroPicker = find.text('Saved camera (optional)');
+    await reveal(tester, macroPicker);
+    await tester.tap(macroPicker);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Full Frame Camera').last);
+    await tester.pumpAndSettle();
+    final calculateMacro = find.widgetWithText(
+      FilledButton,
+      'Calculate macro setup',
+    );
+    await reveal(tester, calculateMacro);
+    await tester.tap(calculateMacro);
+    await tester.pumpAndSettle();
+    final macroSave = find.widgetWithText(FilledButton, 'Save result');
+    await reveal(tester, macroSave);
+    await tester.tap(macroSave);
+    await tester.pumpAndSettle();
+
+    final macroSnapshot = await DriftSnapshotRepository(
+      database,
+    ).listNewestFirst();
+    expect(macroSnapshot.first.equipment.map((item) => item.id), ['camera-ff']);
+    expect(macroSnapshot.first.equipment.single.values['sensorWidthMm'], 36);
     await unmount(tester);
   });
 }

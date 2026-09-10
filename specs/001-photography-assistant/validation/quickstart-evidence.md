@@ -51,6 +51,7 @@ hardware run described in `quickstart.md`.
 | 25 | Camera notes, delete, archive | `equipment_screens_test.dart`: archive action retires active equipment; referenced equipment is archived instead of deleted; editor preserves an existing teleconverter kind; `app_database_test.dart` v3 and v5 fixtures | Automated |
 | 26 | Labelled input summary at 200% | `calculator_components_test.dart`: result exposes the exact calculation inputs accessibly; `text_scale_test.dart` | Automated |
 | 27 | Editing invalidates until recalculation | `test/widget/features/calculators/calculation_invalidation_test.dart` (thirteen screens, cursor-only edits, provenance-only swap, save journey) | Automated |
+| 28 | Sun and Moon night-sky targets | `test/widget/features/calculators/result_reporting_test.dart`: the night-sky planner warns about solar safety for the Sun; `test/unit/features/astronomy/solar_lunar_fixture_test.dart`; `test/widget/features/saved_calculations/saved_calculations_test.dart`: renders saved warnings with a readable calculator label | Automated; the in-preview AR banner needs a device |
 
 ## What remains manual
 
