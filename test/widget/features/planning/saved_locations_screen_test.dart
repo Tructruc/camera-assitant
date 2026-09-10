@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
-import 'package:photography_assistant/core/data/database/app_database.dart';
+import 'package:photography_assistant/core/data/database/app_database.dart'
+    hide SavedLocation;
 import 'package:photography_assistant/features/planning/data/device_planning_service.dart';
 import 'package:photography_assistant/features/planning/data/saved_location_repository.dart';
 import 'package:photography_assistant/features/planning/domain/saved_location.dart';
@@ -138,6 +139,86 @@ void main() {
       find.textContaining('Location services are disabled.'),
       findsNothing,
     );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('invalid coordinates are rejected inline, not by exception', (
+    tester,
+  ) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add location'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'Bad site');
+    await tester.enterText(fields.at(1), '91');
+    await tester.enterText(fields.at(2), 'not a number');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Latitude must be between -90 and 90.'), findsOneWidget);
+    expect(find.text('Enter a number.'), findsOneWidget);
+    expect(find.text('Bad site'), findsOneWidget); // still in the dialog
+    expect(await SavedLocationRepository(database).listAll(), isEmpty);
+
+    // Correcting the values saves without leaving the dialog open.
+    await tester.enterText(fields.at(1), '45');
+    await tester.enterText(fields.at(2), '5');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(await SavedLocationRepository(database).listAll(), hasLength(1));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('a duplicate name is named in the dialog', (tester) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = SavedLocationRepository(database);
+    final now = DateTime.utc(2026, 9, 10);
+    await repository.save(
+      SavedLocation(
+        id: 'existing',
+        name: 'Dark site',
+        latitudeDegrees: 45,
+        longitudeDegrees: 5,
+        timeZoneId: 'UTC',
+        source: LocationSource.manual,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add location'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'dark site');
+    await tester.enterText(fields.at(1), '10');
+    await tester.enterText(fields.at(2), '10');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('A saved location with this name exists.'),
+      findsOneWidget,
+    );
+    expect(await repository.listAll(), hasLength(1));
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump(const Duration(milliseconds: 1));

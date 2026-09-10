@@ -121,51 +121,99 @@ class SavedLocationsScreen extends ConsumerWidget {
           location?.timeZoneId ??
           deviceTimeZoneId(DateTime.now().timeZoneOffset),
     );
+    final errors = <String, String>{};
     final saved = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          location == null ? 'Add saved location' : 'Edit saved location',
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: name,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              TextField(
-                controller: latitude,
-                decoration: const InputDecoration(labelText: 'Latitude'),
-              ),
-              TextField(
-                controller: longitude,
-                decoration: const InputDecoration(labelText: 'Longitude'),
-              ),
-              TextField(
-                controller: elevation,
-                decoration: const InputDecoration(
-                  labelText: 'Elevation (m, optional)',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            location == null ? 'Add saved location' : 'Edit saved location',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: name,
+                  decoration: InputDecoration(
+                    labelText: 'Name',
+                    errorText: errors['name'],
+                  ),
                 ),
-              ),
-              TextField(
-                controller: timezone,
-                decoration: const InputDecoration(labelText: 'Time zone ID'),
-              ),
-            ],
+                TextField(
+                  controller: latitude,
+                  decoration: InputDecoration(
+                    labelText: 'Latitude',
+                    errorText: errors['latitude'],
+                  ),
+                ),
+                TextField(
+                  controller: longitude,
+                  decoration: InputDecoration(
+                    labelText: 'Longitude',
+                    errorText: errors['longitude'],
+                  ),
+                ),
+                TextField(
+                  controller: elevation,
+                  decoration: InputDecoration(
+                    labelText: 'Elevation (m, optional)',
+                    errorText: errors['elevation'],
+                  ),
+                ),
+                TextField(
+                  controller: timezone,
+                  decoration: InputDecoration(
+                    labelText: 'Time zone ID',
+                    errorText: errors['timeZoneId'],
+                  ),
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final found = validateLocationDraft(
+                  name: name.text,
+                  latitude: latitude.text,
+                  longitude: longitude.text,
+                  elevation: elevation.text,
+                  timeZoneId: timezone.text,
+                );
+                if (found.isEmpty) {
+                  // The database enforces unique names, but a raw constraint
+                  // error is not actionable; check first and name the field.
+                  final existing = await ref
+                      .read(savedLocationRepositoryProvider)
+                      .listAll();
+                  final duplicate = existing.any(
+                    (site) =>
+                        site.normalizedName == name.text.trim().toLowerCase() &&
+                        site.id != location?.id,
+                  );
+                  if (duplicate) {
+                    found['name'] = 'A saved location with this name exists.';
+                  }
+                }
+                if (found.isNotEmpty) {
+                  setDialogState(() {
+                    errors
+                      ..clear()
+                      ..addAll(found);
+                  });
+                  return;
+                }
+                if (context.mounted) Navigator.pop(context, true);
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
     if (saved == true) {
@@ -192,13 +240,54 @@ class SavedLocationsScreen extends ConsumerWidget {
                 updatedAt: now,
               ),
             );
-      } on Object catch (error) {
+      } on Object {
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Location not saved: $error')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'The location could not be saved. Check the values and try again; nothing was changed.',
+              ),
+            ),
+          );
         }
       }
     }
   }
+}
+
+/// Field-keyed recovery guidance for a location draft, empty when it is valid.
+/// Pure so the rules are unit-testable without a dialog (FR-002).
+Map<String, String> validateLocationDraft({
+  required String name,
+  required String latitude,
+  required String longitude,
+  required String elevation,
+  required String timeZoneId,
+}) {
+  final errors = <String, String>{};
+  if (name.trim().isEmpty) errors['name'] = 'Enter a name.';
+
+  double? number(String text) => double.tryParse(text.trim());
+  final parsedLatitude = number(latitude);
+  if (parsedLatitude == null || !parsedLatitude.isFinite) {
+    errors['latitude'] = 'Enter a number.';
+  } else if (parsedLatitude < -90 || parsedLatitude > 90) {
+    errors['latitude'] = 'Latitude must be between -90 and 90.';
+  }
+  final parsedLongitude = number(longitude);
+  if (parsedLongitude == null || !parsedLongitude.isFinite) {
+    errors['longitude'] = 'Enter a number.';
+  } else if (parsedLongitude < -180 || parsedLongitude > 180) {
+    errors['longitude'] = 'Longitude must be between -180 and 180.';
+  }
+  if (elevation.trim().isNotEmpty) {
+    final parsedElevation = number(elevation);
+    if (parsedElevation == null || !parsedElevation.isFinite) {
+      errors['elevation'] = 'Enter a number or leave this blank.';
+    }
+  }
+  if (timeZoneId.trim().isEmpty) {
+    errors['timeZoneId'] = 'Enter a time zone ID such as Europe/London or UTC.';
+  }
+  return errors;
 }
