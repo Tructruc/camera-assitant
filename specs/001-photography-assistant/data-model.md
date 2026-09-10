@@ -82,13 +82,22 @@ pitch angles. Saved plans embed applied camera sensor dimensions and lens focal 
 
 ## Astronomy Plan
 
-An immutable UTC/location plan for a bundled fixed ICRS/J2000 target. It records altitude, true-north
-azimuth, above-horizon state, circumpolar/rising visibility cycle, next geometric rise/transit/set events,
-500-rule and NPF shutter estimates, and star-trail duration. Its snapshot embeds the target coordinates,
-observer coordinates, formula version, optical inputs, applied equipment, assumptions, and event instants.
-It also embeds the saved/manual location source, reported accuracy and capture timestamp, local and UTC
-planning times, timezone confidence, elevation, horizon/refraction policy, catalog version/provenance/
-freshness, supported epoch, and the result's explicit planning-accuracy boundary.
+An immutable UTC/location plan for a bundled celestial target. Fixed targets (stars, nebulae, galaxies,
+clusters, the Milky Way core) use ICRS/J2000 catalog coordinates; the moving planets resolve from the
+bundled Keplerian ephemeris at the requested instant; and the Sun and Moon resolve from the shared
+`SolarLunarEphemeris`, the same geocentric Sun/Moon model the alignment planner uses. Separating the two
+resolvers keeps one Sun/Moon implementation instead of two that can drift apart.
+
+The plan records altitude, true-north azimuth, above-horizon state, circumpolar/rising visibility cycle,
+next geometric rise/transit/set events, a sampled local path, 500-rule and NPF shutter estimates, and
+star-trail duration. Its snapshot embeds the target coordinates, observer coordinates, formula version,
+optical inputs, applied equipment, assumptions, and event instants. It also embeds the saved/manual
+location source, reported accuracy and capture timestamp, local and UTC planning times, timezone
+confidence, elevation, horizon/refraction policy, catalog version/provenance/freshness, supported epoch,
+and the result's explicit planning-accuracy boundary.
+
+Selecting the Sun adds a `solarSafety` warning to the result and the snapshot, and the live AR overlay
+repeats the certified-solar-filter warning inside the preview.
 Formula version 2 additionally records `milkyWayOrientationDegrees` for the core target: the
 projected local Galactic-plane axis in `[0, 180)` relative to a level horizon. The value is null
 within 0.1° of zenith/nadir. Its convention and model limitations are embedded in the snapshot;
@@ -99,10 +108,12 @@ earlier formula-version-1 plans remain unchanged and readable without an invente
 An immutable Sun/Moon composition search containing observer coordinates/elevation, target elevation and
 distance, desired true bearing, derived target altitude, UTC range, angular tolerance, sampling resolution,
 and up to 20 ordered candidates selected by a memory-bounded one-year scan. Each candidate records UTC
-instant, true azimuth, altitude, angular error, and horizon state. The immutable snapshot additionally
-stores the inclusive local civil dates, timezone rule confidence, source/accuracy context, elevations,
-horizon/refraction policy, model freshness, and declared accuracy. Numeric, locally grouped timeline,
-compass, map, and AR-capability views consume this same result.
+instant, true azimuth, altitude, angular error, and horizon state. Positions come from the shared
+geocentric ephemeris and are not corrected for topocentric parallax; the disclosed accuracy budget
+(about ±1° for the Sun and ±1.5° for the Moon) absorbs the omission, which is up to about 1° for the Moon.
+The immutable snapshot additionally stores the inclusive local civil dates, timezone rule confidence,
+source/accuracy context, elevations, horizon/refraction policy, model freshness, and declared accuracy.
+Numeric, locally grouped timeline, compass, map, and AR-capability views consume this same result.
 
 ## Saved Location
 

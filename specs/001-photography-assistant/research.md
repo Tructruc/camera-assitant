@@ -269,6 +269,14 @@ model within approximately 1.5° for composition scouting; candidate time resolu
 Terrain, atmospheric refraction, limb radius, parallax, and weather are excluded. Every solar result shows
 a persistent warning never to view the Sun through optical equipment without a certified solar filter.
 
+**Shared model and parallax**: The same geocentric Sun/Moon series now backs the night-sky planner's Sun
+and Moon targets through `SolarLunarEphemeris`, so one implementation serves both planners and their
+fixtures. The night-sky path additionally applies the Meeus topocentric parallax correction; the alignment
+path stays geocentric and instead discloses the omission in its accuracy line, because its declared budgets
+(±1° solar, ±1.5° lunar) already cover the up-to-1° lunar difference. Fixtures for both paths are recorded
+in `test/fixtures/astronomy_fixtures.dart` with their JPL Horizons, SIMBAD, and USNO query parameters, and
+asserted in `test/unit/features/astronomy/solar_lunar_fixture_test.dart`.
+
 **References**: [NOAA solar calculation details](https://gml.noaa.gov/grad/solcalc/calcdetails.html) and
 [NASA JPL Horizons observer-coordinate definitions](https://ssd.jpl.nasa.gov/horizons/manual.html).
 
