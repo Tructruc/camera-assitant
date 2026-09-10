@@ -5,6 +5,27 @@ import 'package:photography_assistant/features/planning/data/saved_location_repo
 import 'package:photography_assistant/features/planning/domain/saved_location.dart';
 
 void main() {
+  test('normalizes the stored time zone identifier', () async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = SavedLocationRepository(database);
+    final now = DateTime.utc(2026, 9, 10);
+    await repository.save(
+      SavedLocation(
+        id: 'trimmed',
+        name: 'Trimmed',
+        latitudeDegrees: 1,
+        longitudeDegrees: 2,
+        timeZoneId: '  Europe/London  ',
+        source: LocationSource.manual,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    final stored = await repository.listAll();
+    expect(stored.single.timeZoneId, 'Europe/London');
+  });
+
   late AppDatabase database;
   late SavedLocationRepository repository;
   setUp(() {

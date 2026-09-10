@@ -257,37 +257,50 @@ class _SavedCalculationDetailScreenState
   Future<void> _edit() async {
     final title = TextEditingController(text: _snapshot.title);
     final notes = TextEditingController(text: _snapshot.notes);
+    final titleError = <String?>[null];
     final save = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit saved calculation'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            TextField(
-              controller: title,
-              decoration: const InputDecoration(labelText: 'Title'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit saved calculation'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextField(
+                controller: title,
+                decoration: InputDecoration(
+                  labelText: 'Title',
+                  errorText: titleError.first,
+                ),
+              ),
+              TextField(
+                controller: notes,
+                decoration: const InputDecoration(labelText: 'Notes'),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
-            TextField(
-              controller: notes,
-              decoration: const InputDecoration(labelText: 'Notes'),
+            FilledButton(
+              onPressed: () {
+                if (title.text.trim().isEmpty) {
+                  setDialogState(() => titleError[0] = 'Enter a title.');
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
+              child: const Text('Save changes'),
             ),
           ],
         ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Save changes'),
-          ),
-        ],
       ),
     );
-    if (save == true && title.text.trim().isNotEmpty) {
-      final newNotes = notes.text.trim().isEmpty ? null : notes.text;
+    if (save != true) return;
+    final newNotes = notes.text.trim().isEmpty ? null : notes.text;
+    try {
       await ref
           .read(snapshotRepositoryProvider)
           .updateMetadata(_snapshot.id, title: title.text, notes: newNotes);
@@ -296,6 +309,18 @@ class _SavedCalculationDetailScreenState
           () => _snapshot = _snapshot.withMetadata(
             title: title.text,
             notes: newNotes,
+          ),
+        );
+      }
+    } on Object {
+      // The stored payload is untouched, so say that plainly rather than
+      // letting the failure disappear (FR-021).
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'The title and notes could not be saved. The stored result is unchanged; try again.',
+            ),
           ),
         );
       }
@@ -320,9 +345,20 @@ class _SavedCalculationDetailScreenState
         ],
       ),
     );
-    if (confirmed == true) {
+    if (confirmed != true) return;
+    try {
       await ref.read(snapshotRepositoryProvider).delete(_snapshot.id);
       if (mounted) Navigator.pop(context);
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'The saved result could not be deleted. It is still stored; try again.',
+            ),
+          ),
+        );
+      }
     }
   }
 }

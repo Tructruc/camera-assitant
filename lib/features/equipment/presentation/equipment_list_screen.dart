@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/domain/repositories/equipment_repository.dart';
 import '../domain/equipment.dart';
 import 'equipment_controller.dart';
 import 'equipment_editor_screen.dart';
@@ -132,7 +133,7 @@ class EquipmentListScreen extends ConsumerWidget {
               _openEditor(context, ref, state.items[index], duplicate: true),
           onArchive: () => _archive(context, ref, state.items[index]),
           onDelete: () => _remove(context, ref, state.items[index]),
-          onRestore: () => controller.restore(state.items[index]),
+          onRestore: () => _restore(context, ref, state.items[index]),
         ),
       ),
     };
@@ -208,7 +209,13 @@ class EquipmentListScreen extends ConsumerWidget {
     EquipmentListEntry entry,
   ) async {
     final repository = ref.read(equipmentRepositoryProvider);
-    final impact = await repository.referenceImpact(entry.item.id);
+    final EquipmentReferenceImpact impact;
+    try {
+      impact = await repository.referenceImpact(entry.item.id);
+    } on Object {
+      if (context.mounted) _reportMutationFailure(context);
+      return;
+    }
     if (!context.mounted) return;
     if (impact.isReferenced) {
       final archive = await showDialog<bool>(
@@ -230,8 +237,13 @@ class EquipmentListScreen extends ConsumerWidget {
           ],
         ),
       );
-      if (archive == true) {
-        await ref.read(equipmentControllerProvider.notifier).archive(entry);
+      if (archive == true && context.mounted) {
+        // The reference warning was already shown above, so archive directly
+        // instead of asking a second time.
+        final archived = await ref
+            .read(equipmentControllerProvider.notifier)
+            .archive(entry);
+        if (!archived && context.mounted) _reportMutationFailure(context);
       }
       return;
     }
@@ -255,7 +267,10 @@ class EquipmentListScreen extends ConsumerWidget {
       ),
     );
     if (delete == true) {
-      await ref.read(equipmentControllerProvider.notifier).delete(entry);
+      final deleted = await ref
+          .read(equipmentControllerProvider.notifier)
+          .delete(entry);
+      if (!deleted && context.mounted) _reportMutationFailure(context);
     }
   }
 
@@ -267,7 +282,34 @@ class EquipmentListScreen extends ConsumerWidget {
     if (!await _confirmReferencedMutation(context, ref, entry, 'archive')) {
       return;
     }
-    await ref.read(equipmentControllerProvider.notifier).archive(entry);
+    if (!context.mounted) return;
+    final archived = await ref
+        .read(equipmentControllerProvider.notifier)
+        .archive(entry);
+    if (!archived && context.mounted) _reportMutationFailure(context);
+  }
+
+  Future<void> _restore(
+    BuildContext context,
+    WidgetRef ref,
+    EquipmentListEntry entry,
+  ) async {
+    final restored = await ref
+        .read(equipmentControllerProvider.notifier)
+        .restore(entry);
+    if (!restored && context.mounted) _reportMutationFailure(context);
+  }
+
+  /// One recovery message for every equipment mutation that fails, so a
+  /// database error never reaches the user as an unhandled exception (FR-021).
+  void _reportMutationFailure(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'The equipment change could not be saved. Nothing was changed; check the values and try again.',
+        ),
+      ),
+    );
   }
 
   Future<bool> _confirmReferencedMutation(
@@ -276,9 +318,17 @@ class EquipmentListScreen extends ConsumerWidget {
     EquipmentListEntry entry,
     String action,
   ) async {
-    final impact = await ref
-        .read(equipmentRepositoryProvider)
-        .referenceImpact(entry.item.id);
+    final EquipmentReferenceImpact impact;
+    try {
+      impact = await ref
+          .read(equipmentRepositoryProvider)
+          .referenceImpact(entry.item.id);
+    } on Object {
+      // Failing to determine the impact must not fall through to a permanent
+      // delete; treat it as a refusal and say why.
+      if (context.mounted) _reportMutationFailure(context);
+      return false;
+    }
     if (!impact.isReferenced || !context.mounted) return true;
     return await showDialog<bool>(
           context: context,

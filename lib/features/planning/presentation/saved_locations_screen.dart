@@ -53,9 +53,7 @@ class SavedLocationsScreen extends ConsumerWidget {
                         ),
                         trailing: IconButton(
                           tooltip: 'Delete ${location.name}',
-                          onPressed: () => ref
-                              .read(savedLocationRepositoryProvider)
-                              .delete(location.id),
+                          onPressed: () => _delete(context, ref, location),
                           icon: const Icon(Icons.delete_outline),
                         ),
                         onTap: () => _edit(context, ref, location: location),
@@ -67,6 +65,26 @@ class SavedLocationsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _delete(
+    BuildContext context,
+    WidgetRef ref,
+    SavedLocation location,
+  ) async {
+    try {
+      await ref.read(savedLocationRepositoryProvider).delete(location.id);
+    } on Object {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'The saved location could not be deleted. It is still stored; try again.',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _fromDevice(BuildContext context, WidgetRef ref) async {
@@ -122,6 +140,7 @@ class SavedLocationsScreen extends ConsumerWidget {
           deviceTimeZoneId(DateTime.now().timeZoneOffset),
     );
     final errors = <String, String>{};
+    var saving = false;
     final saved = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -177,39 +196,47 @@ class SavedLocationsScreen extends ConsumerWidget {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () async {
-                final found = validateLocationDraft(
-                  name: name.text,
-                  latitude: latitude.text,
-                  longitude: longitude.text,
-                  elevation: elevation.text,
-                  timeZoneId: timezone.text,
-                );
-                if (found.isEmpty) {
-                  // The database enforces unique names, but a raw constraint
-                  // error is not actionable; check first and name the field.
-                  final existing = await ref
-                      .read(savedLocationRepositoryProvider)
-                      .listAll();
-                  final duplicate = existing.any(
-                    (site) =>
-                        site.normalizedName == name.text.trim().toLowerCase() &&
-                        site.id != location?.id,
-                  );
-                  if (duplicate) {
-                    found['name'] = 'A saved location with this name exists.';
-                  }
-                }
-                if (found.isNotEmpty) {
-                  setDialogState(() {
-                    errors
-                      ..clear()
-                      ..addAll(found);
-                  });
-                  return;
-                }
-                if (context.mounted) Navigator.pop(context, true);
-              },
+              // Ignore repeat taps while the duplicate check is in flight, so a
+              // second pop cannot close the screen behind the dialog.
+              onPressed: saving
+                  ? null
+                  : () async {
+                      setDialogState(() => saving = true);
+                      final found = validateLocationDraft(
+                        name: name.text,
+                        latitude: latitude.text,
+                        longitude: longitude.text,
+                        elevation: elevation.text,
+                        timeZoneId: timezone.text,
+                      );
+                      if (found.isEmpty) {
+                        // The database enforces unique names, but a raw constraint
+                        // error is not actionable; check first and name the field.
+                        final existing = await ref
+                            .read(savedLocationRepositoryProvider)
+                            .listAll();
+                        final duplicate = existing.any(
+                          (site) =>
+                              site.normalizedName ==
+                                  name.text.trim().toLowerCase() &&
+                              site.id != location?.id,
+                        );
+                        if (duplicate) {
+                          found['name'] =
+                              'A saved location with this name exists.';
+                        }
+                      }
+                      if (found.isNotEmpty) {
+                        setDialogState(() {
+                          saving = false;
+                          errors
+                            ..clear()
+                            ..addAll(found);
+                        });
+                        return;
+                      }
+                      if (context.mounted) Navigator.pop(context, true);
+                    },
               child: const Text('Save'),
             ),
           ],

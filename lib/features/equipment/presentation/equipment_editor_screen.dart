@@ -301,31 +301,45 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
         ),
       };
       final save = widget.onSave;
+      final bool saved;
       if (save != null) {
         await save(item);
+        saved = true;
       } else if (_isEditing) {
-        await ref.read(equipmentControllerProvider.notifier).update(item);
+        saved = await ref
+            .read(equipmentControllerProvider.notifier)
+            .update(item);
       } else {
-        await ref.read(equipmentControllerProvider.notifier).create(item);
+        saved = await ref
+            .read(equipmentControllerProvider.notifier)
+            .create(item);
+      }
+      if (!saved) {
+        // The controller reports failure instead of throwing, so the editor
+        // keeps the form open with the user's values intact.
+        if (mounted) _reportSaveFailure();
+        return;
       }
       if (mounted && Navigator.canPop(context)) {
         Navigator.pop(context);
       }
     } on Object {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Equipment could not be saved. Check the values and try again.',
-            ),
-          ),
-        );
-      }
+      if (mounted) _reportSaveFailure();
     } finally {
       if (mounted) {
         setState(() => _saving = false);
       }
     }
+  }
+
+  void _reportSaveFailure() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Equipment could not be saved. Check the values and try again.',
+        ),
+      ),
+    );
   }
 
   String _kindLabel() => switch (widget.kind) {

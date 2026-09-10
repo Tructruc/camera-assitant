@@ -148,7 +148,10 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
     await load();
   }
 
-  Future<void> create(EquipmentItem item) async {
+  /// Mutations report success instead of throwing, so every screen can show
+  /// its own recovery message and no failure escapes to the framework
+  /// (FR-021). A failure leaves the loaded list untouched.
+  Future<bool> create(EquipmentItem item) => _mutate(() async {
     switch (item) {
       case CameraBody():
         await _repository.createCamera(item);
@@ -159,10 +162,9 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
       case OpticalAccessory():
         await _repository.createAccessory(item);
     }
-    await load();
-  }
+  });
 
-  Future<void> update(EquipmentItem item) async {
+  Future<bool> update(EquipmentItem item) => _mutate(() async {
     switch (item) {
       case CameraBody():
         await _repository.updateCamera(item);
@@ -173,10 +175,9 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
       case OpticalAccessory():
         await _repository.updateAccessory(item);
     }
-    await load();
-  }
+  });
 
-  Future<void> archive(EquipmentListEntry entry) async {
+  Future<bool> archive(EquipmentListEntry entry) => _mutate(() async {
     switch (entry.kind) {
       case EquipmentKind.camera:
         await _repository.archiveCamera(entry.item.id);
@@ -187,10 +188,9 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
       case EquipmentKind.accessory:
         await _repository.archiveAccessory(entry.item.id);
     }
-    await load();
-  }
+  });
 
-  Future<void> delete(EquipmentListEntry entry) async {
+  Future<bool> delete(EquipmentListEntry entry) => _mutate(() async {
     switch (entry.kind) {
       case EquipmentKind.camera:
         await _repository.deleteCamera(entry.item.id);
@@ -201,10 +201,9 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
       case EquipmentKind.accessory:
         await _repository.deleteAccessory(entry.item.id);
     }
-    await load();
-  }
+  });
 
-  Future<void> restore(EquipmentListEntry entry) async {
+  Future<bool> restore(EquipmentListEntry entry) => _mutate(() async {
     switch (entry.kind) {
       case EquipmentKind.camera:
         await _repository.restoreCamera(entry.item.id);
@@ -215,6 +214,16 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
       case EquipmentKind.accessory:
         await _repository.restoreAccessory(entry.item.id);
     }
+  });
+
+  Future<bool> _mutate(Future<void> Function() action) async {
+    try {
+      await action();
+    } on Object {
+      // The screen owns the user-facing message; the list stays as it was.
+      return false;
+    }
     await load();
+    return true;
   }
 }

@@ -9,15 +9,16 @@ final class SavedLocation {
     required String name,
     required this.latitudeDegrees,
     required this.longitudeDegrees,
-    required this.timeZoneId,
+    required String timeZoneId,
     required this.source,
     required this.createdAt,
     required this.updatedAt,
     this.elevationMetres,
     this.accuracyMetres,
   }) : name = name.trim(),
+       timeZoneId = timeZoneId.trim(),
        normalizedName = name.trim().toLowerCase() {
-    if (id.trim().isEmpty || this.name.isEmpty || timeZoneId.trim().isEmpty) {
+    if (id.trim().isEmpty || this.name.isEmpty || this.timeZoneId.isEmpty) {
       throw ArgumentError('Location identity must not be blank.');
     }
     if (!latitudeDegrees.isFinite ||

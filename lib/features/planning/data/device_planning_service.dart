@@ -11,12 +11,17 @@ final class DeviceLocationReading {
   const DeviceLocationReading({
     required this.latitude,
     required this.longitude,
-    required this.elevationMetres,
     required this.accuracyMetres,
+    this.elevationMetres,
   });
   final double latitude;
   final double longitude;
-  final double elevationMetres;
+
+  /// Null when the platform reports no usable altitude. Geolocator documents
+  /// `altitude` as 0 when it is unavailable, so a non-null value here would be
+  /// a fabricated sea-level reading that then feeds horizon and refraction
+  /// context (FR-013, FR-021).
+  final double? elevationMetres;
   final double accuracyMetres;
 }
 
@@ -62,7 +67,10 @@ class DevicePlanningService {
     return DeviceLocationReading(
       latitude: position.latitude,
       longitude: position.longitude,
-      elevationMetres: position.altitude,
+      elevationMetres: elevationFromAltitude(
+        altitude: position.altitude,
+        altitudeAccuracy: position.altitudeAccuracy,
+      ),
       accuracyMetres: position.accuracy,
     );
   }
@@ -131,3 +139,11 @@ class DevicePlanningService {
 
 double cameraPitchDegrees(double x, double y, double z) =>
     math.atan2(-z, math.sqrt(x * x + y * y)) * 180 / math.pi;
+
+/// The platform reports `altitude == 0` when there is no vertical fix, while
+/// `altitudeAccuracy == 0` means the fix is unavailable rather than perfect, so
+/// an unusable altitude becomes null instead of a fabricated sea-level reading.
+double? elevationFromAltitude({
+  required double altitude,
+  required double altitudeAccuracy,
+}) => altitudeAccuracy > 0 && altitude.isFinite ? altitude : null;

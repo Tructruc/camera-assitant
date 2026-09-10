@@ -457,6 +457,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Restore'), findsOneWidget);
     expect(find.text('Archive'), findsNothing);
+    // The archived state is stated in words, not conveyed by colour alone.
+    expect(find.text('Archived'), findsOneWidget);
   });
 
   testWidgets('picker returns the selected saved equipment', (
@@ -551,4 +553,66 @@ void main() {
     expect(find.textContaining('connect'), findsNothing);
     expect(find.textContaining('sign in'), findsNothing);
   });
+
+  testWidgets('a failed mutation is reported and changes nothing', (
+    WidgetTester tester,
+  ) async {
+    final camera = domain.CameraBody(
+      id: 'camera-failing',
+      name: 'Stubborn Camera',
+      sensorWidthMm: 36,
+      sensorHeightMm: 24,
+      provenance: const domain.EquipmentProvenance(
+        source: domain.EquipmentSource.user,
+      ),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    );
+    await repository.createCamera(camera);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          equipmentRepositoryProvider.overrideWithValue(
+            _FailingEquipmentRepository(database),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: EquipmentListScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Delete: the confirmation is accepted, the write fails, the row stays.
+    await tester.tap(find.byTooltip('Actions for Stubborn Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete permanently'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('could not be saved'), findsOneWidget);
+    expect(find.text('Stubborn Camera'), findsOneWidget);
+    expect(await repository.listCameras(), hasLength(1));
+
+    // Archive fails the same way and leaves the inventory active.
+    await tester.tap(find.byTooltip('Actions for Stubborn Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Archive'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('could not be saved'), findsWidgets);
+    expect(await repository.listCameras(), hasLength(1));
+    expect(await repository.listCameras(includeArchived: true), hasLength(1));
+  });
+}
+
+/// Fails every equipment write, standing in for a locked or full database.
+final class _FailingEquipmentRepository extends DriftEquipmentRepository {
+  _FailingEquipmentRepository(super.database);
+
+  @override
+  Future<void> deleteCamera(String id) async =>
+      throw StateError('write failed');
+
+  @override
+  Future<void> archiveCamera(String id) async =>
+      throw StateError('write failed');
 }

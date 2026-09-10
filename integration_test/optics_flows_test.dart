@@ -87,24 +87,20 @@ void main() {
     await calculateAndExpect(tester, action: 'Calculate', expected: '10.74');
 
     await openTool(tester, 'Focus stack planner');
-    await calculateAndExpect(
-      tester,
-      action: 'Calculate',
-      expected: 'Frame count',
-    );
+    await calculateAndExpect(tester, action: 'Calculate', expected: '500.0 mm');
 
     await openTool(tester, 'Macro planner');
     await calculateAndExpect(
       tester,
       action: 'Calculate macro setup',
-      expected: 'Magnification',
+      expected: '0.70×',
     );
 
     await openTool(tester, 'Panorama planner');
     await calculateAndExpect(
       tester,
       action: 'Plan panorama',
-      expected: 'Total frames',
+      expected: '3 columns × 2 rows',
       save: true,
     );
 

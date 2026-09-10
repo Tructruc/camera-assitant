@@ -9,7 +9,9 @@ import '../domain/equipment.dart' as domain;
 
 typedef UtcNow = DateTime Function();
 
-final class DriftEquipmentRepository {
+/// Persistence for equipment. Not `final` so a test can substitute a failing
+/// implementation for the write paths the UI must recover from.
+class DriftEquipmentRepository {
   DriftEquipmentRepository(this._database, {UtcNow? now})
     : _now = now ?? _systemUtcNow;
 

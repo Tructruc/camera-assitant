@@ -142,4 +142,46 @@ void main() {
     expect(result.output, isNull);
     expect(result.errors, hasLength(7));
   });
+
+  test('geodesic geometry is correct across the antimeridian', () {
+    final geometry = TargetGeometry.fromCoordinates(
+      observerLatitudeDegrees: 0,
+      observerLongitudeDegrees: 179.9,
+      targetLatitudeDegrees: 0,
+      targetLongitudeDegrees: -179.9,
+    );
+    // 0.2 degrees of longitude at the equator, eastward.
+    expect(geometry.distanceMetres / 1000, closeTo(22.24, 0.2));
+    expect(geometry.bearingDegrees, closeTo(90, 0.5));
+  });
+
+  test(
+    'a below-sea-level observer is accepted and lowers the target angle',
+    () {
+      final result = const AlignmentCalculator().search(
+        AlignmentSearchInput(
+          body: AlignmentBody.sun,
+          observerLatitudeDegrees: 31.5,
+          observerLongitudeDegrees: 35.5,
+          // Dead Sea shore, below sea level, with a target at sea level.
+          observerElevationMetres: -430,
+          targetElevationMetres: 0,
+          targetDistanceMetres: 1000,
+          desiredBearingDegrees: 90,
+          angularToleranceDegrees: 3,
+          startUtc: DateTime.utc(2026, 3, 20),
+          endUtc: DateTime.utc(2026, 3, 21),
+        ),
+      );
+      expect(result.errors, isEmpty);
+      // The target is 430 m above the observer, about 23 degrees up. Whether a
+      // candidate lands inside the tolerance on this date is incidental; the
+      // point is that a below-sea-level observer is accepted and stays finite.
+      expect(result.output!.desiredAltitudeDegrees, closeTo(23.3, 0.5));
+      for (final candidate in result.output!.candidates) {
+        expect(candidate.altitudeDegrees.isFinite, isTrue);
+        expect(candidate.azimuthDegrees.isFinite, isTrue);
+      }
+    },
+  );
 }

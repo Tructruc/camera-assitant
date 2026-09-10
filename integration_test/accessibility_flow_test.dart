@@ -56,6 +56,8 @@ void main() {
     );
     await tester.tap(find.text('Calculate'));
     await tester.pumpAndSettle();
+    // 200% text must not overflow or clip any frame.
+    expect(tester.takeException(), isNull);
 
     // The labelled input summary is present and exposed to assistive tech.
     await tester.scrollUntilVisible(
@@ -65,6 +67,7 @@ void main() {
     );
     expect(find.text('Input summary'), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp('Input summary')), findsWidgets);
+    expect(tester.takeException(), isNull);
 
     // The whole action row is still reachable and usable at this scale.
     final save = find.widgetWithText(FilledButton, 'Save result');

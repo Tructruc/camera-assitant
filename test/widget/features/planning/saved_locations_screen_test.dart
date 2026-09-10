@@ -223,4 +223,61 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets(
+    'a missing altitude stays blank and a failed delete is reported',
+    (tester) async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            savedLocationRepositoryProvider.overrideWithValue(
+              _FailingSavedLocationRepository(database),
+            ),
+            devicePlanningServiceProvider.overrideWithValue(
+              _FakePlanningService(
+                reading: const DeviceLocationReading(
+                  latitude: 51.4779,
+                  longitude: 0,
+                  accuracyMetres: 8,
+                  // No vertical fix: the platform would report 0 here.
+                ),
+              ),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SavedLocationsScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Use current location'));
+      await tester.pumpAndSettle();
+      final fields = find.byType(TextField);
+      // The elevation must not be fabricated as 0 m.
+      expect(tester.widget<TextField>(fields.at(3)).controller!.text, isEmpty);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      // The delete path fails, and says so instead of throwing.
+      await tester.tap(find.byTooltip('Delete Current location'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('could not be deleted'), findsOneWidget);
+      expect(find.text('Current location'), findsWidgets);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
+}
+
+/// Fails deletes only, standing in for a locked or full database.
+final class _FailingSavedLocationRepository extends SavedLocationRepository {
+  _FailingSavedLocationRepository(super.database);
+
+  @override
+  Future<void> delete(String id) async => throw StateError('write failed');
 }
