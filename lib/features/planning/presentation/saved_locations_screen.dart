@@ -70,15 +70,24 @@ class SavedLocationsScreen extends ConsumerWidget {
 
   Future<void> _fromDevice(BuildContext context, WidgetRef ref) async {
     try {
-      final reading = await const DevicePlanningService()
+      // Read the service from the provider so the device path is injectable and
+      // consistent with the capability detection that uses the same instance.
+      final reading = await ref
+          .read(devicePlanningServiceProvider)
           .requestCurrentLocation();
       if (!context.mounted) return;
       await _edit(context, ref, reading: reading);
-    } on Object catch (error) {
+    } on Object {
+      // A raw platform exception is not actionable. Explain the fallback the
+      // user still has instead (FR-017).
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('$error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Current location is unavailable. Check that location services are on and the permission is granted, or add the coordinates manually.',
+            ),
+          ),
+        );
       }
     }
   }

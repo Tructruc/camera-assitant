@@ -33,7 +33,9 @@ final class DeviceHeadingReading {
   bool get needsCalibration => accuracyDegrees == null || accuracyDegrees! > 15;
 }
 
-final class DevicePlanningService {
+/// Platform planner services. Not `final` so tests can substitute a fake for
+/// the device paths that cannot run in a unit or widget test.
+class DevicePlanningService {
   const DevicePlanningService();
   Future<DeviceLocationReading> requestCurrentLocation() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
