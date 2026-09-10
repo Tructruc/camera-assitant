@@ -135,7 +135,16 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: flutter test integration_test -d emulator-5554
+          # One file per invocation: a single `flutter test integration_test`
+          # run shares one app launch across files, which has failed to start
+          # the second app on some runners. Each file is self-contained.
+          script: |
+            set -e
+            for file in integration_test/*_test.dart; do
+              echo "::group::$file"
+              flutter test "$file" -d emulator-5554
+              echo "::endgroup::"
+            done
 
   ios-integration:
     runs-on: macos-latest
@@ -159,7 +168,13 @@ jobs:
           xcrun simctl boot "$udid" || true
           xcrun simctl bootstatus "$udid" -b
       - name: Run offline integration journeys on iOS
-        run: flutter test integration_test -d "${{ steps.simulator.outputs.udid }}"
+        run: |
+          set -e
+          for file in integration_test/*_test.dart; do
+            echo "::group::$file"
+            flutter test "$file" -d "${{ steps.simulator.outputs.udid }}"
+            echo "::endgroup::"
+          done
 
   publish-prerelease:
     if: (github.event_name == 'push' && github.ref == 'refs/heads/v2') || github.event_name == 'schedule'
