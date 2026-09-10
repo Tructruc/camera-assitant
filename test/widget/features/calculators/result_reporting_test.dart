@@ -7,6 +7,7 @@ import 'package:photography_assistant/core/data/database/app_database.dart'
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
 import 'package:photography_assistant/core/presentation/calculator/calculator_components.dart';
+import 'package:photography_assistant/features/astronomy/domain/astronomy_calculator.dart';
 import 'package:photography_assistant/features/astronomy/presentation/astronomy_screen.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
@@ -236,6 +237,42 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('the solar warning appears for the Sun and not for the Moon', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const AstronomyScreen()));
+    await tester.pumpAndSettle();
+
+    final menu = find.byType(DropdownMenu<CelestialTarget>);
+    await reveal(tester, find.text('Search celestial targets'));
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    // The Sun and Moon are the last catalog entries, so the menu must scroll
+    // them into view before they can be tapped.
+    final moonEntry = find.textContaining('Moon ·');
+    await tester.ensureVisible(moonEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(moonEntry);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Solar safety:'), findsNothing);
+
+    // The same picker now switches to the Sun and the card appears.
+    await tester.ensureVisible(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+    final sunEntry = find.textContaining('Sun ·');
+    await tester.ensureVisible(sunEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(sunEntry);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Solar safety:'), findsOneWidget);
+
+    // The Moon's events and the Sun's result warning are covered by
+    // test/unit/features/astronomy/solar_lunar_fixture_test.dart.
+    await unmount(tester);
+  });
+
   testWidgets('the night-sky planner warns about solar safety for the Sun', (
     tester,
   ) async {
@@ -246,11 +283,15 @@ void main() {
     await reveal(tester, targetPicker);
     await tester.tap(targetPicker);
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Sun ·').last);
+    final sunEntry = find.textContaining('Sun ·');
+    await tester.ensureVisible(sunEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(sunEntry);
     await tester.pumpAndSettle();
 
     // The warning is present before the user calculates, not only afterwards.
-    expect(find.textContaining('certified solar filter'), findsWidgets);
+    // Match the card sentence rather than the menu entry label.
+    expect(find.textContaining('Solar safety:'), findsOneWidget);
     // The same warning reaches the result and the saved plan through the
     // calculator's structured warning, which the unit fixture test and the
     // saved-plan warning test cover.

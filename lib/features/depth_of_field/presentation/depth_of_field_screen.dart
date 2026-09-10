@@ -188,9 +188,10 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
               'Focus distance measured from the lens principal plane',
               'Circle of confusion controls acceptable sharpness',
             ],
-            guidance: _result!.warnings.isEmpty
-                ? 'Near and far limits are estimates, not guaranteed sharpness.'
-                : 'Close focus reduces thin-lens model accuracy.',
+            // The close-focus limitation arrives as a warning bullet, so the
+            // guidance line stays general instead of repeating it.
+            guidance:
+                'Near and far limits are estimates, not guaranteed sharpness.',
             warnings: <String>[
               for (final warning in _result!.warnings)
                 calculationWarningText(warning.code),

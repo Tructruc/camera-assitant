@@ -1,31 +1,33 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/presentation/calculator/calculation_warning_text.dart';
 
-void main() {
-  // Every code a calculator can persist into a snapshot warning list. Keeping
-  // the list here means a new code cannot silently reach users as the generic
-  // fallback sentence.
-  const persistedCodes = <String>[
-    'aperture_outside_typical_range',
-    'close_focus',
-    'configuration_estimate',
-    'distortion',
-    'exposure_exceeds_interval',
-    'frame_limit',
-    'greater_than_near',
-    'milkyWayOrientationUndefined',
-    'not_beyond_focal_length',
-    'planningAccuracy',
-    'positive_finite_required',
-    'power_range',
-    'range',
-    'sampling',
-    'sampling_visible',
-    'solarSafety',
-  ];
+/// Every `code: '...'` literal the library can attach to a result, read from
+/// the source so a newly added code cannot silently reach users as the generic
+/// fallback sentence just because nobody updated a hand-written list.
+List<String> _codesInLibrary() {
+  final codes = <String>{};
+  for (final entity in Directory('lib').listSync(recursive: true)) {
+    if (entity is! File || !entity.path.endsWith('.dart')) continue;
+    for (final match in RegExp(
+      r"""code:\s*'([a-zA-Z_]+)'""",
+    ).allMatches(entity.readAsStringSync())) {
+      codes.add(match.group(1)!);
+    }
+  }
+  return codes.toList()..sort();
+}
 
-  test('every persisted warning code has specific wording', () {
-    for (final code in persistedCodes) {
+void main() {
+  test('the library really declares warning codes', () {
+    // Guards the extraction itself: if the pattern or layout changes, this
+    // fails instead of silently checking an empty set.
+    expect(_codesInLibrary().length, greaterThanOrEqualTo(10));
+  });
+
+  test('every declared code has specific wording', () {
+    for (final code in _codesInLibrary()) {
       final text = calculationWarningText(code);
       expect(text, isNotEmpty, reason: '$code must render');
       expect(

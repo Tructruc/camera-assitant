@@ -466,7 +466,9 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
     if (widget.tool == _OpticsTool.diffraction &&
         _outputs['airyDiskPixels'] is double &&
         (_outputs['airyDiskPixels']! as double) >= 2)
-      'The Airy disk spans at least two pixels, so diffraction is visible at this aperture and pixel pitch.',
+      // The exact sentence a reopened plan renders for this condition, so the
+      // live and saved wording cannot drift apart.
+      calculationWarningText('sampling_visible'),
   ];
 
   String _warningMessage(String code) => calculationWarningText(code);
