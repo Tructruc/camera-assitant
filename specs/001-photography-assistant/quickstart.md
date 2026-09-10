@@ -158,3 +158,5 @@ run smoke journeys on representative Android and iOS devices.
 - Domain shapes and persistence lifecycle: [data-model.md](data-model.md)
 - Observable calculator/repository behavior: [contracts/feature-contracts.md](contracts/feature-contracts.md)
 - Product acceptance criteria: [spec.md](spec.md)
+- Scenario-by-scenario automated evidence and the manual remainder:
+  [validation/quickstart-evidence.md](validation/quickstart-evidence.md)
