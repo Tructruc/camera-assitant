@@ -41,8 +41,12 @@ Linux debug bundle); Android device execution still belongs to the T058/T061 qui
 
 `integration_test/optics_flows_test.dart` was added on the same date and covers field of view,
 diffraction guidance, the focus stack planner, the macro planner, and the panorama planner offline in one
-journey. It passes on the host engine (1/1) and likewise awaits the next device pass. With it, the suite
-defines five Android journeys rather than four.
+journey. It passes on the host engine (1/1) and likewise awaits the next device pass.
+
+`integration_test/preferences_flow_test.dart` covers quickstart scenarios 4, 22, and 23 end to end: a
+display and shutter preference change alters presentation, an already saved plan keeps its own display
+context and canonical values, and the same calculation then renders imperial units. It passes on the host
+engine (1/1). With these, the suite defines six Android journeys rather than four.
 
 The local suite additionally covers the independent orientation references and singularities, 200%
 text scaling, camera notes, permanent deletion guards, input-summary semantics, golden layout, and a

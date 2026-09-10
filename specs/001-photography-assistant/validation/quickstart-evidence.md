@@ -18,6 +18,7 @@ dart format --output=none --set-exit-if-changed lib test integration_test   # cl
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/optics_flows_test.dart      # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/equipment_flow_test.dart    # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/planning_flow_test.dart     # 1 passed
+./.tooling/flutterw --no-version-check test --no-pub integration_test/preferences_flow_test.dart  # 1 passed
 ```
 
 `flutter test integration_test/<file>` runs the journeys against the host Flutter engine (a Linux debug
@@ -31,7 +32,7 @@ hardware run described in `quickstart.md`.
 | 1 | Offline start, no sign-in | `test/widget/app/app_shell_test.dart`: starts offline with all primary navigation destinations; `test/privacy/no_network_test.dart`: primary journey never creates a Dart network client | Automated |
 | 2 | Create custom camera and lens | `test/widget/features/equipment/equipment_screens_test.dart` (camera editor labels units; editor prefills an existing lens); `integration_test/equipment_flow_test.dart`: creates, restarts, archives, and restores equipment offline | Automated |
 | 3 | Apply in depth of field, inspect assumptions | `test/unit/features/depth_of_field/depth_of_field_calculator_test.dart`: 50 mm at f/8 focused at 10 m, declares thin-lens assumptions and close-focus limitation; `calculator_screens_test.dart`: saved equipment applies values and identifies provenance | Automated |
-| 4 | Unit change keeps physical equivalence | `depth_of_field_calculator_test.dart`: equivalent millimetre inputs produce identical physical results; `calculator_screens_test.dart`: expanded optics and macro honor imperial display preference | Automated |
+| 4 | Unit change keeps physical equivalence (also end to end) | `depth_of_field_calculator_test.dart`: equivalent millimetre inputs produce identical physical results; `calculator_screens_test.dart`: expanded optics and macro honor imperial display preference | Automated |
 | 5 | Swap exposures reverses the difference | `test/unit/features/exposure_comparison/exposure_calculator_test.dart`: swapping exposures negates stops and reciprocates the multiplier | Automated |
 | 6 | 3-stop + 7-stop ND on 1/30 s | `test/unit/features/long_exposure/long_exposure_calculator_test.dart`: stacked three and seven stops multiply by 1024; `integration_test/calculator_flows_test.dart` | Automated |
 | 7 | Save, edit/archive lens, restart, unchanged payloads | `integration_test/calculator_flows_test.dart`: calculates manually and from saved equipment offline; `snapshot_repository_test.dart`: metadata update never rewrites calculation payload columns | Automated; a real Android process restart is recorded separately in `android.md` |
@@ -50,7 +51,7 @@ hardware run described in `quickstart.md`.
 | 20 | Saved location survives an offline restart | `integration_test/planning_flow_test.dart`: Milky Way plan survives closing and reopening its on-device database; `saved_locations_screen_test.dart` | Automated (real SQLite file on the host engine) |
 | 21 | Live AR with real camera and compass | none | **Device only — pending T058/T059** |
 | 22 | Stop increments and planner defaults | `test/unit/core/presentation/conventional_shutter_formatter_test.dart`; `calculator_screens_test.dart`: planner defaults come from preferences and remain overridable | Automated |
-| 23 | Night-sky snapshot preserves planning context | `calculator_screens_test.dart`: night-sky plans preserve saved observer elevation; `saved_calculations_test.dart`: opens immutable details and edits metadata only; `solar_lunar_fixture_test.dart` for the astronomy tolerances | Automated |
+| 23 | Night-sky snapshot preserves planning context | `integration_test/preferences_flow_test.dart` asserts a saved plan keeps its `distanceUnit: metric` context after the display preference changes; `calculator_screens_test.dart`: night-sky plans preserve saved observer elevation; `saved_calculations_test.dart`: opens immutable details and edits metadata only; `solar_lunar_fixture_test.dart` for the astronomy tolerances | Automated |
 | 24 | Milky Way projected orientation | `test/unit/features/astronomy/milky_way_orientation_test.dart` (eight orientation, wrap, and singularity cases) | Automated |
 | 25 | Camera notes, delete, archive | `equipment_screens_test.dart`: archive action retires active equipment; referenced equipment is archived instead of deleted; editor preserves an existing teleconverter kind; `app_database_test.dart` v3 and v5 fixtures | Automated |
 | 26 | Labelled input summary at 200% | `calculator_components_test.dart`: result exposes the exact calculation inputs accessibly; `text_scale_test.dart` | Automated |
