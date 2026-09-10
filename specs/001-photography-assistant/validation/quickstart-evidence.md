@@ -19,6 +19,7 @@ dart format --output=none --set-exit-if-changed lib test integration_test   # cl
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/equipment_flow_test.dart    # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/planning_flow_test.dart     # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/preferences_flow_test.dart  # 1 passed
+./.tooling/flutterw --no-version-check test --no-pub integration_test/ar_fallback_flow_test.dart  # 1 passed
 ```
 
 `flutter test integration_test/<file>` runs the journeys against the host Flutter engine (a Linux debug
@@ -47,7 +48,7 @@ hardware run described in `quickstart.md`.
 | 16 | 90° × 45° panorama at 30% overlap | `test/unit/features/panorama/panorama_calculator_test.dart`: plans a single horizontal row with minimum covering frames; `expanded_calculators_reference_test.dart` (3 × 2, six frames) | Automated |
 | 17 | Sirius at Greenwich, 500/NPF rules | `test/unit/features/astronomy/astronomy_calculator_test.dart`: places Sirius for the documented Greenwich fixture; calculates 500, NPF, and star-trail guidance | Automated |
 | 18 | One-year alignment range across DST | `test/unit/features/alignment/alignment_calculator_test.dart`; `planning_time_context_test.dart`: converts inclusive local date ranges across daylight saving; `release_budgets_test.dart`: one-year alignment search remains below five seconds | Automated |
-| 19 | Views usable without permissions | `test/widget/features/planning/live_compass_view_test.dart`, `offline_planning_map_test.dart`, `planning_disclosure_test.dart`: the AR view respects detected device capabilities | Automated at widget level; physical permission denial remains manual |
+| 19 | Views usable without permissions | `integration_test/ar_fallback_flow_test.dart` opens the AR view on a machine with no camera and proves it explains itself (`AR unavailable` or `Camera unavailable`) while the numeric plan still renders; `test/widget/features/planning/live_compass_view_test.dart`, `offline_planning_map_test.dart`, `planning_disclosure_test.dart` cover the widget layer | Automated (host has no camera, which is the unavailable case); physical permission denial remains manual |
 | 20 | Saved location survives an offline restart | `integration_test/planning_flow_test.dart`: Milky Way plan survives closing and reopening its on-device database; `saved_locations_screen_test.dart` | Automated (real SQLite file on the host engine) |
 | 21 | Live AR with real camera and compass | none | **Device only — pending T058/T059** |
 | 22 | Stop increments and planner defaults | `test/unit/core/presentation/conventional_shutter_formatter_test.dart`; `calculator_screens_test.dart`: planner defaults come from preferences and remain overridable | Automated |

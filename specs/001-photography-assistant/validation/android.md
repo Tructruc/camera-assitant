@@ -46,7 +46,12 @@ journey. It passes on the host engine (1/1) and likewise awaits the next device 
 `integration_test/preferences_flow_test.dart` covers quickstart scenarios 4, 22, and 23 end to end: a
 display and shutter preference change alters presentation, an already saved plan keeps its own display
 context and canonical values, and the same calculation then renders imperial units. It passes on the host
-engine (1/1). With these, the suite defines six Android journeys rather than four.
+engine (1/1).
+
+`integration_test/ar_fallback_flow_test.dart` opens the live AR view on a host with no camera and asserts
+that it explains the missing capability while the numeric plan stays usable, covering SC-006 and FR-012
+end to end; it passes on the host engine (1/1). With these, the suite defines seven Android journeys
+rather than four.
 
 The local suite additionally covers the independent orientation references and singularities, 200%
 text scaling, camera notes, permanent deletion guards, input-summary semantics, golden layout, and a
