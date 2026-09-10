@@ -35,7 +35,9 @@ The emulator journeys recorded in this run cover:
 `integration_test/calculator_flows_test.dart` also defines
 `editing an input blocks saving until the result is recalculated`, which calculates a depth-of-field
 result, edits the focal length, verifies the result and the save action disappear, recalculates, and saves
-exactly one snapshot. It is covered by the local widget suite today and awaits the next device pass.
+exactly one snapshot. Added on 2026-09-10 and executed successfully on a host build of the same
+integration target (`flutter test integration_test/calculator_flows_test.dart`, 3/3 journeys passed,
+Linux debug bundle); Android device execution still belongs to the T058/T061 quickstart pass.
 
 The local suite additionally covers the independent orientation references and singularities, 200%
 text scaling, camera notes, permanent deletion guards, input-summary semantics, golden layout, and a

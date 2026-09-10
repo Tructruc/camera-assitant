@@ -364,6 +364,7 @@ Phase 19 validation (2026-09-10): `test/widget/features/calculators/calculation_
 drives all twelve calculators plus the alignment planner through calculate, edit, invalidate, recompute,
 and save against an in-memory database; it also proves that caret/selection-only edits keep the result and
 that swapping to an optically identical saved lens invalidates through provenance alone. The offline
-integration journey `editing an input blocks saving until the result is recalculated` covers the same
-state transition on a real device build; it runs with the still-open Android/iOS quickstart passes because
-the agent sandbox has no KVM or writable SDK cache. Local suite, analyzer, and formatter are clean.
+integration journey `editing an input blocks saving until the result is recalculated` executes the same
+state transition on a host build of the app (`flutter test integration_test/calculator_flows_test.dart`,
+3/3 journeys passed); physical Android/iOS execution stays with the open quickstart passes T058/T059
+because the agent sandbox has no KVM device. Local suite (210 tests), analyzer, and formatter are clean.

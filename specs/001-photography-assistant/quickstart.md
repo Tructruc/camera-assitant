@@ -27,6 +27,10 @@ flutter test --coverage
 flutter test integration_test -d <device-id>
 ```
 
+Without a device, `flutter test integration_test/<file>` still builds and runs the journeys against the
+host Flutter engine (verified on Linux); device-only behavior such as real SQLite files, permissions, and
+sensors still requires the emulator or hardware run below.
+
 ### Headless Android emulator on the local Linux workstation
 
 The installed emulator 36.4.9 crashed in `gles_swiftshader/libGLESv2.so` with
