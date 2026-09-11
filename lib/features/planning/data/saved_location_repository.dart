@@ -4,7 +4,7 @@ import '../../../core/data/database/app_database.dart' as db;
 import '../domain/saved_location.dart';
 
 /// Persistence for saved locations. Not `final` so a test can substitute a
-/// failing implementation for the delete path the UI must recover from.
+/// failing implementation for persistence paths the UI must recover from.
 class SavedLocationRepository {
   const SavedLocationRepository(this.database);
   final db.AppDatabase database;

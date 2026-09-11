@@ -285,7 +285,7 @@ void main() {
           overrides: [
             appDatabaseProvider.overrideWithValue(database),
             savedLocationRepositoryProvider.overrideWithValue(
-              _FailingSavedLocationRepository(database),
+              _FailingDeleteSavedLocationRepository(database),
             ),
             devicePlanningServiceProvider.overrideWithValue(
               _FakePlanningService(
@@ -325,6 +325,133 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
     },
   );
+
+  testWidgets('a failed duplicate check keeps the location draft open', (
+    tester,
+  ) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          savedLocationRepositoryProvider.overrideWithValue(
+            _FailingListSavedLocationRepository(database),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add location'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'Unsent dark site');
+    await tester.enterText(fields.at(1), '45');
+    await tester.enterText(fields.at(2), '5');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Saved locations could not be checked. Try again.'),
+      findsOneWidget,
+    );
+    expect(find.text('Add saved location'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(fields.at(0)).controller!.text,
+      'Unsent dark site',
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('a failed save keeps the location values available to retry', (
+    tester,
+  ) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          savedLocationRepositoryProvider.overrideWithValue(
+            _FailingSaveSavedLocationRepository(database),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add location'));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), 'Retry dark site');
+    await tester.enterText(fields.at(1), '45');
+    await tester.enterText(fields.at(2), '5');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Your values are still here'), findsOneWidget);
+    expect(find.text('Add saved location'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(fields.at(0)).controller!.text,
+      'Retry dark site',
+    );
+    expect(await SavedLocationRepository(database).listAll(), isEmpty);
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('editing a device location preserves its source and accuracy', (
+    tester,
+  ) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = SavedLocationRepository(database);
+    await repository.save(
+      SavedLocation(
+        id: 'device-site',
+        name: 'Device site',
+        latitudeDegrees: 45,
+        longitudeDegrees: 5,
+        timeZoneId: 'Europe/Paris',
+        source: LocationSource.device,
+        accuracyMetres: 8,
+        createdAt: DateTime.utc(2026),
+        updatedAt: DateTime.utc(2026),
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Device site'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Edited device site');
+    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.pumpAndSettle();
+
+    final stored = (await repository.listAll()).single;
+    expect(stored.name, 'Edited device site');
+    expect(stored.source, LocationSource.device);
+    expect(stored.accuracyMetres, 8);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 
   testWidgets('a denied or absent location service explains the fallback', (
     tester,
@@ -374,10 +501,29 @@ void main() {
   });
 }
 
-/// Fails deletes only, standing in for a locked or full database.
-final class _FailingSavedLocationRepository extends SavedLocationRepository {
-  _FailingSavedLocationRepository(super.database);
+/// Fails deletes, standing in for a locked or full database.
+final class _FailingDeleteSavedLocationRepository
+    extends SavedLocationRepository {
+  _FailingDeleteSavedLocationRepository(super.database);
 
   @override
   Future<void> delete(String id) async => throw StateError('write failed');
+}
+
+final class _FailingListSavedLocationRepository
+    extends SavedLocationRepository {
+  _FailingListSavedLocationRepository(super.database);
+
+  @override
+  Future<List<SavedLocation>> listAll() async =>
+      throw StateError('read failed');
+}
+
+final class _FailingSaveSavedLocationRepository
+    extends SavedLocationRepository {
+  _FailingSaveSavedLocationRepository(super.database);
+
+  @override
+  Future<void> save(SavedLocation location) async =>
+      throw StateError('write failed');
 }

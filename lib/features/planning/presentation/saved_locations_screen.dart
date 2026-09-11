@@ -184,7 +184,7 @@ class SavedLocationsScreen extends ConsumerWidget {
     );
     final errors = <String, String>{};
     var saving = false;
-    final saved = await showDialog<bool>(
+    await showDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -230,12 +230,21 @@ class SavedLocationsScreen extends ConsumerWidget {
                     errorText: errors['timeZoneId'],
                   ),
                 ),
+                if (errors['save'] case final message?) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: saving ? null : () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
             FilledButton(
@@ -244,7 +253,10 @@ class SavedLocationsScreen extends ConsumerWidget {
               onPressed: saving
                   ? null
                   : () async {
-                      setDialogState(() => saving = true);
+                      setDialogState(() {
+                        saving = true;
+                        errors.remove('save');
+                      });
                       final found = validateLocationDraft(
                         name: name.text,
                         latitude: latitude.text,
@@ -255,9 +267,20 @@ class SavedLocationsScreen extends ConsumerWidget {
                       if (found.isEmpty) {
                         // The database enforces unique names, but a raw constraint
                         // error is not actionable; check first and name the field.
-                        final existing = await ref
-                            .read(savedLocationRepositoryProvider)
-                            .listAll();
+                        final List<SavedLocation> existing;
+                        try {
+                          existing = await ref
+                              .read(savedLocationRepositoryProvider)
+                              .listAll();
+                        } on Object {
+                          if (!context.mounted) return;
+                          setDialogState(() {
+                            saving = false;
+                            errors['save'] =
+                                'Saved locations could not be checked. Try again.';
+                          });
+                          return;
+                        }
                         final duplicate = existing.any(
                           (site) =>
                               site.normalizedName ==
@@ -270,6 +293,7 @@ class SavedLocationsScreen extends ConsumerWidget {
                         }
                       }
                       if (found.isNotEmpty) {
+                        if (!context.mounted) return;
                         setDialogState(() {
                           saving = false;
                           errors
@@ -278,7 +302,40 @@ class SavedLocationsScreen extends ConsumerWidget {
                         });
                         return;
                       }
-                      if (context.mounted) Navigator.pop(context, true);
+                      final now = DateTime.now().toUtc();
+                      try {
+                        await ref
+                            .read(savedLocationRepositoryProvider)
+                            .save(
+                              SavedLocation(
+                                id: location?.id ?? const Uuid().v4(),
+                                name: name.text,
+                                latitudeDegrees: double.parse(latitude.text),
+                                longitudeDegrees: double.parse(longitude.text),
+                                elevationMetres: elevation.text.trim().isEmpty
+                                    ? null
+                                    : double.parse(elevation.text),
+                                timeZoneId: timezone.text,
+                                source: reading != null
+                                    ? LocationSource.device
+                                    : location?.source ?? LocationSource.manual,
+                                accuracyMetres:
+                                    reading?.accuracyMetres ??
+                                    location?.accuracyMetres,
+                                createdAt: location?.createdAt ?? now,
+                                updatedAt: now,
+                              ),
+                            );
+                      } on Object {
+                        if (!context.mounted) return;
+                        setDialogState(() {
+                          saving = false;
+                          errors['save'] =
+                              'The location could not be saved. Your values are still here; try again.';
+                        });
+                        return;
+                      }
+                      if (context.mounted) Navigator.pop(context);
                     },
               child: const Text('Save'),
             ),
@@ -286,42 +343,6 @@ class SavedLocationsScreen extends ConsumerWidget {
         ),
       ),
     );
-    if (saved == true) {
-      try {
-        final now = DateTime.now().toUtc();
-        await ref
-            .read(savedLocationRepositoryProvider)
-            .save(
-              SavedLocation(
-                id: location?.id ?? const Uuid().v4(),
-                name: name.text,
-                latitudeDegrees: double.parse(latitude.text),
-                longitudeDegrees: double.parse(longitude.text),
-                elevationMetres: elevation.text.trim().isEmpty
-                    ? null
-                    : double.parse(elevation.text),
-                timeZoneId: timezone.text,
-                source: reading == null
-                    ? LocationSource.manual
-                    : LocationSource.device,
-                accuracyMetres:
-                    reading?.accuracyMetres ?? location?.accuracyMetres,
-                createdAt: location?.createdAt ?? now,
-                updatedAt: now,
-              ),
-            );
-      } on Object {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'The location could not be saved. Check the values and try again; nothing was changed.',
-              ),
-            ),
-          );
-        }
-      }
-    }
   }
 }
 
