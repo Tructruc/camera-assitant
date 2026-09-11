@@ -153,6 +153,45 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 
+  testWidgets('an unasked permission still opens the dialog', (tester) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          devicePlanningServiceProvider.overrideWithValue(
+            _FakePlanningService(
+              status: CapabilityStatus.permissionRequired,
+              reading: const DeviceLocationReading(
+                latitude: 51.4779,
+                longitude: 0,
+                accuracyMetres: 8,
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Use current location'));
+    await tester.pumpAndSettle();
+    // The status only says the permission has not been granted yet, so the
+    // request proceeds and the dialog prefills.
+    expect(find.text('Add saved location'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.widgetWithText(TextField, 'Latitude'))
+          .controller!
+          .text,
+      '51.4779',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
   testWidgets('invalid coordinates are rejected inline, not by exception', (
     tester,
   ) async {

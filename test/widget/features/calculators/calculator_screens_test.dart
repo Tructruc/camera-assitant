@@ -312,7 +312,9 @@ void main() {
     expect(find.text('Planning context'), findsOneWidget);
     expect(find.text('Mountain site'), findsOneWidget);
     expect(find.textContaining('±8 m reported accuracy'), findsOneWidget);
-    expect(find.text('3842.0 m'), findsOneWidget);
+    // Elevation presentation follows the length preference, like every other
+    // distance in the app; the canonical value stays in metres.
+    expect(find.text('3842.00 m'), findsOneWidget);
     expect(find.textContaining('SIMBAD'), findsOneWidget);
     expect(find.textContaining('approximately ±0.25°'), findsOneWidget);
     await tester.scrollUntilVisible(
@@ -806,6 +808,66 @@ void main() {
       'lens-optics',
     ]);
     expect(snapshot.equipment.first.values['sensorWidthMm'], 23.5);
+  });
+
+  testWidgets('flash and planner elevations honor the imperial preference', (
+    tester,
+  ) async {
+    const imperial = AppPreferences(lengthDisplay: LengthDisplay.imperial);
+
+    await tester.pumpWidget(
+      app(const FlashExposureScreen(), preferences: imperial),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Calculate flash exposure'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Calculate flash exposure'));
+    await tester.pumpAndSettle();
+    // Guide number 40 m is about 131 ft, and the snapshot records the unit.
+    expect(find.textContaining('131.2'), findsWidgets);
+    expect(find.textContaining('ft'), findsWidgets);
+    final flashSave = find.widgetWithText(FilledButton, 'Save result');
+    await tester.scrollUntilVisible(
+      flashSave,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(flashSave);
+    await tester.pumpAndSettle();
+    await tester.tap(flashSave);
+    await tester.pumpAndSettle();
+
+    final flashSnapshot = (await DriftSnapshotRepository(
+      database,
+    ).listNewestFirst()).single;
+    expect(flashSnapshot.displayContext['distanceUnit'], 'imperial');
+  });
+
+  testWidgets('night-sky elevation follows the length preference', (
+    tester,
+  ) async {
+    const imperial = AppPreferences(lengthDisplay: LengthDisplay.imperial);
+    await tester.pumpWidget(
+      app(const AstronomyScreen(), preferences: imperial),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Observer elevation (m)'),
+      '1200',
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Plan night sky'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Plan night sky'));
+    await tester.pumpAndSettle();
+    // 1200 m is about 3937 ft; the canonical input stays in metres.
+    expect(find.textContaining('3937.01 ft'), findsOneWidget);
   });
 
   testWidgets('expanded optics and macro honor imperial display preference', (

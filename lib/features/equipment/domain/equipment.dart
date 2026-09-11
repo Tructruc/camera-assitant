@@ -270,7 +270,14 @@ String _displayName(String value) {
   return required.replaceAll(RegExp(r'\s+'), ' ');
 }
 
-String _normalizeName(String value) => _displayName(value).toLowerCase();
+String _normalizeName(String value) => normalizeEquipmentName(value);
+
+/// The stored uniqueness key for an equipment name: surrounding whitespace
+/// trimmed, internal whitespace collapsed, and lower-cased. Exposed so callers
+/// that pre-check a name use exactly the rule the domain and the partial unique
+/// index apply.
+String normalizeEquipmentName(String value) =>
+    _displayName(value).toLowerCase();
 
 double _positive(double value, String field) {
   if (!value.isFinite || value <= 0) {

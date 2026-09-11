@@ -676,6 +676,17 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
     return '${location.source.name}${accuracy == null ? '' : ' · ±${accuracy.toStringAsFixed(0)} m reported accuracy'}';
   }
 
+  /// Elevations are entered and stored in metres; only their presentation
+  /// follows the saved length preference (FR-020).
+  String _metres(String text) {
+    final value = double.tryParse(text.trim());
+    if (value == null || !value.isFinite) return '$text m';
+    final display =
+        ref.watch(preferencesProvider).valueOrNull?.lengthDisplay ??
+        LengthDisplay.metric;
+    return formatDisplayLength(value * 1000, display);
+  }
+
   String get _expectedAccuracy => _body == AlignmentBody.sun
       ? 'About ±1° position; candidate times sampled every 10 minutes. Geocentric model: topocentric parallax is not applied.'
       : 'About ±1.5° position; candidate times sampled every 10 minutes. Geocentric model: lunar parallax up to about 1° is not applied, which is inside this tolerance.';
@@ -696,7 +707,7 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         ('Time-zone rules', time.confidenceLabel),
         (
           'Elevations',
-          'observer ${_observerElevation.text} m · target ${_targetElevation.text} m',
+          'observer ${_metres(_observerElevation.text)} · target ${_metres(_targetElevation.text)}',
         ),
         (
           'North reference',

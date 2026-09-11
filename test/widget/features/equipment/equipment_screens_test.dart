@@ -569,6 +569,111 @@ void main() {
     expect(await repository.listCameras(), hasLength(2));
   });
 
+  testWidgets('an archived name can be reused by a new item', (
+    WidgetTester tester,
+  ) async {
+    await repository.createCamera(
+      domain.CameraBody(
+        id: 'camera-old',
+        name: 'Field Camera',
+        sensorWidthMm: 36,
+        sensorHeightMm: 24,
+        provenance: const domain.EquipmentProvenance(
+          source: domain.EquipmentSource.user,
+        ),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      ),
+    );
+    await repository.archiveCamera('camera-old');
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    // Showing archived rows must not make the retired name unavailable: the
+    // unique index only covers active items.
+    final archivedChip = find.widgetWithText(FilterChip, 'Include archived');
+    await tester.ensureVisible(archivedChip);
+    await tester.pumpAndSettle();
+    await tester.tap(archivedChip);
+    await tester.pumpAndSettle();
+    expect(find.text('Field Camera'), findsOneWidget);
+
+    await tester.tap(find.text('Add equipment'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add camera'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Camera name'),
+      'Field Camera',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor width (mm)'),
+      '36',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor height (mm)'),
+      '24',
+    );
+    await tester.scrollUntilVisible(
+      find.text('Save camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Save camera'));
+    await tester.pumpAndSettle();
+
+    expect(await repository.listCameras(), hasLength(1));
+    expect(await repository.listCameras(includeArchived: true), hasLength(2));
+  });
+
+  testWidgets('a clash differing only by repeated spaces is still caught', (
+    WidgetTester tester,
+  ) async {
+    await repository.createCamera(
+      domain.CameraBody(
+        id: 'camera-spaced',
+        name: 'Field Camera',
+        sensorWidthMm: 36,
+        sensorHeightMm: 24,
+        provenance: const domain.EquipmentProvenance(
+          source: domain.EquipmentSource.user,
+        ),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      ),
+    );
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add equipment'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add camera'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Camera name'),
+      'Field  Camera',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor width (mm)'),
+      '36',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor height (mm)'),
+      '24',
+    );
+    await tester.scrollUntilVisible(
+      find.text('Save camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Save camera'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Another active item already uses this name.'),
+      findsOneWidget,
+    );
+    expect(await repository.listCameras(), hasLength(1));
+  });
+
   testWidgets('create, restart, and permanent delete remain fully offline', (
     tester,
   ) async {

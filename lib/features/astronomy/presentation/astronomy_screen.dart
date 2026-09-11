@@ -787,6 +787,17 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       'Planning-grade: approximately ±0.25° position and ±2 minutes for events',
   };
 
+  /// Elevation is entered and stored in metres; only its presentation follows
+  /// the saved length preference (FR-020).
+  String _metres(String text) {
+    final value = double.tryParse(text.trim());
+    if (value == null || !value.isFinite) return '$text m';
+    final display =
+        ref.watch(preferencesProvider).valueOrNull?.lengthDisplay ??
+        LengthDisplay.metric;
+    return formatDisplayLength(value * 1000, display);
+  }
+
   Widget _planningContext() {
     final time = PlanningTimeContext.parse(_timeZoneId);
     const catalog = AstronomyCatalogMetadata.current;
@@ -799,7 +810,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         ('Location', location?.name ?? 'Manual coordinates'),
         ('Coordinates', '${_latitude.text}, ${_longitude.text}'),
         ('Location data', locationDetail),
-        ('Elevation', '${_elevation.text} m'),
+        ('Elevation', _metres(_elevation.text)),
         ('Local time', time.format(_instantUtc)),
         (
           'Canonical UTC',
@@ -866,7 +877,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       PlanningView.map => OfflinePlanningMap(
         desiredBearingDegrees: output.azimuthDegrees,
         observerLabel:
-            'Observer ${_latitude.text}, ${_longitude.text} · ${_elevation.text} m',
+            'Observer ${_latitude.text}, ${_longitude.text} · ${_metres(_elevation.text)}',
         markers: [
           PlanningMapMarker(
             bearingDegrees: output.azimuthDegrees,

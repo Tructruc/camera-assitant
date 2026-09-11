@@ -29,8 +29,6 @@ void main() {
     final constructors = <Object? Function(double)>[
       Aperture.new,
       ExposureTime.seconds,
-      Sensitivity.iso,
-      CircleOfConfusion.millimetres,
     ];
 
     for (final constructor in constructors) {

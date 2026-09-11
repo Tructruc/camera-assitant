@@ -68,12 +68,6 @@ final class ExposureTime {
   final double seconds;
 }
 
-/// A positive ISO sensitivity.
-final class Sensitivity {
-  Sensitivity.iso(double value) : iso = _positiveFinite(value, 'iso');
-  final double iso;
-}
-
 /// A signed exposure difference measured in base-2 stops.
 final class StopDifference {
   StopDifference(double value) : stops = _finite(value, 'stops');
@@ -93,11 +87,4 @@ final class FilterStrength {
     }
     return finite;
   }
-}
-
-/// A positive circle of confusion stored in millimetres.
-final class CircleOfConfusion {
-  CircleOfConfusion.millimetres(double value)
-    : millimetres = _positiveFinite(value, 'millimetres');
-  final double millimetres;
 }

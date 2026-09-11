@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
@@ -33,92 +35,112 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => CalculatorPage(
-    inputControllers: [_guideNumber, _iso, _power, _distance],
-    onInputsChanged: () {
-      if (_result != null || _errors.isNotEmpty) {
-        setState(() {
-          _result = null;
-          _errors = const {};
-        });
-      }
-    },
-    children: [
-      Text('Flash exposure', style: Theme.of(context).textTheme.headlineSmall),
-      const SizedBox(height: 8),
-      const Text(
-        'Estimate direct-flash aperture from guide number, ISO, power, and distance.',
-      ),
-      const SizedBox(height: 16),
-      CalculatorNumberField(
-        label: 'Guide number at ISO 100 (metres)',
-        controller: _guideNumber,
-        errorText: _errors['guideNumberIso100Metres'],
-        fieldKey: const Key('flash-guide-number'),
-      ),
-      CalculatorNumberField(
-        label: 'ISO',
-        controller: _iso,
-        errorText: _errors['iso'],
-      ),
-      CalculatorNumberField(
-        label: 'Power fraction (1, 0.5, 0.25…)',
-        controller: _power,
-        errorText: _errors['powerFraction'],
-      ),
-      CalculatorNumberField(
-        label: 'Subject distance (metres)',
-        controller: _distance,
-        errorText: _errors['subjectDistanceMetres'],
-      ),
-      FilledButton(
-        onPressed: _calculate,
-        child: const Text('Calculate flash exposure'),
-      ),
-      const SizedBox(height: 16),
-      if (_result?.output case final output?)
-        CalculationResultView(
-          title: 'Flash exposure result',
-          inputs: [
-            ('Guide number at ISO 100', '${_guideNumber.text.trim()} m'),
-            ('ISO', _iso.text.trim()),
-            ('Power fraction', _power.text.trim()),
-            ('Subject distance', '${_distance.text.trim()} m'),
-          ],
-          rows: [
-            (
-              'Recommended aperture',
-              'f/${output.recommendedAperture.toStringAsFixed(1)}',
-            ),
-            (
-              'Effective guide number',
-              '${output.effectiveGuideNumberMetres.toStringAsFixed(1)} m',
-            ),
-            (
-              'Power reduction',
-              '${output.powerReductionStops.toStringAsFixed(1)} stops',
-            ),
-            (
-              'Full-power range at that aperture',
-              '${output.fullPowerRangeAtRecommendedApertureMetres.toStringAsFixed(1)} m',
-            ),
-          ],
-          assumptions: const [
-            'Direct flash aimed at the subject',
-            'Guide number is a nominal manufacturer rating',
-            'Modifiers, bounce loss, ambient light, and TTL metering are not modeled',
-          ],
-          guidance:
-              'Use this as a starting exposure. Check the histogram and highlights, especially with bounce or modifiers.',
-          warnings: <String>[
-            for (final warning in _result!.warnings)
-              calculationWarningText(warning.code),
-          ],
-          onSave: () => _save(output),
-          onReset: _reset,
+  Widget build(BuildContext context) {
+    // Distance presentation follows the saved length preference (FR-020) while
+    // the canonical inputs and snapshot values stay in metres.
+    final lengthDisplay =
+        ref.watch(preferencesProvider).valueOrNull?.lengthDisplay ??
+        LengthDisplay.metric;
+    String distance(double metres) =>
+        formatDisplayLength(metres * 1000, lengthDisplay);
+    return CalculatorPage(
+      inputControllers: [_guideNumber, _iso, _power, _distance],
+      onInputsChanged: () {
+        if (_result != null || _errors.isNotEmpty) {
+          setState(() {
+            _result = null;
+            _errors = const {};
+          });
+        }
+      },
+      children: [
+        Text(
+          'Flash exposure',
+          style: Theme.of(context).textTheme.headlineSmall,
         ),
-    ],
-  );
+        const SizedBox(height: 8),
+        const Text(
+          'Estimate direct-flash aperture from guide number, ISO, power, and distance.',
+        ),
+        const SizedBox(height: 16),
+        CalculatorNumberField(
+          label: 'Guide number at ISO 100 (metres)',
+          controller: _guideNumber,
+          errorText: _errors['guideNumberIso100Metres'],
+          fieldKey: const Key('flash-guide-number'),
+        ),
+        CalculatorNumberField(
+          label: 'ISO',
+          controller: _iso,
+          errorText: _errors['iso'],
+        ),
+        CalculatorNumberField(
+          label: 'Power fraction (1, 0.5, 0.25…)',
+          controller: _power,
+          errorText: _errors['powerFraction'],
+        ),
+        CalculatorNumberField(
+          label: 'Subject distance (metres)',
+          controller: _distance,
+          errorText: _errors['subjectDistanceMetres'],
+        ),
+        FilledButton(
+          onPressed: _calculate,
+          child: const Text('Calculate flash exposure'),
+        ),
+        const SizedBox(height: 16),
+        if (_result?.output case final output?)
+          CalculationResultView(
+            title: 'Flash exposure result',
+            inputs: [
+              (
+                'Guide number at ISO 100',
+                distance(
+                  double.tryParse(_guideNumber.text.trim()) ?? double.nan,
+                ),
+              ),
+              ('ISO', _iso.text.trim()),
+              ('Power fraction', _power.text.trim()),
+              (
+                'Subject distance',
+                distance(double.tryParse(_distance.text.trim()) ?? double.nan),
+              ),
+            ],
+            rows: [
+              (
+                'Recommended aperture',
+                'f/${output.recommendedAperture.toStringAsFixed(1)}',
+              ),
+              (
+                'Effective guide number',
+                distance(output.effectiveGuideNumberMetres),
+              ),
+              (
+                'Power reduction',
+                '${output.powerReductionStops.toStringAsFixed(1)} stops',
+              ),
+              (
+                'Full-power range at that aperture',
+                distance(output.fullPowerRangeAtRecommendedApertureMetres),
+              ),
+            ],
+            assumptions: const [
+              'Direct flash aimed at the subject',
+              'Guide number is a nominal manufacturer rating',
+              'Modifiers, bounce loss, ambient light, and TTL metering are not modeled',
+            ],
+            guidance:
+                'Use this as a starting exposure. Check the histogram and highlights, especially with bounce or modifiers.',
+            warnings: <String>[
+              for (final warning in _result!.warnings)
+                calculationWarningText(warning.code),
+            ],
+            onSave: () => _save(output),
+            onReset: _reset,
+          ),
+      ],
+    );
+  }
 
   double _number(TextEditingController controller) =>
       double.tryParse(controller.text.trim()) ?? double.nan;
@@ -142,6 +164,10 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
     });
   }
 
+  LengthDisplay get _lengthDisplay =>
+      ref.read(preferencesProvider).valueOrNull?.lengthDisplay ??
+      LengthDisplay.metric;
+
   Future<void> _save(FlashExposureOutput output) => saveCalculationSnapshot(
     context,
     ref,
@@ -164,7 +190,7 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
         'fullPowerRangeAtRecommendedApertureMetres':
             output.fullPowerRangeAtRecommendedApertureMetres,
       },
-      displayContext: const {'guideNumberUnits': 'metres'},
+      displayContext: {'distanceUnit': _lengthDisplay.name},
       assumptions: _result!.assumptions,
       warnings: _result!.warnings,
     ),

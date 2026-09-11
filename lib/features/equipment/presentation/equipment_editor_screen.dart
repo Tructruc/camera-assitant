@@ -246,7 +246,9 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
     // Active names must be unique per kind. Checking here names the field
     // instead of letting the database constraint surface as a generic failure;
     // the constraint stays as the backstop for a race or another kind.
-    final wanted = _name.text.trim().toLowerCase();
+    // Use the domain's own normalization, so a name that differs only by
+    // repeated spaces still matches the stored uniqueness key.
+    final wanted = normalizeEquipmentName(_name.text);
     // Fail open: if the inventory is not reachable this convenience check is
     // skipped and the database constraint decides, which the catch below turns
     // into the generic recovery message. Isolated widget tests render the
@@ -259,6 +261,10 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           .any(
             (entry) =>
                 entry.item.normalizedName == wanted &&
+                // Only active items hold the name: the unique index is partial
+                // (WHERE archived_at IS NULL), so an archived item must not
+                // block a replacement.
+                !entry.item.isArchived &&
                 entry.item.id != widget.item?.id,
           );
     } on Object {
