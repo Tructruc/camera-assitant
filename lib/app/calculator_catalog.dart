@@ -15,6 +15,7 @@ import '../features/panorama/presentation/panorama_screen.dart';
 import '../features/planning/presentation/saved_locations_screen.dart';
 import '../features/timelapse/presentation/timelapse_screen.dart';
 import 'providers.dart';
+import 'theme/app_theme.dart';
 
 enum CalculatorDestination {
   savedLocations(
@@ -231,7 +232,10 @@ class _CalculatorCatalogScreenState
                   Icon(
                     _purposeIcon(purpose),
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: accentForIcon(
+                      _purposeIcon(purpose),
+                      AppAccents.of(context),
+                    ).onContainer,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -258,10 +262,20 @@ class _CalculatorCatalogScreenState
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      color: accentForIcon(
+                        calculator.icon,
+                        AppAccents.of(context),
+                      ).container,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(calculator.icon, size: 20),
+                    child: Icon(
+                      calculator.icon,
+                      size: 20,
+                      color: accentForIcon(
+                        calculator.icon,
+                        AppAccents.of(context),
+                      ).onContainer,
+                    ),
                   ),
                   title: Text(calculator.label),
                   subtitle: Text(

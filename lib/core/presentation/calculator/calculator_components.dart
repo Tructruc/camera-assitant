@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/app_theme.dart';
 import '../../../app/theme/design_tokens.dart';
 import '../../data/repositories/preferences_repository.dart';
 
@@ -40,6 +41,7 @@ class CalculatorHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accent = accentForIcon(icon, AppAccents.of(context));
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -47,14 +49,10 @@ class CalculatorHeader extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
+            color: accent.container,
             borderRadius: AppRadius.controlAll,
           ),
-          child: Icon(
-            icon,
-            size: 22,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
+          child: Icon(icon, size: 22, color: accent.onContainer),
         ),
         const SizedBox(width: AppGap.md),
         Expanded(

@@ -10,13 +10,175 @@ import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
 
+/// A tinted pair used to colour-code a tool family.
+class AccentPair {
+  const AccentPair({required this.container, required this.onContainer});
+
+  final Color container;
+  final Color onContainer;
+}
+
+/// Per-family accents so the catalog and every screen header carry the same
+/// colour for the same kind of work (planning, optics, exposure, capture,
+/// macro) instead of one grey icon tile everywhere.
+class AppAccents extends ThemeExtension<AppAccents> {
+  const AppAccents({
+    required this.planning,
+    required this.optics,
+    required this.exposure,
+    required this.capture,
+    required this.macro,
+  });
+
+  final AccentPair planning;
+  final AccentPair optics;
+  final AccentPair exposure;
+  final AccentPair capture;
+  final AccentPair macro;
+
+  static const AppAccents light = AppAccents(
+    planning: AccentPair(
+      container: Color(0xffd7e6f5),
+      onContainer: Color(0xff12314a),
+    ),
+    optics: AccentPair(
+      container: Color(0xffffe2be),
+      onContainer: Color(0xff3a2000),
+    ),
+    exposure: AccentPair(
+      container: Color(0xffffdcc7),
+      onContainer: Color(0xff3d1b00),
+    ),
+    capture: AccentPair(
+      container: Color(0xffcde8e4),
+      onContainer: Color(0xff0e3531),
+    ),
+    macro: AccentPair(
+      container: Color(0xffd6e8ce),
+      onContainer: Color(0xff17300f),
+    ),
+  );
+
+  static const AppAccents dark = AppAccents(
+    planning: AccentPair(
+      container: Color(0xff14344a),
+      onContainer: Color(0xffcbe4f7),
+    ),
+    optics: AccentPair(
+      container: Color(0xff4a2e00),
+      onContainer: Color(0xffffdfb9),
+    ),
+    exposure: AccentPair(
+      container: Color(0xff4a2400),
+      onContainer: Color(0xffffd9bf),
+    ),
+    capture: AccentPair(
+      container: Color(0xff123b36),
+      onContainer: Color(0xffbee7e1),
+    ),
+    macro: AccentPair(
+      container: Color(0xff1e3a16),
+      onContainer: Color(0xffcbe8bf),
+    ),
+  );
+
+  /// Night mode keeps every accent in the red family so no tile emits blue or
+  /// green light at a dark-adapted eye.
+  static const AppAccents lowLight = AppAccents(
+    planning: AccentPair(
+      container: Color(0xff241012),
+      onContainer: Color(0xffeec7c2),
+    ),
+    optics: AccentPair(
+      container: Color(0xff2e1512),
+      onContainer: Color(0xfff2cdc7),
+    ),
+    exposure: AccentPair(
+      container: Color(0xff301613),
+      onContainer: Color(0xfff4cfc9),
+    ),
+    capture: AccentPair(
+      container: Color(0xff221110),
+      onContainer: Color(0xffecc5c0),
+    ),
+    macro: AccentPair(
+      container: Color(0xff281410),
+      onContainer: Color(0xfff0cac4),
+    ),
+  );
+
+  static AppAccents of(BuildContext context) =>
+      Theme.of(context).extension<AppAccents>() ?? light;
+
+  @override
+  AppAccents copyWith({
+    AccentPair? planning,
+    AccentPair? optics,
+    AccentPair? exposure,
+    AccentPair? capture,
+    AccentPair? macro,
+  }) => AppAccents(
+    planning: planning ?? this.planning,
+    optics: optics ?? this.optics,
+    exposure: exposure ?? this.exposure,
+    capture: capture ?? this.capture,
+    macro: macro ?? this.macro,
+  );
+
+  @override
+  AppAccents lerp(covariant AppAccents? other, double t) {
+    if (other == null) return this;
+    AccentPair mix(AccentPair a, AccentPair b) => AccentPair(
+      container: Color.lerp(a.container, b.container, t)!,
+      onContainer: Color.lerp(a.onContainer, b.onContainer, t)!,
+    );
+    return AppAccents(
+      planning: mix(planning, other.planning),
+      optics: mix(optics, other.optics),
+      exposure: mix(exposure, other.exposure),
+      capture: mix(capture, other.capture),
+      macro: mix(macro, other.macro),
+    );
+  }
+}
+
+/// The accent for a screen, matched by the tool icon the catalog already uses.
+///
+/// Keeping the lookup here means a header and its catalog tile can never
+/// disagree about which family a tool belongs to.
+AccentPair accentForIcon(IconData icon, AppAccents accents) => switch (icon) {
+  Icons.location_on_outlined ||
+  Icons.align_horizontal_left ||
+  Icons.nightlight_round => accents.planning,
+  Icons.center_focus_strong ||
+  Icons.aspect_ratio ||
+  Icons.blur_circular ||
+  Icons.layers_outlined => accents.optics,
+  Icons.exposure ||
+  Icons.timer_outlined ||
+  Icons.flash_on_outlined => accents.exposure,
+  Icons.movie_creation_outlined ||
+  Icons.panorama_horizontal_outlined => accents.capture,
+  Icons.local_florist_outlined => accents.macro,
+  _ => accents.optics,
+};
+
 /// Application theme definitions with field-friendly control sizing.
 abstract final class AppTheme {
-  static final ThemeData light = _build(_lightScheme, _textTheme(_lightScheme));
-  static final ThemeData dark = _build(_darkScheme, _textTheme(_darkScheme));
+  static final ThemeData light = _build(
+    _lightScheme,
+    _textTheme(_lightScheme),
+    AppAccents.light,
+  );
+  static final ThemeData dark = _build(
+    _darkScheme,
+    _textTheme(_darkScheme),
+    AppAccents.dark,
+  );
   static final ThemeData lowLight = _build(
     _lowLightScheme,
     _textTheme(_lowLightScheme),
+    AppAccents.lowLight,
   );
 
   // ---------------------------------------------------------------- palette
@@ -211,10 +373,15 @@ abstract final class AppTheme {
 
   // ------------------------------------------------------------------ theme
 
-  static ThemeData _build(ColorScheme scheme, TextTheme text) {
+  static ThemeData _build(
+    ColorScheme scheme,
+    TextTheme text,
+    AppAccents accents,
+  ) {
     final outline = scheme.outlineVariant;
     return ThemeData(
       colorScheme: scheme,
+      extensions: <ThemeExtension<Object?>>[accents],
       textTheme: text,
       useMaterial3: true,
       scaffoldBackgroundColor: scheme.surface,
