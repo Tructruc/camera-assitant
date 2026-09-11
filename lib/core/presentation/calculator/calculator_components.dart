@@ -109,6 +109,96 @@ class CalculatorFieldPair extends StatelessWidget {
   );
 }
 
+/// The shape of the content that is about to arrive.
+///
+/// Static on purpose: a pulsing placeholder would keep `pumpAndSettle` busy and
+/// these screens resolve from a local database in a frame or two.
+class LoadingSkeleton extends StatelessWidget {
+  const LoadingSkeleton({
+    required this.label,
+    this.rows = 4,
+    this.rowHeight = 76,
+    super.key,
+  });
+
+  final String label;
+  final int rows;
+  final double rowHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // A Column, not a ListView: this placeholder is dropped inside parents that
+    // already scroll, and a nested viewport would have unbounded height. The
+    // row count is capped to the space actually available so it can never
+    // overflow a short viewport either.
+    return Semantics(
+      container: true,
+      label: label,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final budget = constraints.maxHeight.isFinite
+              ? constraints.maxHeight - AppGap.lg * 2
+              : double.infinity;
+          final fitting = budget.isFinite
+              ? (budget / (rowHeight + AppGap.md)).floor()
+              : rows;
+          final visible = fitting.clamp(1, rows);
+          return Padding(
+            padding: const EdgeInsets.all(AppGap.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (var index = 0; index < visible; index++)
+                  Padding(
+                    padding: EdgeInsets.only(
+                      bottom: index == visible - 1 ? 0 : AppGap.md,
+                    ),
+                    child: Container(
+                      height: rowHeight,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainer,
+                        borderRadius: AppRadius.cardAll,
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(AppGap.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Container(
+                            width: index.isEven ? 180 : 140,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                          const SizedBox(height: AppGap.sm),
+                          Container(
+                            width: index.isEven ? 240 : 200,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// An empty list, search result, or first-run screen.
 ///
 /// One icon in a tinted well, a short title and a sentence that says what to do

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../app/theme/design_tokens.dart';
 import '../../../core/data/repositories/preferences_repository.dart';
+import '../../../core/presentation/calculator/calculator_components.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -12,8 +13,10 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(preferencesProvider);
     return preferences.when(
-      loading: () => const Center(
-        child: CircularProgressIndicator(semanticsLabel: 'Loading settings'),
+      loading: () => const LoadingSkeleton(
+        label: 'Loading settings',
+        rowHeight: 120,
+        rows: 5,
       ),
       error: (_, _) => const Center(
         child: Padding(

@@ -86,7 +86,7 @@ class EquipmentListScreen extends ConsumerWidget {
   ) {
     return switch (state.status) {
       EquipmentLoadStatus.loading => const Center(
-        child: CircularProgressIndicator(semanticsLabel: 'Loading equipment'),
+        child: LoadingSkeleton(label: 'Loading equipment'),
       ),
       EquipmentLoadStatus.error => Center(
         child: Padding(

@@ -18,10 +18,10 @@ class SavedCalculationsScreen extends ConsumerWidget {
     return ref
         .watch(savedSnapshotsProvider)
         .when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(
-              semanticsLabel: 'Loading saved calculations',
-            ),
+          loading: () => const LoadingSkeleton(
+            label: 'Loading saved calculations',
+            rowHeight: 84,
+            rows: 4,
           ),
           error: (_, _) => const Center(
             child: Padding(

@@ -84,7 +84,9 @@ class SavedLocationsScreen extends ConsumerWidget {
                       ),
                     ),
                 ],
-          loading: () => [const Center(child: CircularProgressIndicator())],
+          loading: () => [
+            const LoadingSkeleton(label: 'Loading saved locations'),
+          ],
           error: (_, _) => [const Text('Saved locations could not be loaded.')],
         ),
       ],
