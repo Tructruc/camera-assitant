@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../app/theme/design_tokens.dart';
 import '../../data/repositories/preferences_repository.dart';
 
 String formatDisplayLength(double millimetres, LengthDisplay display) {
@@ -15,6 +16,53 @@ String formatDisplayLength(double millimetres, LengthDisplay display) {
   return millimetres >= 1000
       ? '${(millimetres / 1000).toStringAsFixed(2)} m'
       : '${millimetres.toStringAsFixed(1)} mm';
+}
+
+/// Splits a formatted value into its number and its unit so the two can carry
+/// different weight (`10.47` large, `m` small and quiet).
+(String, String, String) _splitValueUnit(String value) {
+  final trimmed = value.trim();
+  // Shutter fractions read as one token: `1/30 s`, not `1` + `/30 s`.
+  final fraction = RegExp(r'^(\d+/\d+)(\s*)(\S.*)$').firstMatch(trimmed);
+  if (fraction != null) {
+    return (fraction.group(1)!, fraction.group(2)!, fraction.group(3)!);
+  }
+  final match = RegExp(r'^([+-]?[\d.,]+)(\s*)(\S.*)$').firstMatch(trimmed);
+  if (match == null) return (trimmed, '', '');
+  final unit = match.group(3)!;
+  // A long tail is prose, not a unit; keep it in the value.
+  if (unit.length > 14) return (trimmed, '', '');
+  return (match.group(1)!, match.group(2)!, unit);
+}
+
+/// A measurement printed as a large tabular number with a quiet unit.
+class ResultValue extends StatelessWidget {
+  const ResultValue({
+    required this.value,
+    required this.valueStyle,
+    required this.unitStyle,
+    super.key,
+  });
+
+  final String value;
+  final TextStyle? valueStyle;
+  final TextStyle? unitStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final (number, separator, unit) = _splitValueUnit(value);
+    if (unit.isEmpty) return Text(number, style: valueStyle);
+    // The plain text of the span stays byte-identical to the input, so finders
+    // and screen readers see the same string while the unit renders smaller.
+    return Text.rich(
+      TextSpan(
+        children: <InlineSpan>[
+          TextSpan(text: number, style: valueStyle),
+          TextSpan(text: '$separator$unit', style: unitStyle),
+        ],
+      ),
+    );
+  }
 }
 
 class CalculatorPage extends StatefulWidget {
@@ -82,8 +130,16 @@ class _CalculatorPageState extends State<CalculatorPage> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ListView(padding: const EdgeInsets.all(16), children: widget.children);
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.fromLTRB(
+      AppGap.lg,
+      AppGap.lg,
+      AppGap.lg,
+      AppGap.xxl,
+    ),
+    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+    children: widget.children,
+  );
 }
 
 class CalculatorNumberField extends StatelessWidget {
@@ -101,15 +157,19 @@ class CalculatorNumberField extends StatelessWidget {
   final String? errorText;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
-    child: TextField(
-      key: fieldKey,
-      controller: controller,
-      decoration: InputDecoration(labelText: label, errorText: errorText),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppGap.md),
+      child: TextField(
+        key: fieldKey,
+        controller: controller,
+        style: theme.textTheme.titleMedium,
+        decoration: InputDecoration(labelText: label, errorText: errorText),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      ),
+    );
+  }
 }
 
 class AppliedEquipmentNotice extends StatelessWidget {
@@ -127,37 +187,62 @@ class AppliedEquipmentNotice extends StatelessWidget {
   final String? sourceLabel;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label: <String>[
-      'Applied equipment $equipmentName',
-      appliedValues,
-      if (sourceLabel case final source?) 'source $source',
-    ].join(', '),
-    child: Card(
-      color: Theme.of(context).colorScheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      container: true,
+      label: <String>[
+        'Applied equipment $equipmentName',
+        appliedValues,
+        if (sourceLabel case final source?) 'source $source',
+      ].join(', '),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppGap.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppGap.md,
+          vertical: AppGap.sm,
+        ),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.secondaryContainer,
+          borderRadius: AppRadius.controlAll,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Icon(Icons.inventory_2_outlined),
-            const SizedBox(width: 10),
+            Icon(
+              Icons.inventory_2_outlined,
+              size: 18,
+              color: theme.colorScheme.onSecondaryContainer,
+            ),
+            const SizedBox(width: AppGap.sm),
             Expanded(
-              child: Text(
-                <String>[
-                  'From $equipmentName'
-                      '${sourceLabel == null ? '' : ' ($sourceLabel)'}'
-                      ': $appliedValues',
-                  'You can edit these values for this calculation only.',
-                ].join('\n'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'From $equipmentName'
+                    '${sourceLabel == null ? '' : ' ($sourceLabel)'}'
+                    ': $appliedValues',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'You can edit these values for this calculation only.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// A collapsed group of secondary inputs.
@@ -249,43 +334,75 @@ class CalculationResultView extends StatelessWidget {
           '${warnings.isEmpty ? '' : '. Warnings: ${warnings.join('; ')}'}',
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppGap.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Text(
                 title,
-                style: theme.textTheme.labelLarge?.copyWith(
+                style: theme.textTheme.labelMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 1.1,
                 ),
               ),
               if (warnings.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 10),
+                const SizedBox(height: AppGap.md),
                 _WarningBanner(warnings: warnings),
               ],
-              const SizedBox(height: 10),
-              Text(
-                highlight.$1,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(height: AppGap.lg),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppGap.lg,
+                  vertical: AppGap.lg,
+                ),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: AppRadius.controlAll,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      highlight.$1,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: AppGap.xs),
+                    ResultValue(
+                      value: highlight.$2,
+                      valueStyle: theme.textTheme.displaySmall,
+                      unitStyle: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (highlightCaption case final caption?) ...<Widget>[
+                      const SizedBox(height: AppGap.xs),
+                      Text(caption, style: theme.textTheme.bodySmall),
+                    ],
+                  ],
                 ),
               ),
-              Text(
-                highlight.$2,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (highlightCaption case final caption?) ...<Widget>[
-                const SizedBox(height: 4),
-                Text(caption, style: theme.textTheme.bodySmall),
-              ],
               if (guidance case final text?) ...<Widget>[
-                const SizedBox(height: 8),
-                Text(text, style: theme.textTheme.bodyMedium),
+                const SizedBox(height: AppGap.md),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: AppGap.sm),
+                    Expanded(
+                      child: Text(text, style: theme.textTheme.bodySmall),
+                    ),
+                  ],
+                ),
               ],
               if (tiles.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppGap.lg),
                 _ResultTiles(tiles: tiles),
               ],
               if (details.isNotEmpty ||
@@ -299,16 +416,19 @@ class CalculationResultView extends StatelessWidget {
                   inputs: inputs,
                   assumptions: assumptions,
                 ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              const SizedBox(height: AppGap.lg),
+              const Divider(),
+              const SizedBox(height: AppGap.md),
+              Row(
                 children: <Widget>[
-                  FilledButton.icon(
-                    onPressed: onSave,
-                    icon: const Icon(Icons.bookmark_add_outlined),
-                    label: const Text('Save result'),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: onSave,
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 20),
+                      label: const Text('Save result'),
+                    ),
                   ),
+                  const SizedBox(width: AppGap.sm),
                   TextButton(onPressed: onReset, child: const Text('Reset')),
                 ],
               ),
@@ -332,20 +452,31 @@ class _WarningBanner extends StatelessWidget {
       container: true,
       label: 'Warnings: ${warnings.join('; ')}',
       child: Container(
-        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: theme.colorScheme.tertiaryContainer,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.controlAll,
+          border: Border(
+            left: BorderSide(
+              color: theme.colorScheme.onTertiaryContainer,
+              width: 3,
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+          AppGap.md,
+          AppGap.md,
+          AppGap.md,
+          AppGap.md,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Icon(
-              Icons.info_outline,
+              Icons.warning_amber_rounded,
               size: 20,
               color: theme.colorScheme.onTertiaryContainer,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppGap.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,10 +511,10 @@ class _ResultTiles extends StatelessWidget {
         final width = constraints.maxWidth;
         // Two columns whenever a phone-width card can hold them; the tiles stay
         // scannable instead of turning into another full-width value list.
-        final tileWidth = width >= 240 ? (width - 10) / 2 : width;
+        final tileWidth = width >= 240 ? (width - AppGap.sm) / 2 : width;
         return Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: AppGap.sm,
+          runSpacing: AppGap.sm,
           children: <Widget>[
             for (final (label, value) in tiles)
               SizedBox(
@@ -392,29 +523,34 @@ class _ResultTiles extends StatelessWidget {
                   container: true,
                   label: '$label $value',
                   child: Container(
+                    constraints: const BoxConstraints(minHeight: 68),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                      horizontal: AppGap.md,
+                      vertical: AppGap.md,
                     ),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
+                      color: theme.colorScheme.surfaceContainer,
+                      borderRadius: AppRadius.controlAll,
+                      border: Border.all(
+                        color: theme.colorScheme.outlineVariant,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
                         Text(
                           label,
-                          style: theme.textTheme.labelMedium?.copyWith(
+                          style: theme.textTheme.labelSmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
+                            letterSpacing: 0.8,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        const SizedBox(height: AppGap.xs),
+                        ResultValue(
+                          value: value,
+                          valueStyle: theme.textTheme.titleMedium,
+                          unitStyle: theme.textTheme.bodySmall,
                         ),
                       ],
                     ),
@@ -441,41 +577,60 @@ class _DetailsSection extends StatelessWidget {
   final List<String> assumptions;
 
   @override
-  Widget build(BuildContext context) => Theme(
-    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-    child: ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      childrenPadding: EdgeInsets.zero,
-      shape: const Border(),
-      collapsedShape: const Border(),
-      title: const Text('Details'),
-      children: <Widget>[
-        if (inputs.isNotEmpty) ...<Widget>[
-          _DetailHeading('Values used', inputs),
-          const SizedBox(height: 12),
-        ],
-        if (details.isNotEmpty) ...<Widget>[
-          _DetailHeading('Exact values', details),
-          const SizedBox(height: 12),
-        ],
-        if (assumptions.isNotEmpty) ...<Widget>[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Model assumptions',
-              style: Theme.of(context).textTheme.labelLarge,
-            ),
-          ),
-          const SizedBox(height: 4),
-          for (final assumption in assumptions)
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(top: AppGap.md),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+      ),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        shape: const Border(),
+        collapsedShape: const Border(),
+        leading: Icon(
+          Icons.subject,
+          size: 20,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        title: const Text('Details'),
+        children: <Widget>[
+          if (inputs.isNotEmpty) ...<Widget>[
+            _DetailHeading('Values used', inputs),
+            const SizedBox(height: AppGap.md),
+          ],
+          if (details.isNotEmpty) ...<Widget>[
+            _DetailHeading('Exact values', details),
+            const SizedBox(height: AppGap.md),
+          ],
+          if (assumptions.isNotEmpty) ...<Widget>[
             Align(
               alignment: Alignment.centerLeft,
-              child: Text('• $assumption'),
+              child: Text(
+                'Model assumptions',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.9,
+                ),
+              ),
             ),
+            const SizedBox(height: AppGap.xs),
+            for (final assumption in assumptions)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: AppGap.xs),
+                  child: Text('• $assumption'),
+                ),
+              ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class _DetailHeading extends StatelessWidget {
@@ -485,30 +640,49 @@ class _DetailHeading extends StatelessWidget {
   final List<(String, String)> rows;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label: '$label: ${rows.map((row) => '${row.$1} ${row.$2}').join('; ')}',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Text(label, style: Theme.of(context).textTheme.labelLarge),
-        ),
-        const SizedBox(height: 4),
-        for (final (name, value) in rows)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(child: Text(name)),
-                const SizedBox(width: 12),
-                Flexible(child: Text(value, textAlign: TextAlign.end)),
-              ],
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      container: true,
+      label: '$label: ${rows.map((row) => '${row.$1} ${row.$2}').join('; ')}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                letterSpacing: 0.9,
+              ),
             ),
           ),
-      ],
-    ),
-  );
+          const SizedBox(height: AppGap.xs),
+          for (final (name, value) in rows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppGap.sm),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Text(name, style: theme.textTheme.bodyMedium),
+                  ),
+                  const SizedBox(width: AppGap.md),
+                  Flexible(
+                    child: ResultValue(
+                      value: value,
+                      valueStyle: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                      unitStyle: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

@@ -1024,7 +1024,9 @@ void main() {
     expect(
       tester
           .widgetList<Text>(find.textContaining('ft'))
-          .map((widget) => widget.data),
+          // Values render as rich spans (number + quiet unit), so read the
+          // plain text rather than Text.data.
+          .map((widget) => widget.data ?? widget.textSpan?.toPlainText()),
       containsAll(<String>['23.62 ft', 'Scene height 15.75 ft.']),
     );
 

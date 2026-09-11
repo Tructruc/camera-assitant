@@ -49,3 +49,6 @@ app.*.map.json
 
 # Local writable Flutter tool root (agent sandbox)
 .tooling/
+
+# Golden diff artefacts produced by failed golden runs
+test/golden/failures/

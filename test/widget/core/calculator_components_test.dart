@@ -14,18 +14,20 @@ void main() {
     String? guidance,
   }) => MaterialApp(
     home: Scaffold(
-      body: CalculationResultView(
-        title: 'Depth of field result',
-        highlight: highlight,
-        highlightCaption: caption,
-        tiles: tiles,
-        details: details,
-        inputs: inputs,
-        assumptions: assumptions,
-        warnings: warnings,
-        guidance: guidance,
-        onReset: () {},
-        onSave: () {},
+      body: SingleChildScrollView(
+        child: CalculationResultView(
+          title: 'Depth of field result',
+          highlight: highlight,
+          highlightCaption: caption,
+          tiles: tiles,
+          details: details,
+          inputs: inputs,
+          assumptions: assumptions,
+          warnings: warnings,
+          guidance: guidance,
+          onReset: () {},
+          onSave: () {},
+        ),
       ),
     ),
   );
