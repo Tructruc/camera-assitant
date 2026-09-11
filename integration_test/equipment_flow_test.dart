@@ -11,6 +11,7 @@ import 'package:photography_assistant/core/data/repositories/preferences_reposit
 import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
 import 'package:photography_assistant/core/domain/repositories/snapshot_repository.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
+import 'support/journey.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,7 @@ void main() {
   testWidgets('creates, restarts, archives, and restores equipment offline', (
     WidgetTester tester,
   ) async {
+    configureJourneyView(tester);
     final database = AppDatabase.inMemory();
     addTearDown(database.close);
     final repository = DriftEquipmentRepository(database);
@@ -90,6 +92,7 @@ void main() {
     await snapshots.save(snapshot);
 
     // Rebuild the provider tree against the same in-memory store.
+    configureJourneyView(tester);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     await tester.pumpWidget(app());

@@ -10,11 +10,13 @@ import 'package:photography_assistant/core/data/repositories/preferences_reposit
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
 
 import '../test/fixtures/equipment_fixtures.dart';
+import 'support/journey.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('plans flash and timelapse results offline', (tester) async {
+    configureJourneyView(tester);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     final database = AppDatabase.inMemory();
@@ -32,20 +34,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Timelapse planner'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Timelapse planner'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Plan timelapse'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Plan timelapse'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Timelapse planner'), delta: 300);
+    await tapVisible(tester, find.text('Plan timelapse'), delta: 300);
     expect(find.text('361'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Save result'),
@@ -59,13 +49,7 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Flash exposure'),
-      -300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Flash exposure'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Flash exposure'), delta: -300);
     await tester.tap(find.text('Calculate flash exposure'));
     await tester.pumpAndSettle();
     expect(find.text('f/8.0'), findsOneWidget);
@@ -91,6 +75,7 @@ void main() {
   ) async {
     // Integration tests share a running app process. Dispose the previous
     // navigator and provider tree before starting an independent journey.
+    configureJourneyView(tester);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     final database = AppDatabase.inMemory();
@@ -116,13 +101,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Saved camera and lens values remain editable one-off inputs.
-    await tester.scrollUntilVisible(
-      find.text('Depth of field'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Depth of field'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Depth of field'), delta: 300);
     await tester.tap(find.text('Saved lens (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('24-70 mm f/2.8').last);
@@ -131,13 +110,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Calculate'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Calculate'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Calculate'), delta: 300);
     expect(find.text('Near limit'), findsOneWidget);
     expect(find.textContaining('From 24-70 mm'), findsWidgets);
     expect(find.textContaining('connect'), findsNothing);
@@ -155,20 +128,8 @@ void main() {
     // Manual exposure comparison works without inventory or network access.
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Exposure comparison'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Exposure comparison'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Compare exposures'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Compare exposures'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Exposure comparison'), delta: 300);
+    await tapVisible(tester, find.text('Compare exposures'), delta: 300);
     expect(find.text('Equivalent exposure'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Save result'),
@@ -183,13 +144,7 @@ void main() {
     // A saved ND filter applies its canonical strength to the quickstart case.
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Long exposure / ND'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Long exposure / ND'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Long exposure / ND'), delta: 300);
     await tester.tap(find.text('Saved ND filter (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('10-stop ND').last);
@@ -197,13 +152,7 @@ void main() {
       find.byKey(const Key('long-base')),
       '0.0333333333333333',
     );
-    await tester.scrollUntilVisible(
-      find.text('Calculate exposure'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Calculate exposure'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Calculate exposure'), delta: 300);
     // The conventional label rounds to the selected stop increment while the
     // raw exposure preserves the physical result (1/30 second times 2^10).
     expect(find.text('32 s'), findsOneWidget);
@@ -244,6 +193,7 @@ void main() {
     ''');
 
     // All snapshots survive rebuilding offline with their original context.
+    configureJourneyView(tester);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     await tester.pumpWidget(app());
@@ -271,6 +221,7 @@ void main() {
   testWidgets(
     'editing an input blocks saving until the result is recalculated',
     (tester) async {
+      configureJourneyView(tester);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
       final database = AppDatabase.inMemory();
@@ -288,13 +239,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.text('Depth of field'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(find.text('Depth of field'));
-      await tester.pumpAndSettle();
+      await tapVisible(tester, find.text('Depth of field'), delta: 300);
       await tester.tap(find.text('Calculate'));
       await tester.pumpAndSettle();
       expect(find.text('Save result'), findsOneWidget);
@@ -315,13 +260,7 @@ void main() {
       expect(find.text('Save result'), findsNothing);
 
       // Recalculation restores a savable result and the journey completes.
-      await tester.scrollUntilVisible(
-        find.text('Calculate'),
-        -300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(find.text('Calculate'));
-      await tester.pumpAndSettle();
+      await tapVisible(tester, find.text('Calculate'), delta: -300);
       await tester.scrollUntilVisible(
         find.text('Save result'),
         300,

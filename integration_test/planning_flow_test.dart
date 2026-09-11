@@ -10,6 +10,7 @@ import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/features/astronomy/domain/astronomy_calculator.dart';
+import 'support/journey.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -23,6 +24,7 @@ void main() {
       final file = File('${directory.path}/planning.sqlite');
       var database = AppDatabase(NativeDatabase(file));
       addTearDown(() async {
+        configureJourneyView(tester);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();
         await database.close();
@@ -72,6 +74,7 @@ void main() {
         AstronomyCalculator.milkyWayOrientationConvention,
       );
 
+      configureJourneyView(tester);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
       await database.close();

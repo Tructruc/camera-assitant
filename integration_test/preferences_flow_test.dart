@@ -8,6 +8,7 @@ import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
+import 'support/journey.dart';
 
 /// Quickstart scenarios 4, 22, and 23 end to end: a preference change alters
 /// presentation (never canonical values), and an already saved plan keeps the
@@ -18,6 +19,7 @@ void main() {
   testWidgets('preference changes alter presentation, saved plans stay frozen', (
     tester,
   ) async {
+    configureJourneyView(tester);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     final database = AppDatabase.inMemory();
@@ -36,13 +38,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Both planners and calculators are reachable before any preference change.
-    await tester.scrollUntilVisible(
-      find.text('Depth of field'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Depth of field'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Depth of field'), delta: 300);
     await tester.tap(find.text('Calculate'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -63,13 +59,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Imperial (ft and in)'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Conventional shutter'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Conventional shutter'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Conventional shutter'), delta: 300);
 
     final preferences = await PreferencesRepository(database).load();
     expect(preferences.lengthDisplay, LengthDisplay.imperial);
@@ -78,13 +68,7 @@ void main() {
     // The same calculation now presents imperial units.
     await tester.tap(find.text('Calculators'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Depth of field'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Depth of field'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Depth of field'), delta: 300);
     await tester.tap(find.text('Calculate'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(

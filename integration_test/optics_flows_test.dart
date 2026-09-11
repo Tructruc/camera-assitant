@@ -8,6 +8,7 @@ import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/presentation/calculator/calculator_components.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
+import 'support/journey.dart';
 
 /// FR-022 / SC-012: the expanded optics and capture planners need the same
 /// offline acceptance journey as the first-release calculators.
@@ -15,13 +16,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> openTool(WidgetTester tester, String label) async {
-    await tester.scrollUntilVisible(
-      find.text(label),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text(label));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text(label), delta: 300);
   }
 
   Future<void> calculateAndExpect(
@@ -30,13 +25,7 @@ void main() {
     required String expected,
     bool save = false,
   }) async {
-    await tester.scrollUntilVisible(
-      find.text(action),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text(action));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text(action), delta: 300);
     await tester.scrollUntilVisible(
       find.text('Save result'),
       300,
@@ -63,6 +52,7 @@ void main() {
   testWidgets('expanded planners complete their offline journeys', (
     tester,
   ) async {
+    configureJourneyView(tester);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
     final database = AppDatabase.inMemory();

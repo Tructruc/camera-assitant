@@ -7,6 +7,7 @@ import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/features/equipment/data/drift_equipment_repository.dart';
+import 'support/journey.dart';
 
 /// Quickstart scenarios 8 and 26 end to end: the whole journey — navigate,
 /// calculate, read the labelled input summary, and save — must complete at 200%
@@ -42,20 +43,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Depth of field'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Depth of field'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Calculate'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Calculate'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Depth of field'), delta: 300);
+    await tapVisible(tester, find.text('Calculate'), delta: 300);
     // 200% text must not overflow or clip any frame.
     expect(tester.takeException(), isNull);
 
