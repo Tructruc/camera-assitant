@@ -81,3 +81,15 @@ places the core at zenith; its antipode places it at nadir. Tests cover these ex
 points within/outside the exclusion radius, a full day's axis wrapping, the date line, and omission
 for other celestial targets. Display rounds to one decimal place; snapshots retain full precision,
 the angle convention, model limitations, formula version, and null when unavailable.
+
+## Bundled fixed-target catalog
+
+The twelve fixed targets ship ICRS/J2000 positions that are attributed to SIMBAD/CDS. Their values are
+pinned in `test/unit/features/astronomy/catalog_reference_test.dart`, which fails if a catalog coordinate
+is edited without updating its documented reference, and which also asserts that the planets and the
+Sun/Moon never fall back to the 0/0 placeholders they carry in the enum. On 2026-09-11 the Lagoon Nebula
+entry was re-queried against SIMBAD
+([`NAME Lagoon Nebula`](https://simbad.cds.unistra.fr/simbad/sim-id?Ident=NAME+Lagoon+Nebula)), which
+returns ICRS J2000 `18 03 37.0 -24 23 12` with quality flag E (>= 10 arcsec); the shipped position is
+within 0.03 degrees of it. Extended objects carry a looser tolerance than the two catalog stars because
+their published positions legitimately differ between sources.
