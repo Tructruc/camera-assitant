@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../app/theme/design_tokens.dart';
 import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/domain/repositories/snapshot_repository.dart';
@@ -141,54 +142,59 @@ class _SavedCalculationDetailScreenState
         ),
       ],
     ),
-    body: ListView(
-      padding: const EdgeInsets.all(16),
-      children: <Widget>[
-        Text(_snapshot.title, style: Theme.of(context).textTheme.headlineSmall),
-        if (_snapshot.notes case final notes?) ...[
-          const SizedBox(height: 8),
-          Text(notes),
+    body: AppContentFrame(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: <Widget>[
+          Text(
+            _snapshot.title,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          if (_snapshot.notes case final notes?) ...[
+            const SizedBox(height: 8),
+            Text(notes),
+          ],
+          const SizedBox(height: 16),
+          _summaryCard(context),
+          if (_isObservationPlan) _planSummary(context),
+          if (_fieldChecklist.isNotEmpty) _actionableChecklist(context),
+          // The stored provenance stays complete but stops competing with the
+          // answer: each block opens only when a photographer asks for it.
+          _ExpansionSection(
+            title: 'Values used',
+            entries: _snapshot.canonicalInputs,
+          ),
+          _ExpansionSection(
+            title: 'Exact values',
+            entries: Map<String, Object?>.of(_snapshot.canonicalOutputs)
+              ..remove('fieldChecklist'),
+          ),
+          if (_snapshot.displayContext.isNotEmpty)
+            _ExpansionSection(
+              title: 'Display context',
+              entries: _snapshot.displayContext,
+            ),
+          if (_snapshot.equipment.isNotEmpty)
+            _ExpansionSection(
+              title: 'Applied equipment',
+              entries: <String, Object?>{
+                for (final item in _snapshot.equipment)
+                  item.name: '${item.source} · ${_mapText(item.values)}',
+              },
+            ),
+          if (_snapshot.assumptions.isNotEmpty)
+            _ExpansionSection(
+              title: 'Model assumptions',
+              entries: <String, Object?>{
+                for (final item in _snapshot.assumptions) item.key: item.value,
+              },
+            ),
+          const SizedBox(height: 16),
+          const Text(
+            'This saved result is immutable and is not recalculated when equipment or settings change.',
+          ),
         ],
-        const SizedBox(height: 16),
-        _summaryCard(context),
-        if (_isObservationPlan) _planSummary(context),
-        if (_fieldChecklist.isNotEmpty) _actionableChecklist(context),
-        // The stored provenance stays complete but stops competing with the
-        // answer: each block opens only when a photographer asks for it.
-        _ExpansionSection(
-          title: 'Values used',
-          entries: _snapshot.canonicalInputs,
-        ),
-        _ExpansionSection(
-          title: 'Exact values',
-          entries: Map<String, Object?>.of(_snapshot.canonicalOutputs)
-            ..remove('fieldChecklist'),
-        ),
-        if (_snapshot.displayContext.isNotEmpty)
-          _ExpansionSection(
-            title: 'Display context',
-            entries: _snapshot.displayContext,
-          ),
-        if (_snapshot.equipment.isNotEmpty)
-          _ExpansionSection(
-            title: 'Applied equipment',
-            entries: <String, Object?>{
-              for (final item in _snapshot.equipment)
-                item.name: '${item.source} · ${_mapText(item.values)}',
-            },
-          ),
-        if (_snapshot.assumptions.isNotEmpty)
-          _ExpansionSection(
-            title: 'Model assumptions',
-            entries: <String, Object?>{
-              for (final item in _snapshot.assumptions) item.key: item.value,
-            },
-          ),
-        const SizedBox(height: 16),
-        const Text(
-          'This saved result is immutable and is not recalculated when equipment or settings change.',
-        ),
-      ],
+      ),
     ),
   );
 

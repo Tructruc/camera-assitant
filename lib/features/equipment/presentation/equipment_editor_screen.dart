@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/theme/design_tokens.dart';
 import '../domain/equipment.dart';
 import 'equipment_controller.dart';
 
@@ -101,68 +102,71 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
       color: Colors.transparent,
       child: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: <Widget>[
-            TextFormField(
-              controller: _name,
-              decoration: InputDecoration(
-                labelText: '${_kindLabel()} name',
-                errorText: _nameError,
+        child: AppContentFrame(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: <Widget>[
+              TextFormField(
+                controller: _name,
+                decoration: InputDecoration(
+                  labelText: '${_kindLabel()} name',
+                  errorText: _nameError,
+                ),
+                textInputAction: TextInputAction.next,
+                validator: _required,
+                onChanged: (_) {
+                  if (_nameError != null) setState(() => _nameError = null);
+                },
               ),
-              textInputAction: TextInputAction.next,
-              validator: _required,
-              onChanged: (_) {
-                if (_nameError != null) setState(() => _nameError = null);
-              },
-            ),
-            const SizedBox(height: 12),
-            ..._kindFields(),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<EquipmentSource>(
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Value source'),
-              initialValue: _source,
-              // No bundled equipment catalog ships yet, so "bundled" is not
-              // offered as a new claim. A row that already carries it must stay
-              // selectable, though: Flutter asserts that the current value has
-              // exactly one matching item, and silently rewriting the source of
-              // an existing row would corrupt its provenance.
-              items:
-                  <EquipmentSource>[
-                        ..._selectableSources,
-                        if (!_selectableSources.contains(_source)) _source,
-                      ]
-                      .map(
-                        (source) => DropdownMenuItem<EquipmentSource>(
-                          value: source,
-                          child: Text(_sourceLabel(source)),
-                        ),
-                      )
-                      .toList(growable: false),
-              onChanged: (value) => setState(() => _source = value ?? _source),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _sourceNote,
-              decoration: const InputDecoration(labelText: 'Source note'),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _notes,
-              decoration: const InputDecoration(labelText: 'Notes'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: Text(
-                _saving
-                    ? 'Saving…'
-                    : '${_isEditing ? 'Update' : 'Save'} ${_kindLabel().toLowerCase()}',
+              const SizedBox(height: 12),
+              ..._kindFields(),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<EquipmentSource>(
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Value source'),
+                initialValue: _source,
+                // No bundled equipment catalog ships yet, so "bundled" is not
+                // offered as a new claim. A row that already carries it must stay
+                // selectable, though: Flutter asserts that the current value has
+                // exactly one matching item, and silently rewriting the source of
+                // an existing row would corrupt its provenance.
+                items:
+                    <EquipmentSource>[
+                          ..._selectableSources,
+                          if (!_selectableSources.contains(_source)) _source,
+                        ]
+                        .map(
+                          (source) => DropdownMenuItem<EquipmentSource>(
+                            value: source,
+                            child: Text(_sourceLabel(source)),
+                          ),
+                        )
+                        .toList(growable: false),
+                onChanged: (value) =>
+                    setState(() => _source = value ?? _source),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _sourceNote,
+                decoration: const InputDecoration(labelText: 'Source note'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _notes,
+                decoration: const InputDecoration(labelText: 'Notes'),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                child: Text(
+                  _saving
+                      ? 'Saving…'
+                      : '${_isEditing ? 'Update' : 'Save'} ${_kindLabel().toLowerCase()}',
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

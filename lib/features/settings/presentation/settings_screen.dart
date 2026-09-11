@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../app/theme/design_tokens.dart';
 import '../../../core/data/repositories/preferences_repository.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -22,128 +23,131 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      data: (value) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: <Widget>[
-          const _SectionHeader(icon: Icons.straighten, label: 'Display'),
-          _SettingCard<LengthDisplay>(
-            icon: Icons.straighten,
-            title: 'Distance units',
-            subtitle: 'Canonical calculation values are never changed.',
-            value: value.lengthDisplay,
-            options: const <(LengthDisplay, String)>[
-              (LengthDisplay.metric, 'Metric (m and mm)'),
-              (LengthDisplay.imperial, 'Imperial (ft and in)'),
-            ],
-            onChanged: (choice) =>
-                _save(context, ref, value.copyWith(lengthDisplay: choice)),
-          ),
-          _SettingCard<ShutterDisplay>(
-            icon: Icons.timer_outlined,
-            title: 'Shutter display',
-            subtitle: 'Choose raw seconds or a conventional camera value.',
-            value: value.shutterDisplay,
-            options: const <(ShutterDisplay, String)>[
-              (ShutterDisplay.exact, 'Exact seconds'),
-              (ShutterDisplay.conventional, 'Conventional shutter'),
-            ],
-            onChanged: (choice) =>
-                _save(context, ref, value.copyWith(shutterDisplay: choice)),
-          ),
-          _SettingCard<FractionStep>(
-            icon: Icons.exposure_outlined,
-            title: 'Exposure increments',
-            subtitle: 'Used when presenting conventional photographic values.',
-            value: value.fractionStep,
-            options: const <(FractionStep, String)>[
-              (FractionStep.whole, 'Whole stops'),
-              (FractionStep.half, 'Half stops'),
-              (FractionStep.third, 'Third stops'),
-            ],
-            onChanged: (choice) =>
-                _save(context, ref, value.copyWith(fractionStep: choice)),
-          ),
-          _SettingCard<NorthReference>(
-            icon: Icons.explore_outlined,
-            title: 'North reference',
-            subtitle:
-                'Magnetic bearings require local declination; planners keep true bearings visible when it is unavailable.',
-            value: value.northReference,
-            options: const <(NorthReference, String)>[
-              (NorthReference.trueNorth, 'True north'),
-              (NorthReference.magneticNorth, 'Magnetic north'),
-            ],
-            onChanged: (choice) =>
-                _save(context, ref, value.copyWith(northReference: choice)),
-          ),
-          const SizedBox(height: 16),
-          const _SectionHeader(
-            icon: Icons.explore_outlined,
-            label: 'Planner defaults',
-          ),
-          _SettingCard<DefaultStarSharpness>(
-            icon: Icons.nightlight_round,
-            title: 'Default star sharpness',
-            subtitle:
-                'Applied when opening or resetting the night-sky planner.',
-            value: value.defaultStarSharpness,
-            options: const <(DefaultStarSharpness, String)>[
-              (DefaultStarSharpness.strict, 'Strict'),
-              (DefaultStarSharpness.balanced, 'Balanced'),
-              (DefaultStarSharpness.relaxed, 'Relaxed'),
-            ],
-            onChanged: (choice) => _save(
-              context,
-              ref,
-              value.copyWith(defaultStarSharpness: choice),
+      data: (value) => AppContentFrame(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: <Widget>[
+            const _SectionHeader(icon: Icons.straighten, label: 'Display'),
+            _SettingCard<LengthDisplay>(
+              icon: Icons.straighten,
+              title: 'Distance units',
+              subtitle: 'Canonical calculation values are never changed.',
+              value: value.lengthDisplay,
+              options: const <(LengthDisplay, String)>[
+                (LengthDisplay.metric, 'Metric (m and mm)'),
+                (LengthDisplay.imperial, 'Imperial (ft and in)'),
+              ],
+              onChanged: (choice) =>
+                  _save(context, ref, value.copyWith(lengthDisplay: choice)),
             ),
-          ),
-          _SettingCard<double>(
-            icon: Icons.align_horizontal_left,
-            title: 'Alignment angular tolerance',
-            subtitle:
-                'Applied when opening or resetting the alignment planner.',
-            value: value.defaultAlignmentToleranceDegrees,
-            options: const <(double, String)>[
-              (1, '1°'),
-              (2, '2°'),
-              (3, '3°'),
-              (5, '5°'),
-              (10, '10°'),
-            ],
-            onChanged: (choice) => _save(
-              context,
-              ref,
-              value.copyWith(defaultAlignmentToleranceDegrees: choice),
+            _SettingCard<ShutterDisplay>(
+              icon: Icons.timer_outlined,
+              title: 'Shutter display',
+              subtitle: 'Choose raw seconds or a conventional camera value.',
+              value: value.shutterDisplay,
+              options: const <(ShutterDisplay, String)>[
+                (ShutterDisplay.exact, 'Exact seconds'),
+                (ShutterDisplay.conventional, 'Conventional shutter'),
+              ],
+              onChanged: (choice) =>
+                  _save(context, ref, value.copyWith(shutterDisplay: choice)),
             ),
-          ),
-          const SizedBox(height: 16),
-          const _SectionHeader(
-            icon: Icons.dark_mode_outlined,
-            label: 'Appearance',
-          ),
-          _SettingCard<AppThemeMode>(
-            icon: Icons.brightness_6_outlined,
-            title: 'Theme',
-            subtitle:
-                'Low-light mode uses a black surface and restrained red accents.',
-            value: value.themeMode,
-            options: const <(AppThemeMode, String)>[
-              (AppThemeMode.system, 'Use device setting'),
-              (AppThemeMode.light, 'Light'),
-              (AppThemeMode.dark, 'Dark'),
-              (AppThemeMode.lowLight, 'Low-light red'),
-            ],
-            onChanged: (choice) =>
-                _save(context, ref, value.copyWith(themeMode: choice)),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Privacy: equipment, preferences, and saved calculations stay on '
-            'this device. The app has no account, advertising, or telemetry.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
+            _SettingCard<FractionStep>(
+              icon: Icons.exposure_outlined,
+              title: 'Exposure increments',
+              subtitle:
+                  'Used when presenting conventional photographic values.',
+              value: value.fractionStep,
+              options: const <(FractionStep, String)>[
+                (FractionStep.whole, 'Whole stops'),
+                (FractionStep.half, 'Half stops'),
+                (FractionStep.third, 'Third stops'),
+              ],
+              onChanged: (choice) =>
+                  _save(context, ref, value.copyWith(fractionStep: choice)),
+            ),
+            _SettingCard<NorthReference>(
+              icon: Icons.explore_outlined,
+              title: 'North reference',
+              subtitle:
+                  'Magnetic bearings require local declination; planners keep true bearings visible when it is unavailable.',
+              value: value.northReference,
+              options: const <(NorthReference, String)>[
+                (NorthReference.trueNorth, 'True north'),
+                (NorthReference.magneticNorth, 'Magnetic north'),
+              ],
+              onChanged: (choice) =>
+                  _save(context, ref, value.copyWith(northReference: choice)),
+            ),
+            const SizedBox(height: 16),
+            const _SectionHeader(
+              icon: Icons.explore_outlined,
+              label: 'Planner defaults',
+            ),
+            _SettingCard<DefaultStarSharpness>(
+              icon: Icons.nightlight_round,
+              title: 'Default star sharpness',
+              subtitle:
+                  'Applied when opening or resetting the night-sky planner.',
+              value: value.defaultStarSharpness,
+              options: const <(DefaultStarSharpness, String)>[
+                (DefaultStarSharpness.strict, 'Strict'),
+                (DefaultStarSharpness.balanced, 'Balanced'),
+                (DefaultStarSharpness.relaxed, 'Relaxed'),
+              ],
+              onChanged: (choice) => _save(
+                context,
+                ref,
+                value.copyWith(defaultStarSharpness: choice),
+              ),
+            ),
+            _SettingCard<double>(
+              icon: Icons.align_horizontal_left,
+              title: 'Alignment angular tolerance',
+              subtitle:
+                  'Applied when opening or resetting the alignment planner.',
+              value: value.defaultAlignmentToleranceDegrees,
+              options: const <(double, String)>[
+                (1, '1°'),
+                (2, '2°'),
+                (3, '3°'),
+                (5, '5°'),
+                (10, '10°'),
+              ],
+              onChanged: (choice) => _save(
+                context,
+                ref,
+                value.copyWith(defaultAlignmentToleranceDegrees: choice),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const _SectionHeader(
+              icon: Icons.dark_mode_outlined,
+              label: 'Appearance',
+            ),
+            _SettingCard<AppThemeMode>(
+              icon: Icons.brightness_6_outlined,
+              title: 'Theme',
+              subtitle:
+                  'Low-light mode uses a black surface and restrained red accents.',
+              value: value.themeMode,
+              options: const <(AppThemeMode, String)>[
+                (AppThemeMode.system, 'Use device setting'),
+                (AppThemeMode.light, 'Light'),
+                (AppThemeMode.dark, 'Dark'),
+                (AppThemeMode.lowLight, 'Low-light red'),
+              ],
+              onChanged: (choice) =>
+                  _save(context, ref, value.copyWith(themeMode: choice)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Privacy: equipment, preferences, and saved calculations stay on '
+              'this device. The app has no account, advertising, or telemetry.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
       ),
     );
   }
