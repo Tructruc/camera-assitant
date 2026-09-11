@@ -71,6 +71,10 @@ final class PanoramaOutput {
 
 final class PanoramaCalculator {
   const PanoramaCalculator();
+
+  /// The largest frame grid the planner will build and present.
+  static const maxPlannedFrames = 2000;
+
   static const id = 'panorama';
   static const version = 1;
 
@@ -114,8 +118,18 @@ final class PanoramaCalculator {
         frameHorizontal * (1 - input.horizontalOverlapPercent / 100);
     final verticalIncrement =
         frameVertical * (1 - input.verticalOverlapPercent / 100);
-    int count(double bounds, double frame, double increment) =>
-        bounds <= frame ? 1 : ((bounds - frame) / increment).ceil() + 1;
+    // Saturates at one past the limit so an enormous or non-finite grid cannot
+    // overflow the later product check or reach the frame loop.
+    int count(double bounds, double frame, double increment) {
+      if (bounds <= frame) return 1;
+      if (!increment.isFinite || increment <= 0) return maxPlannedFrames + 1;
+      final steps = (bounds - frame) / increment;
+      if (!steps.isFinite || steps >= maxPlannedFrames) {
+        return maxPlannedFrames + 1;
+      }
+      return steps.ceil() + 1;
+    }
+
     final columns = count(
       input.horizontalBoundsDegrees,
       frameHorizontal,
@@ -126,6 +140,24 @@ final class PanoramaCalculator {
       frameVertical,
       verticalIncrement,
     );
+    // A plan has to be shootable. Tiny frames over wide bounds can ask for an
+    // astronomically large grid, which would exhaust memory while building the
+    // frame list, so the request is refused with guidance instead (FR-021).
+    if (columns > maxPlannedFrames ||
+        rows > maxPlannedFrames ||
+        columns * rows > maxPlannedFrames) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'focalLengthMm',
+            code: 'plan_too_large',
+            messageKey: 'panorama.error.planTooLarge',
+          ),
+        ],
+      );
+    }
     final horizontalCoverage =
         frameHorizontal + (columns - 1) * horizontalIncrement;
     final verticalCoverage = frameVertical + (rows - 1) * verticalIncrement;

@@ -77,10 +77,42 @@ final class LongExposureCalculator {
     );
     final filteredSeconds =
         input.baseTimeSeconds * math.pow(2, totalStops).toDouble();
+    // A physically representable stack can still overflow the filtered time.
+    // Report it as a field error instead of letting the ExposureTime value
+    // object throw, which the contract forbids for user-entered values.
+    if (!filteredSeconds.isFinite) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'filters',
+            code: 'result_out_of_range',
+            messageKey: 'longExposure.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
     final targetSeconds = input.targetTimeSeconds;
     final requiredStops = targetSeconds == null
         ? null
         : _log2(targetSeconds / input.baseTimeSeconds);
+    // A representable base and target can still differ by more stops than a
+    // double can hold; the surplus filter strength would throw, so report the
+    // target field instead (FR-002).
+    if (requiredStops != null && !requiredStops.isFinite) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'targetTimeSeconds',
+            code: 'result_out_of_range',
+            messageKey: 'longExposure.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
 
     return CalculationResult.valid(
       calculatorId: id,
@@ -119,6 +151,10 @@ final class LongExposureCalculator {
       };
       if (!valid) {
         errors.add(_error('filters[$index]', 'invalid_filter_strength'));
+      } else if (!_toStops(filter).isFinite) {
+        // An in-range optical density can still overflow the derived stop
+        // count, which would make FilterStrength throw (FR-002).
+        errors.add(_error('filters[$index]', 'result_out_of_range'));
       }
     }
     final target = input.targetTimeSeconds;

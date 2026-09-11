@@ -43,7 +43,20 @@ void main() {
     );
     expect(result.errors, isEmpty);
     expect(result.output!.candidates, isNotEmpty);
-    expect(result.output!.candidates.first.angularErrorDegrees, lessThan(1));
+    // Absolute anchors, independent of the production list's own order. The
+    // search samples every ten minutes, so the best sampled candidate sits up
+    // to about half a step away from the optimum; the measured residual for
+    // this input is 0.66 degrees, inside the 1.25 degree sampling bound. The
+    // desire is 180 true bearing and this file's equinox fixture puts the Sun
+    // at 177.5 degrees azimuth at 12:00 UTC, so the best match must still fall
+    // near solar noon.
+    final best = result.output!.candidates.first;
+    expect(best.angularErrorDegrees, lessThan(1.25));
+    expect(
+      best.instantUtc.difference(DateTime.utc(2026, 3, 20, 12)).inMinutes.abs(),
+      lessThan(20),
+      reason: 'best candidate should be near the 12:00 UTC equinox fixture',
+    );
     expect(
       result.output!.candidates.map((item) => item.angularErrorDegrees),
       orderedEquals(
@@ -168,19 +181,24 @@ void main() {
           targetElevationMetres: 0,
           targetDistanceMetres: 1000,
           desiredBearingDegrees: 90,
-          angularToleranceDegrees: 3,
+          // A full-circle tolerance guarantees candidates, so the candidate
+          // invariants below are actually exercised rather than skipped.
+          angularToleranceDegrees: 180,
           startUtc: DateTime.utc(2026, 3, 20),
           endUtc: DateTime.utc(2026, 3, 21),
         ),
       );
       expect(result.errors, isEmpty);
-      // The target is 430 m above the observer, about 23 degrees up. Whether a
-      // candidate lands inside the tolerance on this date is incidental; the
-      // point is that a below-sea-level observer is accepted and stays finite.
-      expect(result.output!.desiredAltitudeDegrees, closeTo(23.3, 0.5));
+      // The target is 430 m above the observer: atan2(430, 1000) is 23.2717
+      // degrees, an absolute closed form for this geometry.
+      expect(result.output!.desiredAltitudeDegrees, closeTo(23.27, 0.01));
+      expect(result.output!.candidates, isNotEmpty);
       for (final candidate in result.output!.candidates) {
         expect(candidate.altitudeDegrees.isFinite, isTrue);
         expect(candidate.azimuthDegrees.isFinite, isTrue);
+        expect(candidate.angularErrorDegrees.isFinite, isTrue);
+        expect(candidate.altitudeDegrees, inInclusiveRange(-90, 90));
+        expect(candidate.azimuthDegrees, inInclusiveRange(0, 360));
       }
     },
   );

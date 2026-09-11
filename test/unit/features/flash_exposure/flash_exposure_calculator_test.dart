@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/flash_exposure/domain/flash_exposure_calculator.dart';
 
 void main() {
@@ -43,11 +44,28 @@ void main() {
       ),
     );
     expect(result.status, CalculationStatus.invalid);
-    expect(result.errors.map((error) => error.field), [
-      'guideNumberIso100Metres',
-      'iso',
-      'powerFraction',
-      'subjectDistanceMetres',
+    expect(result.output, isNull);
+    expect(result.errors, const [
+      ValidationError(
+        field: 'guideNumberIso100Metres',
+        code: 'positive_finite_required',
+        messageKey: 'flash.error.guideNumberIso100Metres',
+      ),
+      ValidationError(
+        field: 'iso',
+        code: 'positive_finite_required',
+        messageKey: 'flash.error.iso',
+      ),
+      ValidationError(
+        field: 'powerFraction',
+        code: 'power_range',
+        messageKey: 'flash.error.powerFraction',
+      ),
+      ValidationError(
+        field: 'subjectDistanceMetres',
+        code: 'positive_finite_required',
+        messageKey: 'flash.error.subjectDistanceMetres',
+      ),
     ]);
   });
 }

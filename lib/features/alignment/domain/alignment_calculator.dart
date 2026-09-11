@@ -280,8 +280,9 @@ final class AlignmentSkyEphemeris {
     final latitude = _radians(latitudeDegrees);
     final declination = _radians(equatorial.$2);
     final altitude = math.asin(
-      math.sin(latitude) * math.sin(declination) +
-          math.cos(latitude) * math.cos(declination) * math.cos(hourAngle),
+      (math.sin(latitude) * math.sin(declination) +
+              math.cos(latitude) * math.cos(declination) * math.cos(hourAngle))
+          .clamp(-1.0, 1.0),
     );
     final azimuth = _normalize(
       _degrees(

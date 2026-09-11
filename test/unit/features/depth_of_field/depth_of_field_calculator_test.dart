@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/depth_of_field/domain/depth_of_field_calculator.dart';
 
 import '../../../fixtures/depth_of_field_fixtures.dart';
@@ -58,11 +59,28 @@ void main() {
     );
 
     expect(result.status, CalculationStatus.invalid);
-    expect(result.errors.map((error) => error.field), [
-      'focalLengthMm',
-      'aperture',
-      'focusDistanceMm',
-      'circleOfConfusionMm',
+    expect(result.output, isNull);
+    expect(result.errors, const [
+      ValidationError(
+        field: 'focalLengthMm',
+        code: 'positive_finite_required',
+        messageKey: 'depthOfField.error.positiveFinite.focalLengthMm',
+      ),
+      ValidationError(
+        field: 'aperture',
+        code: 'positive_finite_required',
+        messageKey: 'depthOfField.error.positiveFinite.aperture',
+      ),
+      ValidationError(
+        field: 'focusDistanceMm',
+        code: 'positive_finite_required',
+        messageKey: 'depthOfField.error.positiveFinite.focusDistanceMm',
+      ),
+      ValidationError(
+        field: 'circleOfConfusionMm',
+        code: 'positive_finite_required',
+        messageKey: 'depthOfField.error.positiveFinite.circleOfConfusionMm',
+      ),
     ]);
   });
 
@@ -77,8 +95,14 @@ void main() {
     );
 
     expect(result.status, CalculationStatus.invalid);
-    expect(result.errors.single.field, 'focusDistanceMm');
-    expect(result.errors.single.code, 'not_beyond_focal_length');
+    expect(result.output, isNull);
+    expect(result.errors, const [
+      ValidationError(
+        field: 'focusDistanceMm',
+        code: 'not_beyond_focal_length',
+        messageKey: 'depthOfField.error.focusBeyondFocalLength',
+      ),
+    ]);
   });
 
   test('declares thin-lens assumptions and close-focus limitation', () {

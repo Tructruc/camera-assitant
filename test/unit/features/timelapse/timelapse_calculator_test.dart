@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/timelapse/domain/timelapse_calculator.dart';
 
 void main() {
@@ -51,13 +52,38 @@ void main() {
       ),
     );
     expect(result.status, CalculationStatus.invalid);
-    expect(result.errors.map((error) => error.field), [
-      'intervalSeconds',
-      'captureDurationSeconds',
-      'playbackFps',
-      'megabytesPerFrame',
-      'startExposureSeconds',
-      'endExposureSeconds',
+    expect(result.output, isNull);
+    expect(result.errors, const [
+      ValidationError(
+        field: 'intervalSeconds',
+        code: 'positive_finite_required',
+        messageKey: 'timelapse.error.intervalSeconds',
+      ),
+      ValidationError(
+        field: 'captureDurationSeconds',
+        code: 'positive_finite_required',
+        messageKey: 'timelapse.error.captureDurationSeconds',
+      ),
+      ValidationError(
+        field: 'playbackFps',
+        code: 'positive_finite_required',
+        messageKey: 'timelapse.error.playbackFps',
+      ),
+      ValidationError(
+        field: 'megabytesPerFrame',
+        code: 'positive_finite_required',
+        messageKey: 'timelapse.error.megabytesPerFrame',
+      ),
+      ValidationError(
+        field: 'startExposureSeconds',
+        code: 'positive_finite_required',
+        messageKey: 'timelapse.error.startExposureSeconds',
+      ),
+      ValidationError(
+        field: 'endExposureSeconds',
+        code: 'positive_finite_required',
+        messageKey: 'timelapse.error.endExposureSeconds',
+      ),
     ]);
   });
 }

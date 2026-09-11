@@ -553,7 +553,11 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                 onPressed: () => _shiftTime(-1),
                 icon: const Icon(Icons.remove),
               ),
-              const Text('Adjust one hour'),
+              // At 200% text scale the label alone is wider than the screen, so
+              // it must wrap instead of overflowing the centred row (FR-019).
+              const Flexible(
+                child: Text('Adjust one hour', textAlign: TextAlign.center),
+              ),
               IconButton(
                 tooltip: 'One hour later',
                 onPressed: () => _shiftTime(1),

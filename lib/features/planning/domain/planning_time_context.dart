@@ -96,7 +96,11 @@ final class PlanningTimeContext {
         : offset == null
         ? utc
         : utc.add(offset!);
-    return DateTime(
+    // Zone-neutral carrier: a device-zone DateTime would normalise these fields
+    // through the device's own daylight-saving rules, shifting them by an hour
+    // when the target zone's transition falls in a device-zone gap. The sibling
+    // range helper carries fields the same way.
+    return DateTime.utc(
       local.year,
       local.month,
       local.day,

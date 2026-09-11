@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/macro/domain/macro_calculator.dart';
 
 void main() {
@@ -65,12 +66,33 @@ void main() {
       ),
     );
     expect(result.status, CalculationStatus.invalid);
-    expect(result.errors.map((error) => error.field), [
-      'focalLengthMm',
-      'extensionLengthMm',
-      'nativeMagnification',
-      'nominalAperture',
-      'sensorWidthMm',
+    expect(result.output, isNull);
+    expect(result.errors, const [
+      ValidationError(
+        field: 'focalLengthMm',
+        code: 'positive_finite_required',
+        messageKey: 'macro.error.focalLengthMm',
+      ),
+      ValidationError(
+        field: 'extensionLengthMm',
+        code: 'positive_finite_required',
+        messageKey: 'macro.error.extensionLengthMm',
+      ),
+      ValidationError(
+        field: 'nativeMagnification',
+        code: 'non_negative_required',
+        messageKey: 'macro.error.nativeMagnification',
+      ),
+      ValidationError(
+        field: 'nominalAperture',
+        code: 'positive_finite_required',
+        messageKey: 'macro.error.nominalAperture',
+      ),
+      ValidationError(
+        field: 'sensorWidthMm',
+        code: 'positive_finite_required',
+        messageKey: 'macro.error.sensorWidthMm',
+      ),
     ]);
   });
 }

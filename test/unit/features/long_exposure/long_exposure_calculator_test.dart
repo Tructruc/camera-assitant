@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/long_exposure/domain/long_exposure_calculator.dart';
 
 import '../../../fixtures/long_exposure_fixtures.dart';
@@ -118,12 +119,33 @@ void main() {
       );
 
       expect(result.status, CalculationStatus.invalid);
-      expect(result.errors.map((error) => error.field), [
-        'baseTimeSeconds',
-        'filters[0]',
-        'filters[1]',
-        'filters[2]',
-        'targetTimeSeconds',
+      expect(result.output, isNull);
+      expect(result.errors, const [
+        ValidationError(
+          field: 'baseTimeSeconds',
+          code: 'positive_finite_required',
+          messageKey: 'longExposure.error.positive_finite_required',
+        ),
+        ValidationError(
+          field: 'filters[0]',
+          code: 'invalid_filter_strength',
+          messageKey: 'longExposure.error.invalid_filter_strength',
+        ),
+        ValidationError(
+          field: 'filters[1]',
+          code: 'invalid_filter_strength',
+          messageKey: 'longExposure.error.invalid_filter_strength',
+        ),
+        ValidationError(
+          field: 'filters[2]',
+          code: 'invalid_filter_strength',
+          messageKey: 'longExposure.error.invalid_filter_strength',
+        ),
+        ValidationError(
+          field: 'targetTimeSeconds',
+          code: 'positive_finite_required',
+          messageKey: 'longExposure.error.positive_finite_required',
+        ),
       ]);
     },
   );

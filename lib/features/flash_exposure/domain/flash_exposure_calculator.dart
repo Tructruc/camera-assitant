@@ -69,6 +69,49 @@ final class FlashExposureCalculator {
     final effectiveGuideNumber =
         input.guideNumberIso100Metres * isoScale * powerScale;
     final aperture = effectiveGuideNumber / input.subjectDistanceMetres;
+    final fullPowerRange = input.guideNumberIso100Metres * isoScale / aperture;
+    // Individually valid extremes can overflow the effective guide number or
+    // collapse the recommended aperture; refuse rather than publish an
+    // infinite guide number or a zero f-stop (FR-002).
+    if (!effectiveGuideNumber.isFinite || effectiveGuideNumber <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'guideNumberIso100Metres',
+            code: 'result_out_of_range',
+            messageKey: 'flash.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
+    if (!aperture.isFinite || aperture <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'subjectDistanceMetres',
+            code: 'result_out_of_range',
+            messageKey: 'flash.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
+    if (!fullPowerRange.isFinite || fullPowerRange <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'iso',
+            code: 'result_out_of_range',
+            messageKey: 'flash.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
     return CalculationResult.valid(
       calculatorId: id,
       formulaVersion: version,
@@ -76,8 +119,7 @@ final class FlashExposureCalculator {
         effectiveGuideNumberMetres: effectiveGuideNumber,
         recommendedAperture: aperture,
         powerReductionStops: -math.log(input.powerFraction) / math.ln2,
-        fullPowerRangeAtRecommendedApertureMetres:
-            input.guideNumberIso100Metres * isoScale / aperture,
+        fullPowerRangeAtRecommendedApertureMetres: fullPowerRange,
       ),
       assumptions: const [
         CalculationAssumption(key: 'guideNumberUnits', value: 'metresAtIso100'),

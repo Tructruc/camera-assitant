@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/panorama/domain/panorama_calculator.dart';
 
 void main() {
@@ -89,16 +91,34 @@ void main() {
         verticalOverlapPercent: -1,
       ),
     );
+    expect(result.status, CalculationStatus.invalid);
     expect(result.output, isNull);
-    expect(
-      result.errors.map((error) => error.field),
-      containsAll(<String>[
-        'sensorWidthMm',
-        'horizontalBoundsDegrees',
-        'verticalBoundsDegrees',
-        'horizontalOverlapPercent',
-        'verticalOverlapPercent',
-      ]),
-    );
+    expect(result.errors, const [
+      ValidationError(
+        field: 'sensorWidthMm',
+        code: 'positive',
+        messageKey: 'panorama.error.sensorWidthMm',
+      ),
+      ValidationError(
+        field: 'horizontalBoundsDegrees',
+        code: 'range',
+        messageKey: 'panorama.error.horizontalBoundsDegrees',
+      ),
+      ValidationError(
+        field: 'verticalBoundsDegrees',
+        code: 'range',
+        messageKey: 'panorama.error.verticalBoundsDegrees',
+      ),
+      ValidationError(
+        field: 'horizontalOverlapPercent',
+        code: 'overlap',
+        messageKey: 'panorama.error.horizontalOverlapPercent',
+      ),
+      ValidationError(
+        field: 'verticalOverlapPercent',
+        code: 'overlap',
+        messageKey: 'panorama.error.verticalOverlapPercent',
+      ),
+    ]);
   });
 }

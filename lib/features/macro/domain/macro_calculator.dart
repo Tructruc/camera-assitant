@@ -143,14 +143,58 @@ final class MacroCalculator {
       MacroConfiguration.coupledLenses =>
         input.primaryFocalLengthMm! / input.reversedFocalLengthMm!,
     };
+    // Extreme but individually valid inputs can collapse the magnification to
+    // zero (dividing by it) or overflow the effective aperture. Report the
+    // driving field rather than returning non-finite results (FR-002).
+    if (!magnification.isFinite || magnification <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: [
+          ValidationError(
+            field: _magnificationField(input.configuration),
+            code: 'result_out_of_range',
+            messageKey: 'macro.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
     final apertureFactor = 1 + magnification;
+    final effectiveAperture = input.nominalAperture * apertureFactor;
+    final subjectWidth = input.sensorWidthMm / magnification;
+    if (!effectiveAperture.isFinite || effectiveAperture <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'nominalAperture',
+            code: 'result_out_of_range',
+            messageKey: 'macro.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
+    if (!subjectWidth.isFinite || subjectWidth <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'sensorWidthMm',
+            code: 'result_out_of_range',
+            messageKey: 'macro.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
     return CalculationResult.valid(
       calculatorId: id,
       formulaVersion: version,
       output: MacroOutput(
         magnification: magnification,
-        effectiveAperture: input.nominalAperture * apertureFactor,
-        subjectWidthMm: input.sensorWidthMm / magnification,
+        effectiveAperture: effectiveAperture,
+        subjectWidthMm: subjectWidth,
         exposureCompensationStops: 2 * math.log(apertureFactor) / math.ln2,
       ),
       assumptions: [
@@ -173,3 +217,11 @@ final class MacroCalculator {
     );
   }
 }
+
+/// The user-entered field that drives magnification for [configuration].
+String _magnificationField(MacroConfiguration configuration) =>
+    switch (configuration) {
+      MacroConfiguration.extensionTube => 'extensionLengthMm',
+      MacroConfiguration.reversedLens => 'reversedFocalLengthMm',
+      MacroConfiguration.coupledLenses => 'primaryFocalLengthMm',
+    };

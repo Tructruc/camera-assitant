@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
-    hide CameraBody, SavedLocation;
+    hide CameraBody, CalculationSnapshot, SavedLocation;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
+import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
+import 'package:photography_assistant/core/presentation/calculator/calculator_components.dart';
 import 'package:photography_assistant/features/alignment/domain/alignment_calculator.dart';
 import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
 import 'package:photography_assistant/features/alignment/presentation/alignment_timeline.dart';
@@ -568,6 +570,50 @@ void main() {
     expect(snapshot.displayContext['expectedAccuracy'], contains('10 minutes'));
   });
 
+  testWidgets('an over-sized filter stack is refused, not crashed', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const LongExposureScreen()));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'ND filter strengths (stops)'),
+      '1000000000000',
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Calculate exposure'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Calculate exposure'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('overflows the exposure time'), findsOneWidget);
+    expect(find.byType(CalculationResultView), findsNothing);
+  });
+
+  testWidgets('an unshootable panorama grid is refused, not crashed', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const PanoramaScreen()));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Focal length (mm)'),
+      '1000000000000',
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Plan panorama'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Plan panorama'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('more than 2000 frames'), findsOneWidget);
+    expect(find.byType(CalculationResultView), findsNothing);
+  });
+
   testWidgets('preferences change result presentation, not calculations', (
     tester,
   ) async {
@@ -978,6 +1024,275 @@ void main() {
             snapshot.displayContext.isNotEmpty,
       ),
       isTrue,
+    );
+
+    // "Non-empty" alone would accept a mis-keyed or swapped payload. Pin the
+    // formula version and the exact provenance keys each calculator promises,
+    // so a renamed or dropped field fails here instead of in the saved list.
+    final byCalculator = <String, CalculationSnapshot>{
+      for (final snapshot in snapshots) snapshot.calculatorId: snapshot,
+    };
+    const expectedProvenance =
+        <String, (int, List<String>, List<String>, List<String>)>{
+          'depth_of_field': (
+            1,
+            [
+              'focalLengthMm',
+              'aperture',
+              'focusDistanceMm',
+              'circleOfConfusionMm',
+            ],
+            [
+              'hyperfocalDistanceMm',
+              'nearLimitMm',
+              'farLimitMm',
+              'totalDepthMm',
+            ],
+            ['distanceUnit', 'infinityLabel'],
+          ),
+          'exposure_comparison': (
+            1,
+            ['baseline', 'candidate'],
+            [
+              'totalDifferenceStops',
+              'apertureContributionStops',
+              'timeContributionStops',
+              'isoContributionStops',
+              'multiplier',
+              'direction',
+            ],
+            ['stopPrecision', 'multiplierPrecision'],
+          ),
+          'long_exposure_nd': (
+            1,
+            ['baseTimeSeconds', 'filterStops', 'targetTimeSeconds'],
+            [
+              'filteredTimeSeconds',
+              'totalStrengthStops',
+              'requiredStrengthStops',
+              'requiresBulbOrTimer',
+            ],
+            ['shutterDisplay', 'fractionStep', 'shutterLabel'],
+          ),
+          'flash_exposure': (
+            1,
+            [
+              'guideNumberIso100Metres',
+              'iso',
+              'powerFraction',
+              'subjectDistanceMetres',
+            ],
+            [
+              'effectiveGuideNumberMetres',
+              'recommendedAperture',
+              'powerReductionStops',
+              'fullPowerRangeAtRecommendedApertureMetres',
+            ],
+            ['distanceUnit'],
+          ),
+          'timelapse': (
+            1,
+            [
+              'intervalSeconds',
+              'captureDurationSeconds',
+              'playbackFps',
+              'megabytesPerFrame',
+              'startExposureSeconds',
+              'endExposureSeconds',
+            ],
+            [
+              'frameCount',
+              'playbackDurationSeconds',
+              'storageMegabytes',
+              'exposureRampStops',
+              'maximumDutyCycle',
+            ],
+            ['storageUnits'],
+          ),
+          'macro': (
+            1,
+            [
+              'configuration',
+              'focalLengthMm',
+              'extensionLengthMm',
+              'nativeMagnification',
+              'nominalAperture',
+              'sensorWidthMm',
+            ],
+            [
+              'magnification',
+              'effectiveAperture',
+              'subjectWidthMm',
+              'exposureCompensationStops',
+            ],
+            ['lengthUnit'],
+          ),
+          'field_of_view': (
+            1,
+            ['sensorWidthMm', 'sensorHeightMm', 'focalLengthMm', 'distanceMm'],
+            [
+              'horizontalDegrees',
+              'verticalDegrees',
+              'diagonalDegrees',
+              'sceneWidthMm',
+              'sceneHeightMm',
+            ],
+            ['distanceUnit'],
+          ),
+          'diffraction': (
+            1,
+            ['aperture', 'wavelengthNm', 'pixelPitchMicrometres'],
+            ['airyDiskMicrometres', 'airyRadiusMicrometres', 'airyDiskPixels'],
+            ['distanceUnit'],
+          ),
+          'focus_stacking': (
+            1,
+            [
+              'focalLengthMm',
+              'aperture',
+              'circleOfConfusionMm',
+              'nearDistanceMm',
+              'farDistanceMm',
+              'overlapPercent',
+            ],
+            ['frameCount', 'focusDistancesMm'],
+            ['distanceUnit'],
+          ),
+          'panorama': (
+            1,
+            [
+              'sensorWidthMm',
+              'sensorHeightMm',
+              'focalLengthMm',
+              'orientation',
+              'horizontalBoundsDegrees',
+              'verticalBoundsDegrees',
+              'horizontalOverlapPercent',
+              'verticalOverlapPercent',
+            ],
+            [
+              'columns',
+              'rows',
+              'frameCount',
+              'frameHorizontalDegrees',
+              'frameVerticalDegrees',
+              'horizontalIncrementDegrees',
+              'verticalIncrementDegrees',
+              'horizontalCoverageDegrees',
+              'verticalCoverageDegrees',
+              'frames',
+            ],
+            ['angleUnit', 'positionOrigin'],
+          ),
+          'astronomy': (
+            2,
+            [
+              'latitudeDegrees',
+              'longitudeDegrees',
+              'observerElevationMetres',
+              'instantUtc',
+              'target',
+              'rightAscensionDegrees',
+              'declinationDegrees',
+              'focalLengthMm',
+              'cropFactor',
+              'aperture',
+              'pixelPitchMicrometres',
+              'desiredTrailDegrees',
+              'selectedRule',
+              'sharpnessTolerance',
+            ],
+            [
+              'altitudeDegrees',
+              'azimuthDegrees',
+              'aboveHorizon',
+              'rule500Seconds',
+              'npfSeconds',
+              'recommendedShutterSeconds',
+              'events',
+              'fieldChecklist',
+            ],
+            [
+              'timeZone',
+              'catalogVersion',
+              'catalogProvenance',
+              'sourceFreshness',
+              'expectedAccuracy',
+            ],
+          ),
+          'sun_moon_alignment': (
+            2,
+            [
+              'body',
+              'observerLatitudeDegrees',
+              'observerLongitudeDegrees',
+              'observerElevationMetres',
+              'targetElevationMetres',
+              'targetDistanceMetres',
+              'desiredBearingDegrees',
+              'angularToleranceDegrees',
+              'startLocalDate',
+              'endLocalDate',
+              'startUtc',
+              'endUtc',
+            ],
+            [
+              'desiredAltitudeDegrees',
+              'sampleMinutes',
+              'candidates',
+              'fieldChecklist',
+            ],
+            [
+              'timeZone',
+              'northReference',
+              'mapMode',
+              'locationLabel',
+              'horizon',
+              'refraction',
+              'sourceFreshness',
+              'expectedAccuracy',
+            ],
+          ),
+        };
+
+    for (final entry in expectedProvenance.entries) {
+      final snapshot = byCalculator[entry.key];
+      expect(snapshot, isNotNull, reason: '${entry.key} was not saved');
+      final (version, inputKeys, outputKeys, contextKeys) = entry.value;
+      expect(
+        snapshot!.formulaVersion,
+        version,
+        reason: '${entry.key} saved the wrong formula version',
+      );
+      expect(
+        snapshot.canonicalInputs.keys,
+        containsAll(inputKeys),
+        reason: '${entry.key} lost canonical inputs',
+      );
+      expect(
+        snapshot.canonicalOutputs.keys,
+        containsAll(outputKeys),
+        reason: '${entry.key} lost canonical outputs',
+      );
+      expect(
+        snapshot.displayContext.keys,
+        containsAll(contextKeys),
+        reason: '${entry.key} lost reproducibility context',
+      );
+    }
+
+    // One absolute anchor: the default depth-of-field payload must carry the
+    // on-screen values and their thin-lens hyperfocal result.
+    final depthOfField = byCalculator['depth_of_field']!;
+    expect(depthOfField.canonicalInputs, <String, Object?>{
+      'focalLengthMm': 50.0,
+      'aperture': 8.0,
+      'focusDistanceMm': 10000.0,
+      'circleOfConfusionMm': 0.03,
+    });
+    expect(
+      depthOfField.canonicalOutputs['hyperfocalDistanceMm'] as num,
+      closeTo(50 * 50 / (8 * 0.03) + 50, 0.01),
     );
   });
 }

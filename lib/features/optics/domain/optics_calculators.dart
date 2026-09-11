@@ -63,6 +63,23 @@ final class FieldOfViewCalculator {
             input.sensorHeightMm * input.sensorHeightMm,
       ),
     );
+    final sceneWidth = 2 * input.distanceMm * math.tan(horizontal / 2);
+    final sceneHeight = 2 * input.distanceMm * math.tan(vertical / 2);
+    // Individually finite inputs can still multiply into an unrepresentable
+    // scene width; refuse it instead of reporting an infinite frame (FR-002).
+    if (!sceneWidth.isFinite || !sceneHeight.isFinite) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'distanceMm',
+            code: 'result_out_of_range',
+            messageKey: 'optics.error.resultOutOfRange.distanceMm',
+          ),
+        ],
+      );
+    }
     return CalculationResult.valid(
       calculatorId: id,
       formulaVersion: version,
@@ -70,8 +87,8 @@ final class FieldOfViewCalculator {
         horizontalDegrees: horizontal * 180 / math.pi,
         verticalDegrees: vertical * 180 / math.pi,
         diagonalDegrees: diagonal * 180 / math.pi,
-        sceneWidthMm: 2 * input.distanceMm * math.tan(horizontal / 2),
-        sceneHeightMm: 2 * input.distanceMm * math.tan(vertical / 2),
+        sceneWidthMm: sceneWidth,
+        sceneHeightMm: sceneHeight,
       ),
       assumptions: const [
         CalculationAssumption(key: 'projection', value: 'rectilinear'),
@@ -122,20 +139,50 @@ final class DiffractionCalculator {
       );
     }
     final diameter = 2.44 * (input.wavelengthNm / 1000) * input.aperture;
+    final pixels = diameter / input.pixelPitchMicrometres;
+    // Extreme, individually valid wavelengths/apertures can overflow the Airy
+    // diameter (or underflow it to zero); report the field instead of a
+    // non-finite spot measurement (FR-002).
+    if (!diameter.isFinite || diameter <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'wavelengthNm',
+            code: 'result_out_of_range',
+            messageKey: 'optics.error.resultOutOfRange.wavelengthNm',
+          ),
+        ],
+      );
+    }
+    if (!pixels.isFinite || pixels <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'pixelPitchMicrometres',
+            code: 'result_out_of_range',
+            messageKey: 'optics.error.resultOutOfRange.pixelPitchMicrometres',
+          ),
+        ],
+      );
+    }
     return CalculationResult.valid(
       calculatorId: id,
       formulaVersion: version,
       output: DiffractionOutput(
         airyDiskMicrometres: diameter,
         airyRadiusMicrometres: diameter / 2,
-        airyDiskPixels: diameter / input.pixelPitchMicrometres,
+        airyDiskPixels: pixels,
       ),
       assumptions: const [
         CalculationAssumption(key: 'criterion', value: 'firstAiryMinimum'),
         CalculationAssumption(key: 'aperture', value: 'circular'),
         CalculationAssumption(key: 'wavelength', value: 'monochromatic'),
       ],
-      warnings: diameter / input.pixelPitchMicrometres >= 2
+      warnings: pixels >= 2
           ? const [
               CalculationWarning(
                 code: 'sampling_visible',
@@ -228,6 +275,21 @@ final class FocusStackCalculator {
             input.focalLengthMm /
             (input.aperture * input.circleOfConfusionMm) +
         input.focalLengthMm;
+    // A hyperfocal distance that is not representable would silently truncate
+    // the stack to a single frame, so refuse the request instead.
+    if (!hyperfocal.isFinite || hyperfocal <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'focalLengthMm',
+            code: 'result_out_of_range',
+            messageKey: 'optics.error.resultOutOfRange.focalLengthMm',
+          ),
+        ],
+      );
+    }
     final usable = 1 - input.overlapPercent / 100;
     final positions = <double>[];
     var focus = input.nearDistanceMm;

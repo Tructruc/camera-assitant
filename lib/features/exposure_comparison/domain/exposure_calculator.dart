@@ -74,11 +74,55 @@ final class ExposureCalculator {
     );
     final isoStops = _log2(input.candidate.iso / input.baseline.iso);
     final totalStops = apertureStops + timeStops + isoStops;
+    // A ratio of extreme but individually valid inputs can overflow the
+    // logarithm; the result is not representable, so say which side it came
+    // from instead of letting the stop value object throw (FR-002).
+    final unrepresentable = <String>[
+      if (!apertureStops.isFinite) 'baseline.aperture',
+      if (!timeStops.isFinite) 'baseline.timeSeconds',
+      if (!isoStops.isFinite) 'baseline.iso',
+    ];
+    if (unrepresentable.isNotEmpty) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: [
+          for (final field in unrepresentable)
+            ValidationError(
+              field: field,
+              code: 'result_out_of_range',
+              messageKey: 'exposure.error.resultOutOfRange',
+            ),
+        ],
+      );
+    }
     final direction = switch (totalStops) {
       > 0 => ExposureDirection.brighter,
       < 0 => ExposureDirection.darker,
       _ => ExposureDirection.equivalent,
     };
+    final multiplier = math.pow(2, totalStops).toDouble();
+    // Finite stop differences can still push the linear multiplier past the
+    // representable range (overflow to infinity or underflow to zero), which
+    // is not a usable "N×" comparison factor.
+    if (!multiplier.isFinite || multiplier <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: [
+          ValidationError(
+            field: _multiplierField(
+              totalStops,
+              apertureStops,
+              timeStops,
+              isoStops,
+            ),
+            code: 'result_out_of_range',
+            messageKey: 'exposure.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
 
     return CalculationResult.valid(
       calculatorId: id,
@@ -88,7 +132,7 @@ final class ExposureCalculator {
         apertureContribution: StopDifference(apertureStops),
         timeContribution: StopDifference(timeStops),
         isoContribution: StopDifference(isoStops),
-        multiplier: math.pow(2, totalStops).toDouble(),
+        multiplier: multiplier,
         direction: direction,
       ),
       assumptions: const [
@@ -135,4 +179,34 @@ final class ExposureCalculator {
   }
 
   double _log2(double value) => math.log(value) / math.ln2;
+}
+
+/// Names the endpoint whose stop contribution pushed the linear multiplier out
+/// of range, so the UI highlights the side the user should change.
+String _multiplierField(
+  double totalStops,
+  double apertureStops,
+  double timeStops,
+  double isoStops,
+) {
+  final contributions = <(String, double)>[
+    ('baseline.aperture', apertureStops),
+    ('baseline.timeSeconds', timeStops),
+    ('baseline.iso', isoStops),
+  ];
+  // A brighter candidate (positive stops) comes from the candidate's smaller
+  // aperture, longer time, or higher ISO; mirror the field names accordingly.
+  final candidateSide = totalStops > 0;
+  String? bestField;
+  var bestMagnitude = -1.0;
+  for (final (field, stops) in contributions) {
+    final magnitude = candidateSide ? stops : -stops;
+    if (magnitude > bestMagnitude) {
+      bestMagnitude = magnitude;
+      bestField = candidateSide
+          ? field.replaceFirst('baseline.', 'candidate.')
+          : field;
+    }
+  }
+  return bestField ?? 'candidate.aperture';
 }

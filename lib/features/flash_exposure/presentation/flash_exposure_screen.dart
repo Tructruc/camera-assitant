@@ -157,9 +157,14 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
       _result = result;
       _errors = {
         for (final error in result.errors)
-          error.field: error.code == 'power_range'
-              ? 'Enter a power fraction above 0 and no greater than 1.'
-              : 'Enter a positive finite value.',
+          error.field: switch (error.code) {
+            'power_range' =>
+              'Enter a power fraction above 0 and no greater than 1.',
+            'result_out_of_range' =>
+              'These values produce a result outside the representable range. '
+                  'Reduce the extreme value and try again.',
+            _ => 'Enter a positive finite value.',
+          },
       };
     });
   }

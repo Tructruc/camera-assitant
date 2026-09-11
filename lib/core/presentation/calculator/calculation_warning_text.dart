@@ -34,5 +34,9 @@ String calculationWarningText(String code) => switch (code) {
     'The distance must be greater than the focal length.',
   'positive_finite_required' => 'Enter a positive finite value.',
   'range' => 'Enter a value inside the supported range.',
+  'plan_too_large' =>
+    'These bounds need more than 2,000 frames. Reduce the coverage or use a wider lens.',
+  'result_out_of_range' =>
+    'These values produce a result outside the representable range. Reduce the extreme value and try again.',
   _ => 'This result reported a limitation ($code).',
 };

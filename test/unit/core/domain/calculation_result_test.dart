@@ -68,4 +68,65 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('a usable result cannot be constructed without a non-null output', () {
+    expect(
+      () => CalculationResult<double>.valid(
+        calculatorId: 'depth-of-field',
+        formulaVersion: 1,
+        output: null,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('nullable outputs are still allowed when the type admits null', () {
+    final result = CalculationResult<double?>.valid(
+      calculatorId: 'depth-of-field',
+      formulaVersion: 1,
+      output: null,
+    );
+
+    expect(result.status, CalculationStatus.valid);
+    expect(result.isUsable, isTrue);
+    expect(result.output, isNull);
+    expect(result.errors, isEmpty);
+  });
+
+  test('validation issues compare by value', () {
+    expect(
+      const ValidationError(
+        field: 'aperture',
+        code: 'positive_finite_required',
+        messageKey: 'dof.error.aperture',
+      ),
+      const ValidationError(
+        field: 'aperture',
+        code: 'positive_finite_required',
+        messageKey: 'dof.error.aperture',
+      ),
+    );
+    expect(
+      const ValidationError(
+        field: 'aperture',
+        code: 'positive_finite_required',
+        messageKey: 'dof.error.aperture',
+      ),
+      isNot(
+        const ValidationError(
+          field: 'aperture',
+          code: 'range',
+          messageKey: 'dof.error.aperture',
+        ),
+      ),
+    );
+    expect(
+      const CalculationWarning(code: 'close-focus', messageKey: 'warning.x'),
+      const CalculationWarning(code: 'close-focus', messageKey: 'warning.x'),
+    );
+    expect(
+      const CalculationAssumption(key: 'model', value: 'thin-lens'),
+      const CalculationAssumption(key: 'model', value: 'thin-lens'),
+    );
+  });
 }

@@ -23,7 +23,13 @@ String formatConventionalShutter(double seconds, FractionStep step) {
     return '${_decimal(roundedSeconds)} s';
   }
 
-  final denominator = _nearestDenominator(1 / roundedSeconds, step);
+  final reciprocal = 1 / roundedSeconds;
+  if (!reciprocal.isFinite) {
+    // Below roughly 1e-308 the reciprocal overflows; there is no conventional
+    // fraction to name, so report the exact value rather than a wrong "1/2 s".
+    return '${_decimal(roundedSeconds)} s';
+  }
+  final denominator = _nearestDenominator(reciprocal, step);
   return '1/${_decimal(denominator)} s';
 }
 
@@ -119,6 +125,13 @@ double _nearestDenominator(double target, FractionStep step) {
   );
 }
 
-String _decimal(double value) => value == value.roundToDouble()
-    ? value.toInt().toString()
-    : value.toStringAsFixed(1);
+String _decimal(double value) {
+  if (!value.isFinite) return value.toString();
+  // `toInt()` saturates above the largest representable integer, which would
+  // print a plausible but wrong huge number. Extremely long exposures are real
+  // (stacked ND filters), so fall back to the plain decimal form there.
+  if (value.abs() >= 1e15) return value.toStringAsFixed(0);
+  return value == value.roundToDouble()
+      ? value.toInt().toString()
+      : value.toStringAsFixed(1);
+}

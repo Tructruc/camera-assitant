@@ -20,6 +20,12 @@ final class CalculationResult<T> {
            ? CalculationStatus.valid
            : CalculationStatus.validWithWarning {
     _validateIdentity(calculatorId, formulaVersion);
+    // A usable result must actually carry the value callers will dereference.
+    // Without this, `CalculationResult<Object?>.valid(output: null)` would
+    // advertise a usable result whose output is missing (FR-002 recovery).
+    if (output == null && null is! T) {
+      throw ArgumentError.value(output, 'output', 'must not be null for $T');
+    }
   }
 
   CalculationResult.invalid({

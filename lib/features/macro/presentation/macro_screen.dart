@@ -329,9 +329,13 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
       _result = result;
       _errors = {
         for (final error in result.errors)
-          error.field: error.code == 'non_negative_required'
-              ? 'Enter zero or a positive finite value.'
-              : 'Enter a positive finite value.',
+          error.field: switch (error.code) {
+            'non_negative_required' => 'Enter zero or a positive finite value.',
+            'result_out_of_range' =>
+              'These values produce a result outside the representable range. '
+                  'Reduce the extreme value and try again.',
+            _ => 'Enter a positive finite value.',
+          },
       };
     });
   }

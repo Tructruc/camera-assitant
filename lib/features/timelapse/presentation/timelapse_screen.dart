@@ -126,7 +126,9 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
       _result = result;
       _errors = {
         for (final error in result.errors)
-          error.field: 'Enter a positive finite value.',
+          error.field: error.code == 'result_out_of_range'
+              ? 'This duration and interval need more frames than the model can represent. Increase the interval.'
+              : 'Enter a positive finite value.',
       };
     });
   }

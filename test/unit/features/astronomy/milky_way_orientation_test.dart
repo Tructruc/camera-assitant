@@ -86,7 +86,14 @@ void main() {
       final outside = calculator.calculate(
         input(-28.80781, -14.04378837, DateTime.utc(2000, 1, 1, 12)),
       );
-      expect(outside.output!.milkyWayOrientationDegrees, isNotNull);
+      // Just outside the singular band the angle is numerically known: it holds
+      // the same limit as the pole fixtures above (121.395578), and probing
+      // offsets of 0.11 to 2.0 degrees north and south of the zenith latitude
+      // returns that value unchanged to about 1e-13 degrees.
+      expect(
+        outside.output!.milkyWayOrientationDegrees,
+        closeTo(121.395578, 0.1),
+      );
     },
   );
 

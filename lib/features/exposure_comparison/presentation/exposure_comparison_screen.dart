@@ -140,7 +140,9 @@ class _ExposureComparisonScreenState
       _result = result;
       _errors = {
         for (final error in result.errors)
-          error.field: 'Enter a positive finite value.',
+          error.field: error.code == 'result_out_of_range'
+              ? 'This pair of settings differs by more stops than the model can represent.'
+              : 'Enter a positive finite value.',
       };
     });
   }

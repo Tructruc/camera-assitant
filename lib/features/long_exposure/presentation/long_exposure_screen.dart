@@ -165,7 +165,11 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
 
   String? get _filterError {
     for (final entry in _errors.entries) {
-      if (entry.key.startsWith('filters[')) return entry.value;
+      // A per-filter error is indexed; an error about the stack as a whole uses
+      // the bare field name.
+      if (entry.key == 'filters' || entry.key.startsWith('filters[')) {
+        return entry.value;
+      }
     }
     return null;
   }
@@ -188,9 +192,13 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
       _result = result;
       _errors = {
         for (final error in result.errors)
-          error.field: error.code == 'target_shorter_than_base'
-              ? 'Target time must not be shorter than base time.'
-              : 'Enter a valid non-negative ND value.',
+          error.field: switch (error.code) {
+            'target_shorter_than_base' =>
+              'Target time must not be shorter than base time.',
+            'result_out_of_range' =>
+              'This stack of filters overflows the exposure time. Reduce the stacked strength.',
+            _ => 'Enter a valid non-negative ND value.',
+          },
       };
     });
   }

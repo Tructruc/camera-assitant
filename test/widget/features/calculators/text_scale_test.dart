@@ -33,20 +33,24 @@ void main() {
     ),
   );
 
-  for (final (name, screen) in <(String, Widget)>[
-    ('saved locations', const SavedLocationsScreen()),
-    ('depth of field', const DepthOfFieldScreen()),
-    ('exposure comparison', const ExposureComparisonScreen()),
-    ('long exposure / ND', const LongExposureScreen()),
-    ('field of view', const FieldOfViewScreen()),
-    ('diffraction guidance', const DiffractionScreen()),
-    ('focus stack planner', const FocusStackScreen()),
-    ('flash exposure', const FlashExposureScreen()),
-    ('timelapse planner', const TimelapseScreen()),
-    ('macro planner', const MacroScreen()),
-    ('panorama planner', const PanoramaScreen()),
-    ('night-sky planner', const AstronomyScreen()),
-    ('Sun & Moon alignment', const AlignmentScreen()),
+  for (final (name, screen, primaryAction) in <(String, Widget, String)>[
+    ('saved locations', const SavedLocationsScreen(), 'Add location'),
+    ('depth of field', const DepthOfFieldScreen(), 'Calculate'),
+    (
+      'exposure comparison',
+      const ExposureComparisonScreen(),
+      'Compare exposures',
+    ),
+    ('long exposure / ND', const LongExposureScreen(), 'Calculate exposure'),
+    ('field of view', const FieldOfViewScreen(), 'Calculate'),
+    ('diffraction guidance', const DiffractionScreen(), 'Calculate'),
+    ('focus stack planner', const FocusStackScreen(), 'Calculate'),
+    ('flash exposure', const FlashExposureScreen(), 'Calculate flash exposure'),
+    ('timelapse planner', const TimelapseScreen(), 'Plan timelapse'),
+    ('macro planner', const MacroScreen(), 'Calculate macro setup'),
+    ('panorama planner', const PanoramaScreen(), 'Plan panorama'),
+    ('night-sky planner', const AstronomyScreen(), 'Plan night sky'),
+    ('Sun & Moon alignment', const AlignmentScreen(), 'Search alignments'),
   ]) {
     testWidgets('$name stays usable at 200 percent text scale', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
@@ -64,6 +68,23 @@ void main() {
 
       // Every screen keeps labelled controls for screen readers, not just one.
       expect(find.bySemanticsLabel(RegExp('.+')), findsAtLeastNWidgets(2));
+
+      // The screen's real primary action must still be reachable at 2x text;
+      // "some scrollable and some labelled node exist" would accept a control
+      // that 200% text pushed out of the scroll extent.
+      final action = find.widgetWithText(FilledButton, primaryAction);
+      await tester.scrollUntilVisible(
+        action,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        action,
+        findsOneWidget,
+        reason: '$primaryAction is unreachable at 200 percent text',
+      );
+      expect(tester.takeException(), isNull);
 
       // The longest content stays reachable by scrolling to the end.
       await tester.drag(find.byType(Scrollable).first, const Offset(0, -400));

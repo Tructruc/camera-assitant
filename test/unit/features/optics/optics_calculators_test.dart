@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/optics/domain/optics_calculators.dart';
 
 void main() {
@@ -29,10 +30,23 @@ void main() {
         ),
       );
       expect(result.status, CalculationStatus.invalid);
-      expect(result.errors.map((error) => error.field), [
-        'sensorWidthMm',
-        'focalLengthMm',
-        'distanceMm',
+      expect(result.output, isNull);
+      expect(result.errors, const [
+        ValidationError(
+          field: 'sensorWidthMm',
+          code: 'positive_finite_required',
+          messageKey: 'optics.error.positiveFinite.sensorWidthMm',
+        ),
+        ValidationError(
+          field: 'focalLengthMm',
+          code: 'positive_finite_required',
+          messageKey: 'optics.error.positiveFinite.focalLengthMm',
+        ),
+        ValidationError(
+          field: 'distanceMm',
+          code: 'positive_finite_required',
+          messageKey: 'optics.error.positiveFinite.distanceMm',
+        ),
       ]);
     });
   });
@@ -59,9 +73,19 @@ void main() {
           pixelPitchMicrometres: 0,
         ),
       );
-      expect(result.errors.map((error) => error.field), [
-        'wavelengthNm',
-        'pixelPitchMicrometres',
+      expect(result.status, CalculationStatus.invalid);
+      expect(result.output, isNull);
+      expect(result.errors, const [
+        ValidationError(
+          field: 'wavelengthNm',
+          code: 'positive_finite_required',
+          messageKey: 'optics.error.positiveFinite.wavelengthNm',
+        ),
+        ValidationError(
+          field: 'pixelPitchMicrometres',
+          code: 'positive_finite_required',
+          messageKey: 'optics.error.positiveFinite.pixelPitchMicrometres',
+        ),
       ]);
     });
   });
@@ -79,12 +103,20 @@ void main() {
         ),
       );
       final positions = result.output!.focusDistancesMm;
-      expect(positions.first, 500);
-      expect(positions.last, 1000);
-      expect(positions.length, greaterThan(2));
+      // Hyperfocal is 41766.66666666667 mm; with 20% overlap the thin-lens
+      // loop needs 61 steps to cover 500 mm -> 1000 mm, plus the pinned far end.
+      expect(positions, hasLength(62));
+      expect(positions.first, 500.0);
+      expect(positions.last, 1000.0);
+      expect(positions[1], closeTo(503.87722132471725, 1e-6));
+      expect(positions[2], closeTo(507.8227525846824, 1e-6));
+      expect(positions[3], closeTo(511.83840892668724, 1e-6));
+      expect(positions[4], closeTo(515.9260704172258, 1e-6));
+      expect(positions[5], closeTo(520.0876849723631, 1e-6));
       for (var index = 1; index < positions.length; index++) {
         expect(positions[index], greaterThan(positions[index - 1]));
       }
+      expect(positions, everyElement(inInclusiveRange(500.0, 1000.0)));
     });
 
     test('validates range, optical distance, and overlap', () {
@@ -99,10 +131,24 @@ void main() {
         ),
       );
       expect(result.status, CalculationStatus.invalid);
-      expect(
-        result.errors.map((error) => error.field),
-        containsAll(['farDistanceMm', 'overlapPercent', 'nearDistanceMm']),
-      );
+      expect(result.output, isNull);
+      expect(result.errors, const [
+        ValidationError(
+          field: 'farDistanceMm',
+          code: 'greater_than_near',
+          messageKey: 'focusStack.error.farDistance',
+        ),
+        ValidationError(
+          field: 'overlapPercent',
+          code: 'range',
+          messageKey: 'focusStack.error.overlap',
+        ),
+        ValidationError(
+          field: 'nearDistanceMm',
+          code: 'not_beyond_focal_length',
+          messageKey: 'focusStack.error.nearDistance',
+        ),
+      ]);
     });
   });
 }

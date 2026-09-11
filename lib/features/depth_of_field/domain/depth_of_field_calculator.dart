@@ -66,6 +66,23 @@ final class DepthOfFieldCalculator {
         focusDistance *
         (hyperfocal - focalLength) /
         (hyperfocal + focusDistance - (2 * focalLength));
+    // Extreme but individually valid inputs can underflow the denominator or
+    // collapse the hyperfocal distance; the geometric model then has no
+    // positive finite answer, so report it rather than letting the quantity
+    // value objects throw (FR-002).
+    if (!hyperfocal.isFinite || !near.isFinite || near <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'circleOfConfusionMm',
+            code: 'result_out_of_range',
+            messageKey: 'depthOfField.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
     final hyperfocalTolerance = hyperfocal * 1e-12;
     final farIsInfinite = focusDistance >= hyperfocal - hyperfocalTolerance;
     final far = farIsInfinite

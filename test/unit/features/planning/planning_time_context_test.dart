@@ -40,7 +40,7 @@ void main() {
     );
     expect(
       context.localCivilTime(DateTime.utc(2026, 8, 21, 20, 30)),
-      DateTime(2026, 8, 21, 22, 30),
+      DateTime.utc(2026, 8, 21, 22, 30),
     );
   });
 
@@ -52,7 +52,7 @@ void main() {
     );
     expect(
       context.localCivilTime(DateTime.utc(2026, 8, 21, 20, 30)),
-      DateTime(2026, 8, 21, 15),
+      DateTime.utc(2026, 8, 21, 15),
     );
   });
 
@@ -65,7 +65,7 @@ void main() {
     );
     expect(
       paris.localCivilTime(DateTime.utc(2028, 3, 1)),
-      DateTime(2028, 3, 1, 1),
+      DateTime.utc(2028, 3, 1, 1),
     );
 
     // A fixed offset east of the date line keeps the local date ahead of UTC.
@@ -76,7 +76,7 @@ void main() {
     );
     expect(
       kiritimati.localCivilTime(DateTime.utc(2026, 2, 28, 12)),
-      DateTime(2026, 3, 1, 2),
+      DateTime.utc(2026, 3, 1, 2),
     );
   });
 

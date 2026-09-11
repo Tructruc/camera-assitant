@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/core/domain/calculation_result.dart';
+import 'package:photography_assistant/core/domain/validation/validation.dart';
 import 'package:photography_assistant/features/exposure_comparison/domain/exposure_calculator.dart';
 
 import '../../../fixtures/exposure_fixtures.dart';
@@ -71,7 +72,7 @@ void main() {
     expect(reverse.output!.direction, ExposureDirection.darker);
   });
 
-  test('component contributions sum to the total', () {
+  test('reports absolute stop contributions for a real exposure change', () {
     final result = calculator.calculate(
       const ExposureComparisonInput(
         baseline: ExposureTriple(aperture: 2.8, timeSeconds: 1 / 125, iso: 100),
@@ -79,12 +80,18 @@ void main() {
       ),
     );
     final output = result.output!;
-    final sum =
-        output.apertureContribution.stops +
-        output.timeContribution.stops +
-        output.isoContribution.stops;
 
-    expect(output.totalDifference.stops, closeTo(sum, exposureTolerance));
+    // f/2.8 -> f/5.6 halves the light twice: -2.0 stops.
+    expect(output.apertureContribution.stops, closeTo(-2.0, 1e-9));
+    // 1/125 s -> 1/30 s is log2(125 / 30) stops of additional light.
+    expect(output.timeContribution.stops, closeTo(2.0588936890535687, 1e-9));
+    // ISO 100 -> ISO 400 doubles the sensitivity twice: +2.0 stops.
+    expect(output.isoContribution.stops, closeTo(2.0, 1e-9));
+    // Total: -2.0 + 2.0588936890535687 + 2.0.
+    expect(output.totalDifference.stops, closeTo(2.0588936890535687, 1e-9));
+    // 2 ** 2.0588936890535687 == 125 / 30.
+    expect(output.multiplier, closeTo(4.166666666666667, 1e-6));
+    expect(output.direction, ExposureDirection.brighter);
   });
 
   test('reports all invalid fields in stable baseline-first order', () {
@@ -100,13 +107,38 @@ void main() {
     );
 
     expect(result.status, CalculationStatus.invalid);
-    expect(result.errors.map((error) => error.field), [
-      'baseline.aperture',
-      'baseline.timeSeconds',
-      'baseline.iso',
-      'candidate.aperture',
-      'candidate.timeSeconds',
-      'candidate.iso',
+    expect(result.output, isNull);
+    expect(result.errors, const [
+      ValidationError(
+        field: 'baseline.aperture',
+        code: 'positive_finite_required',
+        messageKey: 'exposure.error.positiveFinite.baseline.aperture',
+      ),
+      ValidationError(
+        field: 'baseline.timeSeconds',
+        code: 'positive_finite_required',
+        messageKey: 'exposure.error.positiveFinite.baseline.timeSeconds',
+      ),
+      ValidationError(
+        field: 'baseline.iso',
+        code: 'positive_finite_required',
+        messageKey: 'exposure.error.positiveFinite.baseline.iso',
+      ),
+      ValidationError(
+        field: 'candidate.aperture',
+        code: 'positive_finite_required',
+        messageKey: 'exposure.error.positiveFinite.candidate.aperture',
+      ),
+      ValidationError(
+        field: 'candidate.timeSeconds',
+        code: 'positive_finite_required',
+        messageKey: 'exposure.error.positiveFinite.candidate.timeSeconds',
+      ),
+      ValidationError(
+        field: 'candidate.iso',
+        code: 'positive_finite_required',
+        messageKey: 'exposure.error.positiveFinite.candidate.iso',
+      ),
     ]);
   });
 }

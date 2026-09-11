@@ -327,6 +327,64 @@ final class AstronomyCalculator {
     final selectedBase = input.selectedRule == StarShutterRule.rule500
         ? rule500
         : npf;
+    final recommendedShutter = selectedBase * toleranceMultiplier;
+    // Extreme but individually valid optics can overflow the 500-rule or NPF
+    // shutter time and collapse the other to zero. Both are user-facing
+    // recommendations, so report the field instead of publishing a
+    // non-finite shutter speed (FR-002).
+    if (!rule500.isFinite || rule500 <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'cropFactor',
+            code: 'result_out_of_range',
+            messageKey: 'astronomy.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
+    if (!npf.isFinite) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'aperture',
+            code: 'result_out_of_range',
+            messageKey: 'astronomy.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
+    if (npf <= 0) {
+      // A vanishing NPF time means the focal length swallowed the numerator.
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'focalLengthMm',
+            code: 'result_out_of_range',
+            messageKey: 'astronomy.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
+    if (!recommendedShutter.isFinite || recommendedShutter <= 0) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'focalLengthMm',
+            code: 'result_out_of_range',
+            messageKey: 'astronomy.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
     final isMilkyWay = input.target == CelestialTarget.milkyWayCore;
     final orientation = isMilkyWay
         ? _milkyWayOrientation(latitude, _radians(localSidereal), coordinates)
@@ -349,7 +407,7 @@ final class AstronomyCalculator {
         trailDurationSeconds:
             _siderealDaySeconds * input.desiredTrailDegrees / 360,
         trailRotationDegreesPerHour: 360 * 3600 / _siderealDaySeconds,
-        recommendedShutterSeconds: selectedBase * toleranceMultiplier,
+        recommendedShutterSeconds: recommendedShutter,
         milkyWayOrientationDegrees: orientation,
       ),
       assumptions: [

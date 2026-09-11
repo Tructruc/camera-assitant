@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/app.dart';
+import 'package:photography_assistant/app/calculator_catalog.dart';
 import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
@@ -19,6 +20,7 @@ void main() {
   Widget buildApp({double textScale = 1}) {
     return ProviderScope(
       overrides: <Override>[
+        appDatabaseProvider.overrideWithValue(database),
         preferencesProvider.overrideWith(
           (ref) => Stream<AppPreferences>.value(const AppPreferences()),
         ),
@@ -70,40 +72,54 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('calculator catalog opens each offline calculator screen', (
+  testWidgets('calculator catalog opens every offline calculator screen', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Depth of field'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Depth of field'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Exposure comparison'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Exposure comparison'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Long exposure / ND'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('Long exposure / ND'), findsOneWidget);
+    // Driven by the catalog enum, so a destination that is added without a
+    // working route or a screen that fails to build cannot slip through.
+    for (final destination in CalculatorDestination.values) {
+      // Filtering with the catalog's own search keeps each tile on screen, so
+      // the loop does not depend on the scroll position of a long list.
+      await tester.enterText(find.byType(SearchBar), destination.label);
+      await tester.pumpAndSettle();
+      final tile = find.widgetWithText(ListTile, destination.label);
+      expect(
+        tile,
+        findsOneWidget,
+        reason: '${destination.label} is missing from the catalog',
+      );
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Depth of field'),
-      -200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Depth of field'));
+      expect(
+        find.widgetWithText(AppBar, destination.label),
+        findsOneWidget,
+        reason: '${destination.label} did not open its own screen',
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: '${destination.label} threw while building',
+      );
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+    }
+
+    await tester.enterText(find.byType(SearchBar), 'Depth of field');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Depth of field'));
     await tester.pumpAndSettle();
     expect(find.text('Focal length (mm)'), findsOneWidget);
     expect(find.textContaining('connect'), findsNothing);
+
+    // Opening every destination starts Drift streams; unmount before the
+    // framework checks that no timer outlives the widget tree.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
   });
 
   testWidgets('catalog searches and groups tools by photographic purpose', (

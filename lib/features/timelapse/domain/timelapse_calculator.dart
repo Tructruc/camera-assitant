@@ -46,6 +46,12 @@ final class TimelapseCalculator {
   static const id = 'timelapse';
   static const version = 1;
 
+  /// Highest frame count this planner will plan for. Beyond it the frame
+  /// counter stops being a plan and starts being an arithmetic artefact:
+  /// `double.floor()` clamps at the 64-bit integer limit, so a larger quotient
+  /// would otherwise silently wrap to a negative frame count.
+  static const maximumPlannedFrames = 1000000;
+
   CalculationResult<TimelapseOutput> calculate(TimelapseInput input) {
     final errors = <ValidationError>[];
     for (final entry in <String, double>{
@@ -74,23 +80,73 @@ final class TimelapseCalculator {
       );
     }
 
-    final frameCount =
-        (input.captureDurationSeconds / input.intervalSeconds).floor() + 1;
+    final frames = input.captureDurationSeconds / input.intervalSeconds;
+    // An extreme ratio makes the quotient infinite, and floor() throws on a
+    // non-finite value; a merely huge quotient clamps at the integer limit and
+    // would wrap to a negative frame count. Both are field errors (FR-002).
+    if (!frames.isFinite || frames > maximumPlannedFrames) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: const [
+          ValidationError(
+            field: 'intervalSeconds',
+            code: 'result_out_of_range',
+            messageKey: 'timelapse.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
+    final frameCount = frames.floor() + 1;
     final maximumExposure = math.max(
       input.startExposureSeconds,
       input.endExposureSeconds,
     );
+    final playbackDurationSeconds = frameCount / input.playbackFps;
+    final storageMegabytes = frameCount * input.megabytesPerFrame;
+    final exposureRampStops =
+        math.log(input.endExposureSeconds / input.startExposureSeconds) /
+        math.ln2;
+    final maximumDutyCycle = maximumExposure / input.intervalSeconds;
+    // A finite frame count can still overflow the derived playback, storage,
+    // ramp, or duty-cycle figures; name the field that drives each (FR-002).
+    final outOfRange = switch ((
+      playbackDurationSeconds,
+      storageMegabytes,
+      exposureRampStops,
+      maximumDutyCycle,
+    )) {
+      (final playback, _, _, _) when !playback.isFinite || playback <= 0 =>
+        'playbackFps',
+      (_, final storage, _, _) when !storage.isFinite || storage <= 0 =>
+        'megabytesPerFrame',
+      (_, _, final ramp, _) when !ramp.isFinite => 'endExposureSeconds',
+      (_, _, _, final duty) when !duty.isFinite || duty <= 0 =>
+        'intervalSeconds',
+      _ => null,
+    };
+    if (outOfRange != null) {
+      return CalculationResult.invalid(
+        calculatorId: id,
+        formulaVersion: version,
+        errors: [
+          ValidationError(
+            field: outOfRange,
+            code: 'result_out_of_range',
+            messageKey: 'timelapse.error.resultOutOfRange',
+          ),
+        ],
+      );
+    }
     return CalculationResult.valid(
       calculatorId: id,
       formulaVersion: version,
       output: TimelapseOutput(
         frameCount: frameCount,
-        playbackDurationSeconds: frameCount / input.playbackFps,
-        storageMegabytes: frameCount * input.megabytesPerFrame,
-        exposureRampStops:
-            math.log(input.endExposureSeconds / input.startExposureSeconds) /
-            math.ln2,
-        maximumDutyCycle: maximumExposure / input.intervalSeconds,
+        playbackDurationSeconds: playbackDurationSeconds,
+        storageMegabytes: storageMegabytes,
+        exposureRampStops: exposureRampStops,
+        maximumDutyCycle: maximumDutyCycle,
       ),
       assumptions: const [
         CalculationAssumption(key: 'schedule', value: 'inclusiveEndpoints'),

@@ -53,7 +53,10 @@ void main() {
   });
 
   test('selected rule and tolerance alter the recommendation', () {
-    final strict = calculator
+    AstronomyOutput shutterFor({
+      required StarShutterRule rule,
+      required StarSharpnessTolerance tolerance,
+    }) => calculator
         .calculate(
           AstronomyInput(
             observerLatitudeDegrees: 51.4779,
@@ -65,14 +68,56 @@ void main() {
             aperture: 2,
             pixelPitchMicrometres: 5,
             desiredTrailDegrees: 30,
-            selectedRule: StarShutterRule.rule500,
-            sharpnessTolerance: StarSharpnessTolerance.strict,
+            selectedRule: rule,
+            sharpnessTolerance: tolerance,
           ),
         )
         .output!;
+
+    // Absolute closed forms for this input, computed here rather than read back
+    // from the calculator: rule500 = 500 / (focal * crop) and
+    // npf = (35 * aperture + 30 * pixelPitch) / focal.
+    const rule500 = 500 / 24;
+    const npf = (35 * 2 + 30 * 5) / 24;
+    expect(rule500, closeTo(20.833333333333, 1e-9));
+    expect(npf, closeTo(9.166666666667, 1e-9));
+
+    for (final (rule, base) in <(StarShutterRule, double)>[
+      (StarShutterRule.rule500, rule500),
+      (StarShutterRule.npf, npf),
+    ]) {
+      for (final (tolerance, multiplier) in <(StarSharpnessTolerance, double)>[
+        (StarSharpnessTolerance.strict, 0.75),
+        (StarSharpnessTolerance.balanced, 1.0),
+        (StarSharpnessTolerance.relaxed, 1.25),
+      ]) {
+        final output = shutterFor(rule: rule, tolerance: tolerance);
+        expect(output.rule500Seconds, closeTo(rule500, 1e-9));
+        expect(output.npfSeconds, closeTo(npf, 1e-9));
+        expect(
+          output.recommendedShutterSeconds,
+          closeTo(base * multiplier, 1e-9),
+          reason: '$rule with $tolerance',
+        );
+      }
+    }
+
+    // The two rules are genuinely different recommendations here, so the
+    // assertions above cannot both hold for one shared path.
     expect(
-      strict.recommendedShutterSeconds,
-      closeTo(strict.rule500Seconds * 0.75, 0.001),
+      shutterFor(
+        rule: StarShutterRule.rule500,
+        tolerance: StarSharpnessTolerance.balanced,
+      ).recommendedShutterSeconds,
+      isNot(
+        closeTo(
+          shutterFor(
+            rule: StarShutterRule.npf,
+            tolerance: StarSharpnessTolerance.balanced,
+          ).recommendedShutterSeconds,
+          1e-6,
+        ),
+      ),
     );
   });
 
@@ -278,6 +323,20 @@ void main() {
       ),
     );
     expect(result.output, isNull);
+    // The exact ordered field/code pairs the calculator declares, not just a
+    // count. Observer elevation is absent because 0 m is valid.
+    expect(
+      result.errors.map((error) => (error.field, error.code)),
+      <(String, String)>[
+        ('observerLatitudeDegrees', 'range'),
+        ('observerLongitudeDegrees', 'range'),
+        ('focalLengthMm', 'range'),
+        ('cropFactor', 'range'),
+        ('aperture', 'range'),
+        ('pixelPitchMicrometres', 'range'),
+        ('desiredTrailDegrees', 'range'),
+      ],
+    );
     expect(result.errors, hasLength(7));
   });
 }

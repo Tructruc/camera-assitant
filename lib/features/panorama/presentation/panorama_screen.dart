@@ -269,6 +269,8 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
       ? 'Enter a positive finite value.'
       : code == 'overlap'
       ? 'Enter overlap from 0 up to (but not including) 100%.'
+      : code == 'plan_too_large'
+      ? 'These bounds need more than ${PanoramaCalculator.maxPlannedFrames} frames. Reduce the coverage or use a wider lens.'
       : 'Enter an angle within the supported range.';
 
   void _applyCamera(CameraBody? camera) => setState(() {
