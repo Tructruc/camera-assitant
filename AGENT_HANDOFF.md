@@ -34,11 +34,11 @@ T059, T061, and T062 are therefore blocked here; everything else can be verified
 
 ## Current state
 
-The tree is clean and `origin/v2` is at the commit that adds this file (check
-`git log --oneline -1` and `git status --short` rather than trusting this line). The last full
-verification:
+The tree is clean and `origin/v2` contains the completed post-redesign convergence fixes through
+`d6fa5e7` (check `git log --oneline -1` and `git status --short` rather than trusting this line). The last
+full verification:
 
-- `flutter test --no-pub --concurrency=1` → **286 passed**
+- `flutter test --no-pub --concurrency=1` → **337 passed**
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
@@ -92,27 +92,10 @@ Material icon fonts loaded:
 
 ## Next action when work resumes
 
-**Run one more independent convergence audit** (read-only), then close whatever it finds. The brief that
-was queued for it:
-
-- Check the persistence error-handling refactor for a path where a failure is now silently swallowed,
-  where `load()` no longer runs, where a snackbar fires on a disposed context, or where success is
-  reported after a failed write — in `equipment_controller.dart` (`create/update/archive/delete/restore`
-  now return `Future<bool>` and never throw), every caller of those methods, and the
-  saved-calculation/saved-location/editor save paths.
-- Check `integration_test/support/journey.dart` and its use across the seven journeys: is `tapVisible`
-  correct for a negative delta (scrolling up)? Does pinning 1000x1600 at `devicePixelRatio` 1 hide
-  problems a real phone would show? Would any journey still pass against a broken implementation?
-- Check `elevationFromAltitude` and the now-nullable `DeviceLocationReading.elevationMetres`: any caller
-  that assumed non-null, or a null reaching arithmetic or formatting and producing a wrong value instead
-  of "unknown".
-- Check `SavedLocation` trimming `timeZoneId`: any code that compared or persisted the untrimmed value,
-  or a fixture that relied on it.
-- Check the 24 FRs, 12 SCs, 7 user stories, and the edge-case list at `spec.md:183-198` for anything still
-  uncovered.
-
-Delegate it or run it directly; it is read-only and needs no device. Then continue with the open work
-below.
+All repository-verifiable requirements and the queued convergence audit are complete. Continue with the
+open device and usability work below when the required hardware and participants are available. In a
+sandbox-only session, useful release hardening includes keeping dependencies and CI configuration current,
+running the Linux release-compilation gate after production changes, and fixing only concrete findings.
 
 ## What is done
 
@@ -130,6 +113,10 @@ below.
 - **Device readings**: a missing altitude no longer becomes 0 m, a new saved location defaults to the
   device's real UTC offset instead of UTC, and the location dialog validates its fields.
 - **Test infrastructure**: the integration journeys are deterministic (see below).
+- **Post-redesign convergence**: loading states mirror their destination layouts; failed location and
+  snapshot writes keep drafts recoverable; failed settings and favorite writes are reported; integration
+  taps target complete controls; concurrent preference changes are serialized without lost updates; and
+  live AR releases and recreates its camera across app lifecycle interruptions.
 
 ## Open work
 
@@ -138,8 +125,8 @@ below.
    sessions. `validation/ios.md` lists exactly what an iOS pass must capture.
 2. **CI-only assertions** — the merged-manifest checks in `mobile-builds.yml` (audio/storage permissions
    removed, `camera.any` optional) only run where Gradle can build.
-3. **Optional next steps** — a further convergence audit; more end-to-end journeys for the remaining
-   quickstart scenarios; or the desktop/web targets FR-023 allows for later releases.
+3. **Optional next steps** — more end-to-end journeys for the remaining quickstart scenarios, dependency
+   and CI maintenance, or the desktop/web targets FR-023 allows for later releases.
 
 ## Gotchas worth knowing before changing tests
 

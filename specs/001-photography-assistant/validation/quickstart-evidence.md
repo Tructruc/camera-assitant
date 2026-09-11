@@ -1,17 +1,17 @@
 # Quickstart execution record
 
-Executed on 10 September 2026 from the agent sandbox on branch `v2`. This record covers the automated half
-of the `quickstart.md` manual acceptance journey and states exactly which parts still need a physical
-device, a simulator, or representative photographers.
+Executed on 10 September 2026 and reverified on 11 September 2026 from the agent sandbox on branch `v2`.
+This record covers the automated half of the `quickstart.md` manual acceptance journey and states exactly
+which parts still need a physical device, a simulator, or representative photographers.
 
-It was first recorded at `c816578` (265 tests) and re-verified after the audit follow-up that added the
-Sun/Moon scenarios and the warning-wording tests; the counts below are from that second run. Rows 21 and 28
-are the only ones with device-only parts, and the sections after the table list the rest.
+It was first recorded at `c816578` (265 tests) and most recently reverified through `d6fa5e7` after the
+post-redesign convergence audit. Rows 21 and 28 are the only ones with device-only parts, and the sections
+after the table list the rest.
 
 Commands and results:
 
 ```sh
-./.tooling/flutterw --no-version-check test --no-pub --concurrency=1   # 277 passed
+./.tooling/flutterw --no-version-check test --no-pub --concurrency=1   # 337 passed
 ./.tooling/flutterw --no-version-check analyze --fatal-infos           # no issues
 dart format --output=none --set-exit-if-changed lib test integration_test   # clean
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/calculator_flows_test.dart  # 3 passed
@@ -55,7 +55,7 @@ hardware run described in `quickstart.md`.
 | 16 | 90° × 45° panorama at 30% overlap | `test/unit/features/panorama/panorama_calculator_test.dart`: plans a single horizontal row with minimum covering frames; `expanded_calculators_reference_test.dart` (3 × 2, six frames) | Automated |
 | 17 | Sirius at Greenwich, 500/NPF rules | `test/unit/features/astronomy/astronomy_calculator_test.dart`: places Sirius for the documented Greenwich fixture; every planet asserted against its JPL Horizons position (measured deviations 0.001-0.07 degrees against a 0.25 degree claim); calculates 500, NPF, and star-trail guidance. `catalog_reference_test.dart` pins the twelve fixed catalog positions. | Automated |
 | 18 | One-year alignment range across DST | `test/unit/features/alignment/alignment_calculator_test.dart`; `planning_time_context_test.dart`: converts inclusive local date ranges across daylight saving; `release_budgets_test.dart`: one-year alignment search remains below five seconds | Automated |
-| 19 | Views usable without permissions | `integration_test/ar_fallback_flow_test.dart` opens the AR view on a machine with no camera and proves it explains itself (`AR unavailable` or `Camera unavailable`) while the numeric plan still renders; `test/widget/features/planning/live_compass_view_test.dart`, `offline_planning_map_test.dart`, `planning_disclosure_test.dart` cover the widget layer | Automated (host has no camera, which is the unavailable case); physical permission denial remains manual |
+| 19 | Views usable without permissions | `integration_test/ar_fallback_flow_test.dart` opens the AR view on a machine with no camera, interrupts and resumes the app, and proves it explains itself (`AR unavailable` or `Camera unavailable`) while the numeric plan still renders; `test/widget/features/planning/live_ar_view_test.dart` proves a camera controller is released and recreated across the lifecycle transition; `live_compass_view_test.dart`, `offline_planning_map_test.dart`, and `planning_disclosure_test.dart` cover the rest of the widget layer | Automated (host has no camera, which is the unavailable case); physical permission denial remains manual |
 | 20 | Saved location survives an offline restart | `integration_test/planning_flow_test.dart`: Milky Way plan survives closing and reopening its on-device database; `saved_locations_screen_test.dart` | Automated (real SQLite file on the host engine) |
 | 21 | Live AR with real camera and compass | none | **Device only — pending T058/T059** |
 | 22 | Stop increments and planner defaults | `test/unit/core/presentation/conventional_shutter_formatter_test.dart`; `calculator_screens_test.dart`: planner defaults come from preferences and remain overridable | Automated |

@@ -538,3 +538,20 @@ equipment collapsed the open "More settings" section (the inserted notice shifte
 so every section now carries a stable key). Verified at that point: clean analyzer and formatter, 286 local
 tests, all eight host journeys, and a screenshot pass over every screen rendered from the real app at phone
 width.
+
+## Phase 22: Post-redesign convergence and recovery hardening
+
+- [x] T159 Replace generic loading spinners with accessible skeletons shaped like each destination
+- [x] T160 Keep saved-location drafts open and preserve device provenance when validation or persistence fails
+- [x] T161 Report preference and favorite write failures without changing the visible stored state
+- [x] T162 Keep saved-calculation edits and deletes recoverable after local database failures
+- [x] T163 Remove missed-hit allowances and make scroll journeys tap complete interactive controls
+- [x] T164 Serialize preference transforms so rapid settings and favorite actions cannot lose updates
+- [x] T165 Release and recreate the live AR camera across app lifecycle interruptions
+
+Convergence completed (2026-09-11) across `cc2c8a2`, `b62b3e8`, `739549f`, `c389eb0`, `5fcf480`,
+`5defdd2`, and `d6fa5e7`. The audit rechecked all 24 functional requirements, 12 success criteria, seven
+user stories, and the edge-case list. Automated coverage is complete for the repository-verifiable scope;
+T058, T059, T061, and T062 remain device- or participant-bound. Verification at `d6fa5e7`: 337 local
+tests, clean analyzer and formatter, and all eight host integration journeys green when run in isolated
+processes.
