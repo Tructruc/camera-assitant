@@ -59,6 +59,49 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Scrolls a collapsed expander into view. Returns false when the screen has
+  /// no such section.
+  Future<bool> scrollToExpander(WidgetTester tester, String title) async {
+    var header = find.text(title);
+    for (
+      var attempt = 0;
+      attempt < 10 && header.evaluate().isEmpty;
+      attempt++
+    ) {
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await tester.pumpAndSettle();
+      header = find.text(title);
+    }
+    if (header.evaluate().isEmpty) return false;
+    await tester.ensureVisible(header.first);
+    await tester.pumpAndSettle();
+    return true;
+  }
+
+  Future<void> openExpander(WidgetTester tester, String title) async {
+    expect(
+      await scrollToExpander(tester, title),
+      isTrue,
+      reason: '"$title" is not reachable',
+    );
+    await tester.tap(find.text(title).first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+  }
+
+  /// The result's collapsed details, where exact values and applied inputs live.
+  Future<void> openDetails(WidgetTester tester) =>
+      openExpander(tester, 'Details');
+
+  /// The collapsed input group, where conventions and equipment pickers live.
+  Future<void> openAdvancedInputs(WidgetTester tester) async {
+    for (final title in const <String>['More settings', 'Candidate settings']) {
+      if (await scrollToExpander(tester, title)) {
+        await tester.tap(find.text(title).first, warnIfMissed: false);
+        await tester.pumpAndSettle();
+      }
+    }
+  }
+
   CameraBody savedCamera() => CameraBody(
     id: 'camera-ff',
     name: 'Full Frame Camera',
@@ -93,6 +136,10 @@ void main() {
     await tester.tap(calculate);
     await tester.pumpAndSettle();
 
+    // The hero carries the answer; the derived rows stay available, one tap
+    // away, instead of competing with it.
+    expect(find.text('Hyperfocal distance'), findsOneWidget);
+    await openDetails(tester);
     expect(find.text('Depth in front of focus'), findsOneWidget);
     expect(find.text('Depth behind focus'), findsOneWidget);
     await unmount(tester);
@@ -155,9 +202,10 @@ void main() {
     await repository.createCamera(savedCamera());
     await tester.pumpWidget(app(const AstronomyScreen()));
     await tester.pumpAndSettle();
+    await openAdvancedInputs(tester);
     final cameraPicker = find.text('Saved camera (optional)');
     await reveal(tester, cameraPicker);
-    await tester.tap(cameraPicker);
+    await tester.tap(cameraPicker, warnIfMissed: false);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
@@ -170,7 +218,7 @@ void main() {
         .text;
     expect(cropFactor, '1.00');
 
-    // The provenance notice sits above the fields, so scroll back to it.
+    // The provenance notice sits with the picker it came from.
     final notice = find.textContaining('1.00× crop factor');
     await reveal(tester, notice, delta: -300);
     expect(notice, findsOneWidget);
@@ -185,7 +233,10 @@ void main() {
     await repository.createLens(savedLens());
     await tester.pumpWidget(app(const MacroScreen()));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Saved camera (optional)'));
+    await openAdvancedInputs(tester);
+    final cameraPicker = find.text('Saved camera (optional)');
+    await reveal(tester, cameraPicker);
+    await tester.tap(cameraPicker, warnIfMissed: false);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
@@ -205,6 +256,7 @@ void main() {
   ) async {
     await tester.pumpWidget(app(const FocusStackScreen()));
     await tester.pumpAndSettle();
+    await openAdvancedInputs(tester);
     final cocField = find.byKey(const Key('focusStack-circleOfConfusionMm'));
     await reveal(tester, cocField, delta: 200);
     await tester.enterText(cocField, '0.0001');
@@ -214,10 +266,14 @@ void main() {
     await tester.tap(calculate);
     await tester.pumpAndSettle();
 
-    final warnings = find.text('Warnings');
-    await reveal(tester, warnings);
-    expect(warnings, findsOneWidget);
-    expect(find.textContaining('1,000-frame planning limit'), findsOneWidget);
+    // The limitation is visible with the answer, not hidden behind "Details",
+    // and it is announced to assistive technology.
+    final warning = find.textContaining('1,000-frame planning limit');
+    await reveal(tester, warning);
+    expect(warning, findsOneWidget);
+    // Anchored so it matches the warning banner itself, not the result region
+    // label that also ends with the same warning sentence.
+    expect(find.bySemanticsLabel(RegExp(r'^Warnings: ')), findsOneWidget);
     await unmount(tester);
   });
 
@@ -305,9 +361,10 @@ void main() {
 
     await tester.pumpWidget(app(const AstronomyScreen()));
     await tester.pumpAndSettle();
+    await openAdvancedInputs(tester);
     final cameraPicker = find.text('Saved camera (optional)');
     await reveal(tester, cameraPicker);
-    await tester.tap(cameraPicker);
+    await tester.tap(cameraPicker, warnIfMissed: false);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
@@ -336,9 +393,10 @@ void main() {
 
     await tester.pumpWidget(app(const MacroScreen()));
     await tester.pumpAndSettle();
+    await openAdvancedInputs(tester);
     final macroPicker = find.text('Saved camera (optional)');
     await reveal(tester, macroPicker);
-    await tester.tap(macroPicker);
+    await tester.tap(macroPicker, warnIfMissed: false);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();

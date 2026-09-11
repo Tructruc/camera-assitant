@@ -7,6 +7,7 @@ import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
+import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../planning/domain/planning_capabilities.dart';
 import '../../planning/domain/planning_time_context.dart';
@@ -208,45 +209,9 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
           errorText: _errors['observerLongitudeDegrees'],
         ),
         CalculatorNumberField(
-          label: 'Observer elevation (m)',
-          controller: _observerElevation,
-          errorText: _errors['observerElevationMetres'],
-        ),
-        CalculatorNumberField(
-          label: 'Target elevation (m)',
-          controller: _targetElevation,
-          errorText: _errors['targetElevationMetres'],
-        ),
-        CalculatorNumberField(
-          label: 'Target distance (m)',
-          controller: _targetDistance,
-          errorText: _errors['targetDistanceMetres'],
-        ),
-        CalculatorNumberField(
           label: 'Desired true bearing (degrees)',
           controller: _bearing,
           errorText: _errors['desiredBearingDegrees'],
-        ),
-        ExpansionTile(
-          title: const Text('Target coordinate'),
-          subtitle: const Text(
-            'Derive bearing and distance; manual values remain editable.',
-          ),
-          children: [
-            CalculatorNumberField(
-              label: 'Target latitude (degrees)',
-              controller: _targetLatitude,
-            ),
-            CalculatorNumberField(
-              label: 'Target longitude (degrees)',
-              controller: _targetLongitude,
-            ),
-            OutlinedButton.icon(
-              onPressed: _deriveTargetGeometry,
-              icon: const Icon(Icons.route_outlined),
-              label: const Text('Calculate geometry'),
-            ),
-          ],
         ),
         CalculatorNumberField(
           label: 'Angular tolerance (degrees)',
@@ -255,10 +220,6 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         ),
         Text(
           'Default: ${_numberText(preferences?.defaultAlignmentToleranceDegrees ?? 3)}° from Settings',
-        ),
-        CalculatorNumberField(
-          label: 'Magnetic declination, east positive (degrees)',
-          controller: _magneticDeclination,
         ),
         InputDecorator(
           decoration: InputDecoration(
@@ -286,6 +247,57 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             ],
           ),
         ),
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: <Widget>[
+            Text(
+              'Observer and target geometry',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            CalculatorNumberField(
+              label: 'Observer elevation (m)',
+              controller: _observerElevation,
+              errorText: _errors['observerElevationMetres'],
+            ),
+            CalculatorNumberField(
+              label: 'Target elevation (m)',
+              controller: _targetElevation,
+              errorText: _errors['targetElevationMetres'],
+            ),
+            CalculatorNumberField(
+              label: 'Target distance (m)',
+              controller: _targetDistance,
+              errorText: _errors['targetDistanceMetres'],
+            ),
+            ExpansionTile(
+              title: const Text('Target coordinate'),
+              subtitle: const Text(
+                'Derive bearing and distance; manual values remain editable.',
+              ),
+              children: [
+                CalculatorNumberField(
+                  label: 'Target latitude (degrees)',
+                  controller: _targetLatitude,
+                ),
+                CalculatorNumberField(
+                  label: 'Target longitude (degrees)',
+                  controller: _targetLongitude,
+                ),
+                OutlinedButton.icon(
+                  onPressed: _deriveTargetGeometry,
+                  icon: const Icon(Icons.route_outlined),
+                  label: const Text('Calculate geometry'),
+                ),
+              ],
+            ),
+            CalculatorNumberField(
+              label: 'Magnetic declination, east positive (degrees)',
+              controller: _magneticDeclination,
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         FilledButton(
           key: const Key('alignment-search'),
@@ -294,9 +306,52 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         ),
         const SizedBox(height: 16),
         if (_result?.output case final output?) ...[
-          _planningContext(),
           CalculationResultView(
             title: '${_body.name} alignment search',
+            highlight: (
+              'Best window',
+              output.candidates.isEmpty
+                  ? 'No matching window'
+                  : PlanningTimeContext.parse(
+                      _timeZoneId,
+                    ).format(output.candidates.first.instantUtc),
+            ),
+            highlightCaption: output.candidates.isEmpty
+                ? '${_body.name} · bearing ${_bearing.text.trim()}° true · nothing inside the tolerance'
+                : '${_body.name} · bearing ${_bearing.text.trim()}° true · ${output.candidates.length} matching window${output.candidates.length == 1 ? '' : 's'}',
+            tiles: <(String, String)>[
+              if (output.candidates.isNotEmpty) ...[
+                (
+                  'Azimuth',
+                  '${output.candidates.first.azimuthDegrees.toStringAsFixed(0)}° true',
+                ),
+                (
+                  'Altitude',
+                  '${output.candidates.first.altitudeDegrees.toStringAsFixed(0)}°',
+                ),
+                (
+                  'Angular error',
+                  '${output.candidates.first.angularErrorDegrees.toStringAsFixed(2)}°',
+                ),
+              ],
+              ('Windows', '${output.candidates.length}'),
+            ],
+            details: <(String, String)>[
+              (
+                'Target altitude',
+                '${output.desiredAltitudeDegrees.toStringAsFixed(1)}°',
+              ),
+              ('Search resolution', '${output.sampleMinutes} minutes'),
+              for (final candidate in output.candidates)
+                (
+                  PlanningTimeContext.parse(
+                    _timeZoneId,
+                  ).format(candidate.instantUtc),
+                  'az ${candidate.azimuthDegrees.toStringAsFixed(1)}° · alt ${candidate.altitudeDegrees.toStringAsFixed(1)}° · error ${candidate.angularErrorDegrees.toStringAsFixed(2)}°',
+                ),
+              if (output.candidates.isEmpty)
+                ('Best angular error', 'No match within tolerance'),
+            ],
             inputs: [
               ('Body', _body.name),
               (
@@ -313,24 +368,14 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
                 '${DateFormat('yyyy-MM-dd').format(_startLocalDate)} to ${DateFormat('yyyy-MM-dd').format(_endLocalDate)} ($_timeZoneId)',
               ),
             ],
-            rows: [
-              (
-                'Target altitude',
-                '${output.desiredAltitudeDegrees.toStringAsFixed(1)}°',
-              ),
-              ('Candidates', '${output.candidates.length}'),
-              ('Search resolution', '${output.sampleMinutes} minutes'),
-              (
-                'Best angular error',
-                output.candidates.isEmpty
-                    ? 'No match within tolerance'
-                    : '${output.candidates.first.angularErrorDegrees.toStringAsFixed(2)}°',
-              ),
-            ],
             assumptions: const [
               'True north and unobstructed geometric horizon',
               'Manual elevations; terrain and refraction are not modeled',
               'Ten-minute samples; confirm near the predicted time',
+            ],
+            warnings: [
+              for (final warning in _result!.warnings)
+                calculationWarningText(warning.code),
             ],
             guidance: output.candidates.isEmpty
                 ? 'Increase the tolerance, adjust geometry, or try another date.'
@@ -338,6 +383,8 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
             onSave: () => _save(output),
             onReset: _reset,
           ),
+          const SizedBox(height: 12),
+          _planningContext(),
           const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -416,15 +463,15 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
       PlanningView.numeric => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final candidate in output.candidates.take(8))
-            Text(
-              alignmentCandidateSummary(
-                candidate,
-                PlanningTimeContext.parse(
-                  _timeZoneId,
-                ).format(candidate.instantUtc),
-              ),
-            ),
+          // Only the best windows here; the rest of the sampled grid lives in
+          // the result card's Details so the default view stays scannable.
+          for (final line in alignmentWindowLines(
+            output.candidates,
+            (candidate) => PlanningTimeContext.parse(
+              _timeZoneId,
+            ).format(candidate.instantUtc),
+          ))
+            Text(line),
         ],
       ),
       PlanningView.timeline => Column(
@@ -734,3 +781,23 @@ String alignmentCandidateSummary(
     'alt ${candidate.altitudeDegrees.toStringAsFixed(1)}°, '
     'error ${candidate.angularErrorDegrees.toStringAsFixed(2)}° · '
     '${candidate.aboveHorizon ? 'above horizon' : 'below horizon'}';
+
+/// Windows the numeric planning view lists inline before the remainder moves
+/// into the collapsed candidate table.
+const int numericWindowPreviewLimit = 3;
+
+/// Builds the numeric view's window lines.
+///
+/// The best [numericWindowPreviewLimit] candidates are summarised and, when the
+/// search found more, a count line names the total so matches are never
+/// silently hidden; the full sampled grid stays in the result card's Details.
+List<String> alignmentWindowLines(
+  List<AlignmentCandidate> candidates,
+  String Function(AlignmentCandidate candidate) formatInstant,
+) => <String>[
+  for (final candidate in candidates.take(numericWindowPreviewLimit))
+    alignmentCandidateSummary(candidate, formatInstant(candidate)),
+  if (candidates.length > numericWindowPreviewLimit)
+    '$numericWindowPreviewLimit of ${candidates.length} windows shown · '
+        'open Details for the full list.',
+];

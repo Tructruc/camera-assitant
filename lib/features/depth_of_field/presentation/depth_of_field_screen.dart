@@ -81,26 +81,13 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
           value: _selectedLens,
           onSelected: _applyLens,
         ),
-        const SizedBox(height: 12),
-        EquipmentPicker<CameraBody>(
-          label: 'Saved camera (optional)',
-          items: cameras,
-          itemLabel: (camera) => camera.name,
-          value: _selectedCamera,
-          onSelected: _applyCamera,
-        ),
         if (_selectedLens case final lens?)
           AppliedEquipmentNotice(
             equipmentName: lens.name,
             sourceLabel: lens.provenance.source.label,
             appliedValues: '${_focal.text} mm at f/${_aperture.text}',
           ),
-        if (_selectedCamera case final camera?)
-          AppliedEquipmentNotice(
-            equipmentName: camera.name,
-            sourceLabel: camera.provenance.source.label,
-            appliedValues: 'circle of confusion ${_coc.text} mm',
-          ),
+        const SizedBox(height: 12),
         CalculatorNumberField(
           label: 'Focal length (mm)',
           controller: _focal,
@@ -117,30 +104,50 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
           controller: _distance,
           errorText: _errors['focusDistanceMm'],
         ),
-        CalculatorNumberField(
-          label: 'Circle of confusion (mm)',
-          controller: _coc,
-          errorText: _errors['circleOfConfusionMm'],
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: <Widget>[
+            EquipmentPicker<CameraBody>(
+              label: 'Saved camera (optional)',
+              items: cameras,
+              itemLabel: (camera) => camera.name,
+              value: _selectedCamera,
+              onSelected: _applyCamera,
+            ),
+            if (_selectedCamera case final camera?)
+              AppliedEquipmentNotice(
+                equipmentName: camera.name,
+                sourceLabel: camera.provenance.source.label,
+                appliedValues: 'circle of confusion ${_coc.text} mm',
+              ),
+            const SizedBox(height: 12),
+            CalculatorNumberField(
+              label: 'Circle of confusion (mm)',
+              controller: _coc,
+              errorText: _errors['circleOfConfusionMm'],
+            ),
+          ],
         ),
         FilledButton(onPressed: _calculate, child: const Text('Calculate')),
         const SizedBox(height: 16),
         if (_result?.output case final output?)
           CalculationResultView(
             title: 'Depth of field result',
-            inputs: [
-              ('Focal length', '${_focal.text.trim()} mm'),
-              ('Aperture', 'f/${_aperture.text.trim()}'),
-              ('Focus distance', '${_distance.text.trim()} mm'),
-              ('Circle of confusion', '${_coc.text.trim()} mm'),
-            ],
-            rows: <(String, String)>[
-              (
-                'Hyperfocal distance',
-                _distanceText(
-                  output.hyperfocalDistance.millimetres,
-                  preferences.lengthDisplay,
-                ),
+            highlight: (
+              'Hyperfocal distance',
+              _distanceText(
+                output.hyperfocalDistance.millimetres,
+                preferences.lengthDisplay,
               ),
+            ),
+            highlightCaption:
+                'Sharp from '
+                '${_distanceText(output.nearLimit.millimetres, preferences.lengthDisplay)}'
+                ' to '
+                '${output.farLimit.isInfinite ? 'infinity' : _distanceText(output.farLimit.millimetres, preferences.lengthDisplay)}.',
+            tiles: <(String, String)>[
               (
                 'Near limit',
                 _distanceText(
@@ -158,6 +165,17 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
                       ),
               ),
               (
+                'Total depth',
+                output.totalDepth.isInfinite
+                    ? 'Infinity'
+                    : _distanceText(
+                        output.totalDepth.millimetres,
+                        preferences.lengthDisplay,
+                      ),
+              ),
+            ],
+            details: <(String, String)>[
+              (
                 'Depth in front of focus',
                 _distanceText(
                   output.frontDepth.millimetres,
@@ -173,15 +191,12 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
                         preferences.lengthDisplay,
                       ),
               ),
-              (
-                'Total depth',
-                output.totalDepth.isInfinite
-                    ? 'Infinity'
-                    : _distanceText(
-                        output.totalDepth.millimetres,
-                        preferences.lengthDisplay,
-                      ),
-              ),
+            ],
+            inputs: [
+              ('Focal length', '${_focal.text.trim()} mm'),
+              ('Aperture', 'f/${_aperture.text.trim()}'),
+              ('Focus distance', '${_distance.text.trim()} mm'),
+              ('Circle of confusion', '${_coc.text.trim()} mm'),
             ],
             assumptions: const <String>[
               'Thin-lens geometric model',

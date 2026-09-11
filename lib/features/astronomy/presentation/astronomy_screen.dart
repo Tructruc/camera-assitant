@@ -225,119 +225,130 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           controller: _longitude,
           errorText: _errors['observerLongitudeDegrees'],
         ),
-        CalculatorNumberField(
-          label: 'Observer elevation (m)',
-          controller: _elevation,
-          errorText: _errors['observerElevationMetres'],
-        ),
         _planningTimeControl(),
-        CalculatorNumberField(
-          label: 'Magnetic declination, east positive (degrees)',
-          controller: _magneticDeclination,
-        ),
-        const SizedBox(height: 12),
-        EquipmentPicker<CameraBody>(
-          label: 'Saved camera (optional)',
-          items: cameras,
-          itemLabel: (item) => item.name,
-          value: _camera,
-          onSelected: (camera) => setState(() {
-            _camera = camera;
-            _result = null;
-            if (camera != null) {
-              // The planner consumes a crop factor, so derive it from the
-              // saved sensor width instead of recording an unused dimension.
-              _cropFactor.text = (36 / camera.sensorWidthMm).toStringAsFixed(2);
-            }
-          }),
-        ),
-        if (_camera case final camera?)
-          AppliedEquipmentNotice(
-            equipmentName: camera.name,
-            sourceLabel: camera.provenance.source.label,
-            appliedValues: '${_cropFactor.text}× crop factor',
-          ),
-        EquipmentPicker<Lens>(
-          label: 'Saved lens (optional)',
-          items: lenses,
-          itemLabel: (item) => item.name,
-          value: _lens,
-          onSelected: _applyLens,
-        ),
-        if (_lens case final lens?)
-          AppliedEquipmentNotice(
-            equipmentName: lens.name,
-            sourceLabel: lens.provenance.source.label,
-            appliedValues: '${_focalLength.text} mm focal length',
-          ),
-        CalculatorNumberField(
-          label: 'Focal length (mm)',
-          controller: _focalLength,
-          errorText: _errors['focalLengthMm'],
-        ),
-        CalculatorNumberField(
-          label: 'Crop factor',
-          controller: _cropFactor,
-          errorText: _errors['cropFactor'],
-        ),
-        CalculatorNumberField(
-          label: 'Aperture (f-number)',
-          controller: _aperture,
-          errorText: _errors['aperture'],
-        ),
-        CalculatorNumberField(
-          label: 'Pixel pitch (µm)',
-          controller: _pixelPitch,
-          errorText: _errors['pixelPitchMicrometres'],
-        ),
-        CalculatorNumberField(
-          label: 'Desired star-trail arc (degrees)',
-          controller: _trailDegrees,
-          errorText: _errors['desiredTrailDegrees'],
-        ),
-        DropdownButtonFormField<StarShutterRule>(
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Sharp-star rule'),
-          initialValue: _shutterRule,
-          items: const [
-            DropdownMenuItem(
-              value: StarShutterRule.npf,
-              child: Text('NPF rule'),
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: <Widget>[
+            Text('Observer', style: Theme.of(context).textTheme.titleSmall),
+            CalculatorNumberField(
+              label: 'Observer elevation (m)',
+              controller: _elevation,
+              errorText: _errors['observerElevationMetres'],
             ),
-            DropdownMenuItem(
-              value: StarShutterRule.rule500,
-              child: Text('500 rule'),
+            CalculatorNumberField(
+              label: 'Magnetic declination, east positive (degrees)',
+              controller: _magneticDeclination,
+            ),
+            const SizedBox(height: 12),
+            Text('Optics', style: Theme.of(context).textTheme.titleSmall),
+            EquipmentPicker<CameraBody>(
+              label: 'Saved camera (optional)',
+              items: cameras,
+              itemLabel: (item) => item.name,
+              value: _camera,
+              onSelected: (camera) => setState(() {
+                _camera = camera;
+                _result = null;
+                if (camera != null) {
+                  // The planner consumes a crop factor, so derive it from the
+                  // saved sensor width instead of recording an unused dimension.
+                  _cropFactor.text = (36 / camera.sensorWidthMm)
+                      .toStringAsFixed(2);
+                }
+              }),
+            ),
+            if (_camera case final camera?)
+              AppliedEquipmentNotice(
+                equipmentName: camera.name,
+                sourceLabel: camera.provenance.source.label,
+                appliedValues: '${_cropFactor.text}× crop factor',
+              ),
+            EquipmentPicker<Lens>(
+              label: 'Saved lens (optional)',
+              items: lenses,
+              itemLabel: (item) => item.name,
+              value: _lens,
+              onSelected: _applyLens,
+            ),
+            if (_lens case final lens?)
+              AppliedEquipmentNotice(
+                equipmentName: lens.name,
+                sourceLabel: lens.provenance.source.label,
+                appliedValues: '${_focalLength.text} mm focal length',
+              ),
+            CalculatorNumberField(
+              label: 'Focal length (mm)',
+              controller: _focalLength,
+              errorText: _errors['focalLengthMm'],
+            ),
+            CalculatorNumberField(
+              label: 'Crop factor',
+              controller: _cropFactor,
+              errorText: _errors['cropFactor'],
+            ),
+            CalculatorNumberField(
+              label: 'Aperture (f-number)',
+              controller: _aperture,
+              errorText: _errors['aperture'],
+            ),
+            CalculatorNumberField(
+              label: 'Pixel pitch (µm)',
+              controller: _pixelPitch,
+              errorText: _errors['pixelPitchMicrometres'],
+            ),
+            Text('Star trails', style: Theme.of(context).textTheme.titleSmall),
+            CalculatorNumberField(
+              label: 'Desired star-trail arc (degrees)',
+              controller: _trailDegrees,
+              errorText: _errors['desiredTrailDegrees'],
+            ),
+            DropdownButtonFormField<StarShutterRule>(
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Sharp-star rule'),
+              initialValue: _shutterRule,
+              items: const [
+                DropdownMenuItem(
+                  value: StarShutterRule.npf,
+                  child: Text('NPF rule'),
+                ),
+                DropdownMenuItem(
+                  value: StarShutterRule.rule500,
+                  child: Text('500 rule'),
+                ),
+              ],
+              onChanged: (value) => setState(() {
+                _shutterRule = value ?? _shutterRule;
+                _result = null;
+              }),
+            ),
+            const SizedBox(height: 12),
+            SegmentedButton<StarSharpnessTolerance>(
+              segments: const [
+                ButtonSegment(
+                  value: StarSharpnessTolerance.strict,
+                  label: Text('Strict'),
+                ),
+                ButtonSegment(
+                  value: StarSharpnessTolerance.balanced,
+                  label: Text('Balanced'),
+                ),
+                ButtonSegment(
+                  value: StarSharpnessTolerance.relaxed,
+                  label: Text('Relaxed'),
+                ),
+              ],
+              selected: {_sharpnessTolerance},
+              onSelectionChanged: (values) => setState(() {
+                _sharpnessTolerance = values.first;
+                _result = null;
+              }),
+            ),
+            Text(
+              'Default: ${_starSharpness(preferences?.defaultStarSharpness ?? DefaultStarSharpness.balanced).name} from Settings',
             ),
           ],
-          onChanged: (value) => setState(() {
-            _shutterRule = value ?? _shutterRule;
-            _result = null;
-          }),
-        ),
-        const SizedBox(height: 12),
-        SegmentedButton<StarSharpnessTolerance>(
-          segments: const [
-            ButtonSegment(
-              value: StarSharpnessTolerance.strict,
-              label: Text('Strict'),
-            ),
-            ButtonSegment(
-              value: StarSharpnessTolerance.balanced,
-              label: Text('Balanced'),
-            ),
-            ButtonSegment(
-              value: StarSharpnessTolerance.relaxed,
-              label: Text('Relaxed'),
-            ),
-          ],
-          selected: {_sharpnessTolerance},
-          onSelectionChanged: (values) => setState(() {
-            _sharpnessTolerance = values.first;
-            _result = null;
-          }),
-        ),
-        Text(
-          'Default: ${_starSharpness(preferences?.defaultStarSharpness ?? DefaultStarSharpness.balanced).name} from Settings',
         ),
         FilledButton(
           onPressed: _calculate,
@@ -345,9 +356,74 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         ),
         const SizedBox(height: 16),
         if (_result?.output case final output?) ...[
-          _planningContext(),
           CalculationResultView(
             title: '${_target.label} plan',
+            highlight: (
+              'Target altitude',
+              '${output.altitudeDegrees.toStringAsFixed(0)}° '
+                  '${output.isAboveHorizon ? 'above the horizon' : 'below the horizon'}',
+            ),
+            highlightCaption:
+                'Azimuth ${output.azimuthDegrees.toStringAsFixed(0)}° true · '
+                '${output.isAboveHorizon ? 'up now' : 'not visible now'}',
+            tiles: <(String, String)>[
+              (
+                'Recommended',
+                '${output.recommendedShutterSeconds.toStringAsFixed(1)} s',
+              ),
+              ('500 rule', '${output.rule500Seconds.toStringAsFixed(1)} s'),
+              ('NPF rule', '${output.npfSeconds.toStringAsFixed(1)} s'),
+              if (_target == CelestialTarget.milkyWayCore)
+                (
+                  'Milky Way',
+                  output.milkyWayOrientationDegrees != null
+                      ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(0)}° to horizon'
+                      : 'Unavailable near zenith',
+                ),
+            ],
+            details: <(String, String)>[
+              (
+                'Right ascension',
+                '${output.rightAscensionDegrees.toStringAsFixed(2)}°',
+              ),
+              (
+                'Declination',
+                '${output.declinationDegrees.toStringAsFixed(2)}°',
+              ),
+              (
+                'Altitude (exact)',
+                '${output.altitudeDegrees.toStringAsFixed(1)}°',
+              ),
+              (
+                'Azimuth (exact)',
+                '${output.azimuthDegrees.toStringAsFixed(1)}° true',
+              ),
+              if (_target == CelestialTarget.milkyWayCore)
+                (
+                  'Milky Way orientation',
+                  output.milkyWayOrientationDegrees != null
+                      ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(1)}° relative to horizon'
+                      : 'Unavailable near zenith or nadir',
+                ),
+              ('Visibility cycle', _cycle(output.visibilityCycle)),
+              (
+                '${_value(_trailDegrees).toStringAsFixed(0)}° star trail',
+                _duration(output.trailDurationSeconds),
+              ),
+              (
+                'Trail rotation',
+                '${output.trailRotationDegreesPerHour.toStringAsFixed(1)}°/hour',
+              ),
+              (
+                'Selected rule',
+                '${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'} · ${_sharpnessTolerance.name}',
+              ),
+              for (final sample in output.path)
+                (
+                  'Sky path ${DateFormat('HH:mm').format(sample.instantUtc)} UTC',
+                  '${sample.altitudeDegrees.toStringAsFixed(0)}° / ${sample.azimuthDegrees.toStringAsFixed(0)}° true north',
+                ),
+            ],
             inputs: [
               ('Target', _target.label),
               (
@@ -367,34 +443,6 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                 '${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'} · ${_sharpnessTolerance.name}',
               ),
               ('Star-trail arc', '${_trailDegrees.text.trim()}°'),
-            ],
-            rows: [
-              (
-                'Altitude',
-                '${output.altitudeDegrees.toStringAsFixed(1)}° (${output.isAboveHorizon ? 'above horizon' : 'below horizon'})',
-              ),
-              ('Azimuth', '${output.azimuthDegrees.toStringAsFixed(1)}° true'),
-              if (_target == CelestialTarget.milkyWayCore)
-                (
-                  'Milky Way orientation',
-                  output.milkyWayOrientationDegrees != null
-                      ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(1)}° relative to horizon'
-                      : 'Unavailable near zenith or nadir',
-                ),
-              ('Visibility cycle', _cycle(output.visibilityCycle)),
-              (
-                '500 rule',
-                '${output.rule500Seconds.toStringAsFixed(1)} seconds',
-              ),
-              ('NPF rule', '${output.npfSeconds.toStringAsFixed(1)} seconds'),
-              (
-                'Recommended (${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'}, ${_sharpnessTolerance.name})',
-                '${output.recommendedShutterSeconds.toStringAsFixed(1)} seconds',
-              ),
-              (
-                '${_value(_trailDegrees).toStringAsFixed(0)}° star trail',
-                _duration(output.trailDurationSeconds),
-              ),
             ],
             assumptions: [
               switch (_target) {
@@ -421,6 +469,8 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             onSave: () => _save(output),
             onReset: _reset,
           ),
+          const SizedBox(height: 12),
+          _planningContext(),
           const SizedBox(height: 12),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -457,28 +507,6 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             Text(
               '${event.type.name}: ${PlanningTimeContext.parse(_timeZoneId).format(event.instantUtc)}',
             ),
-          const SizedBox(height: 12),
-          Text(
-            '12-hour sky path',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const Text('Two-hour samples · altitude / azimuth true north'),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final sample in output.path)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8, top: 8),
-                    child: Chip(
-                      label: Text(
-                        '${DateFormat('HH:mm').format(sample.instantUtc)} UTC\n${sample.altitudeDegrees.toStringAsFixed(0)}° / ${sample.azimuthDegrees.toStringAsFixed(0)}°',
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
           FieldChecklist(
             items: _checklist,
             onChanged: (items) => setState(() => _checklist = items),

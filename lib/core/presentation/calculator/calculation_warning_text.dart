@@ -16,8 +16,13 @@ String calculationWarningText(String code) => switch (code) {
     'The Milky Way orientation is unavailable within 0.1° of zenith or nadir.',
   'close_focus' =>
     'Close focus reduces the accuracy of the thin-lens estimate.',
-  'sampling_visible' || 'sampling' =>
+  'sampling_visible' =>
     'The Airy disk spans at least two pixels at these settings, so diffraction is visible.',
+  // The alignment search reuses the bare `sampling` code for its ten-minute
+  // grid, so it needs its own sentence: the diffraction wording above would
+  // otherwise appear on a Sun/Moon plan that has nothing to do with optics.
+  'sampling' =>
+    'Candidates are sampled every ten minutes; confirm the best window near the predicted time.',
   'frame_limit' =>
     'The focus stack reached the 1,000-frame planning limit. The far distance is included, but increase overlap or split the stack before shooting.',
   'exposure_exceeds_interval' =>

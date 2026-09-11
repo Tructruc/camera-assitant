@@ -63,6 +63,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Opens the collapsed input groups so a moved control can be reached.
+  ///
+  /// The redesign hides conventions behind "More settings" (and the candidate
+  /// exposure behind "Candidate settings"). Nothing was removed, so reaching
+  /// the control through the expander is part of the contract these tests
+  /// verify: a section that cannot be opened fails here.
+  Future<void> expandSections(WidgetTester tester) async {
+    for (final title in const <String>['More settings', 'Candidate settings']) {
+      var header = find.text(title);
+      for (
+        var attempt = 0;
+        attempt < 10 && header.evaluate().isEmpty;
+        attempt++
+      ) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -300));
+        await tester.pumpAndSettle();
+        header = find.text(title);
+      }
+      if (header.evaluate().isEmpty) continue;
+      await tester.ensureVisible(header.first);
+      await tester.pumpAndSettle();
+      await tester.tap(header.first, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
+  }
+
   Lens savedLens(String id, String name) {
     final now = DateTime.utc(2026, 9, 10);
     return Lens(
@@ -176,6 +202,7 @@ void main() {
     ) async {
       await tester.pumpWidget(app(screen));
       await tester.pumpAndSettle();
+      await expandSections(tester);
       final calculate = find.widgetWithText(FilledButton, action);
       final save = find.widgetWithText(FilledButton, 'Save result');
       await reveal(tester, calculate);
@@ -423,6 +450,7 @@ void main() {
 
       await tester.pumpWidget(app(screen));
       await tester.pumpAndSettle();
+      await expandSections(tester);
       final picker = find.text(pickerLabel);
       await reveal(tester, picker);
       await tester.tap(picker);

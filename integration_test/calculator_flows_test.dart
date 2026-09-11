@@ -88,11 +88,14 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
-    // Saved camera and lens values remain editable one-off inputs.
+    // Saved camera and lens values remain editable one-off inputs. The camera
+    // picker now lives behind the result-first "More settings" section.
     await tapVisible(tester, find.text('Depth of field'), delta: 300);
     await tester.tap(find.text('Saved lens (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('24-70 mm f/2.8').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('More settings'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Saved camera (optional)'));
     await tester.pumpAndSettle();
@@ -129,12 +132,16 @@ void main() {
       '0.0333333333333333',
     );
     await tapVisible(tester, find.text('Calculate exposure'), delta: 300);
-    // The conventional label rounds to the selected stop increment while the
-    // raw exposure preserves the physical result (1/30 second times 2^10).
-    expect(find.text('32 s'), findsOneWidget);
-    expect(find.text('34.133333 s'), findsOneWidget);
+    // The hero carries the human-readable time; the conventional label rounds
+    // to the selected stop increment and the exact value lives in Details.
+    expect(find.text('34.1 s'), findsOneWidget);
+    expect(find.textContaining('32 s'), findsWidgets);
     expect(find.textContaining('From 10-stop ND'), findsWidgets);
-    await scrollToResultActions(tester, extra: 500);
+    await reveal(tester, find.text('Details'));
+    await tester.tap(find.text('Details'));
+    await tester.pumpAndSettle();
+    expect(find.text('34.133333 s'), findsOneWidget);
+    await scrollToResultActions(tester);
     await tester.tap(find.text('Save result'));
     await tester.pumpAndSettle();
 

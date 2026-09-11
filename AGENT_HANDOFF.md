@@ -38,11 +38,52 @@ The tree is clean and `origin/v2` is at the commit that adds this file (check
 `git log --oneline -1` and `git status --short` rather than trusting this line). The last full
 verification:
 
-- `flutter test --no-pub --concurrency=1` → **293 passed**
+- `flutter test --no-pub --concurrency=1` → **277 passed**
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
-- All **7 integration journeys** green three runs in a row:
-  `calculator_flows`, `optics_flows`, `equipment_flow`, `planning_flow`, `preferences_flow`,
-  `ar_fallback_flow`, `accessibility_flow`
+- All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
+  `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
+
+## Current work: result-first UI redesign
+
+The user's verdict on the old interface was "way too cluttered... wall of numbers everywhere": every
+calculator was a 6–10 field form followed by a result card that echoed the inputs and listed every
+intermediate number, assumption, warning and checklist.
+
+The agreed redesign (confirmed by the user) is **result-first with progressive disclosure**:
+
+- `CalculationResultView` (in `lib/core/presentation/calculator/calculator_components.dart`) now takes
+  `highlight: (label, value)` — the single answer the calculator exists to produce — plus an optional
+  `highlightCaption`, half-width `tiles` for the two to four numbers a photographer compares,
+  `details` for exact intermediates, and collapses `inputs` ("Values used"), `details` ("Exact values")
+  and `assumptions` ("Model assumptions") behind one "Details" expander. Warnings stay visible above the
+  hero; the semantics label announces `'<title> calculation result: <label> <value>'` plus warnings.
+- `CalculatorAdvancedSection` hides secondary inputs behind "More settings"; no control is ever removed.
+- `lib/features/depth_of_field/presentation/depth_of_field_screen.dart` is the reference conversion: hero
+  = hyperfocal distance with a "Sharp from X to Y" caption, tiles = near/far/total depth, camera picker
+  and circle of confusion behind "More settings", equipment notices still visible.
+- Screens are being converted in waves (calculators and planners first, then equipment/settings).
+  Calculations, snapshot payload keys, field labels and `AppliedEquipmentNotice` must not change.
+- Regression tests must be updated with the screens: assertions on `'Input summary'`/`'Results'`/
+  `'Assumptions'` become `'Details'` + hero-value assertions, and tests that need a hidden control must
+  expand "More settings" or "Details" first.
+
+### Seeing the UI without a device
+
+`.tooling/ui_capture/` (gitignored) renders real pixels through widget tests with the SDK's Roboto and
+Material icon fonts loaded:
+
+```sh
+./.tooling/flutterw --no-version-check test --no-pub --update-goldens .tooling/ui_capture/capture_test.dart
+# PNGs land in .tooling/ui_capture/ui/ and can be opened with an image reader
+```
+
+### Polish queued after the screen waves
+
+- Long exposure's base shutter defaults to the repeating decimal `0.0333333333`. Accept `1/30` (and show
+  it) instead, with the exact seconds in Details — the input parser is a four-line `_number` change.
+- Re-check every hero/tile at 200% text once the waves land; the tiles go two-up above 240 logical px.
+- Equipment, saved-calculation and settings screens are still the old density (tasks T158).
+
 
 ## Next action when work resumes
 

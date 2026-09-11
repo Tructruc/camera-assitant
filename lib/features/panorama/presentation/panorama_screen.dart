@@ -89,20 +89,6 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
           'Build a gap-free horizontal, vertical, or multi-row capture grid with a serpentine shooting order.',
         ),
         const SizedBox(height: 16),
-        EquipmentPicker<CameraBody>(
-          label: 'Saved camera (optional)',
-          items: cameras,
-          itemLabel: (item) => item.name,
-          value: _selectedCamera,
-          onSelected: _applyCamera,
-        ),
-        if (_selectedCamera case final camera?)
-          AppliedEquipmentNotice(
-            equipmentName: camera.name,
-            sourceLabel: camera.provenance.source.label,
-            appliedValues:
-                '${_sensorWidth.text} × ${_sensorHeight.text} mm sensor',
-          ),
         EquipmentPicker<Lens>(
           label: 'Saved lens (optional)',
           items: lenses,
@@ -116,16 +102,6 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
             sourceLabel: lens.provenance.source.label,
             appliedValues: '${_focalLength.text} mm focal length',
           ),
-        CalculatorNumberField(
-          label: 'Sensor width (mm)',
-          controller: _sensorWidth,
-          errorText: _errors['sensorWidthMm'],
-        ),
-        CalculatorNumberField(
-          label: 'Sensor height (mm)',
-          controller: _sensorHeight,
-          errorText: _errors['sensorHeightMm'],
-        ),
         CalculatorNumberField(
           label: 'Focal length (mm)',
           controller: _focalLength,
@@ -161,21 +137,87 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
           controller: _verticalBounds,
           errorText: _errors['verticalBoundsDegrees'],
         ),
-        CalculatorNumberField(
-          label: 'Horizontal overlap (%)',
-          controller: _horizontalOverlap,
-          errorText: _errors['horizontalOverlapPercent'],
-        ),
-        CalculatorNumberField(
-          label: 'Vertical overlap (%)',
-          controller: _verticalOverlap,
-          errorText: _errors['verticalOverlapPercent'],
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: <Widget>[
+            EquipmentPicker<CameraBody>(
+              label: 'Saved camera (optional)',
+              items: cameras,
+              itemLabel: (item) => item.name,
+              value: _selectedCamera,
+              onSelected: _applyCamera,
+            ),
+            if (_selectedCamera case final camera?)
+              AppliedEquipmentNotice(
+                equipmentName: camera.name,
+                sourceLabel: camera.provenance.source.label,
+                appliedValues:
+                    '${_sensorWidth.text} × ${_sensorHeight.text} mm sensor',
+              ),
+            const SizedBox(height: 12),
+            CalculatorNumberField(
+              label: 'Sensor width (mm)',
+              controller: _sensorWidth,
+              errorText: _errors['sensorWidthMm'],
+            ),
+            CalculatorNumberField(
+              label: 'Sensor height (mm)',
+              controller: _sensorHeight,
+              errorText: _errors['sensorHeightMm'],
+            ),
+            CalculatorNumberField(
+              label: 'Horizontal overlap (%)',
+              controller: _horizontalOverlap,
+              errorText: _errors['horizontalOverlapPercent'],
+            ),
+            CalculatorNumberField(
+              label: 'Vertical overlap (%)',
+              controller: _verticalOverlap,
+              errorText: _errors['verticalOverlapPercent'],
+            ),
+          ],
         ),
         FilledButton(onPressed: _calculate, child: const Text('Plan panorama')),
         const SizedBox(height: 16),
-        if (_result?.output case final output?) ...[
+        if (_result?.output case final output?)
           CalculationResultView(
             title: 'Panorama capture plan',
+            highlight: ('Frames to shoot', '${output.frameCount}'),
+            highlightCaption:
+                '${output.columns} columns × ${output.rows} rows covering '
+                '${_degrees(output.horizontalCoverageDegrees)} × ${_degrees(output.verticalCoverageDegrees)}.',
+            tiles: <(String, String)>[
+              ('Columns', '${output.columns}'),
+              ('Rows', '${output.rows}'),
+              (
+                'Coverage',
+                '${_degrees(output.horizontalCoverageDegrees)} × ${_degrees(output.verticalCoverageDegrees)}',
+              ),
+            ],
+            details: <(String, String)>[
+              (
+                'Frame field of view',
+                '${_degrees(output.frameHorizontalDegrees)} × ${_degrees(output.frameVerticalDegrees)}',
+              ),
+              ('Yaw increment', _degrees(output.horizontalIncrementDegrees)),
+              ('Pitch increment', _degrees(output.verticalIncrementDegrees)),
+              (
+                'Requested overlap',
+                '${_value(_horizontalOverlap).toStringAsFixed(0)}% horizontal, ${_value(_verticalOverlap).toStringAsFixed(0)}% vertical',
+              ),
+              // The full capture grid is the longest list in the app, so it is
+              // collapsed with the other exact values instead of printed under
+              // the result.
+              for (final frame in output.frames)
+                (
+                  'Frame ${frame.captureIndex}',
+                  'Row ${frame.row + 1}, column ${frame.column + 1}: '
+                      'yaw ${_signed(frame.yawDegrees)}, '
+                      'pitch ${_signed(frame.pitchDegrees)}',
+                ),
+            ],
             inputs: [
               (
                 'Sensor',
@@ -192,26 +234,6 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
                 '${_horizontalOverlap.text.trim()}% horizontal, ${_verticalOverlap.text.trim()}% vertical',
               ),
             ],
-            rows: [
-              ('Frame grid', '${output.columns} columns × ${output.rows} rows'),
-              ('Total frames', '${output.frameCount}'),
-              (
-                'Frame field of view',
-                '${_degrees(output.frameHorizontalDegrees)} × ${_degrees(output.frameVerticalDegrees)}',
-              ),
-              (
-                'Movement increments',
-                '${_degrees(output.horizontalIncrementDegrees)} yaw × ${_degrees(output.verticalIncrementDegrees)} pitch',
-              ),
-              (
-                'Resulting coverage',
-                '${_degrees(output.horizontalCoverageDegrees)} × ${_degrees(output.verticalCoverageDegrees)}',
-              ),
-              (
-                'Requested overlap',
-                '${_value(_horizontalOverlap).toStringAsFixed(0)}% horizontal, ${_value(_verticalOverlap).toStringAsFixed(0)}% vertical',
-              ),
-            ],
             assumptions: const [
               'Rectilinear lens field of view',
               'Rotate around the lens entrance pupil to limit parallax',
@@ -226,17 +248,6 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
             onSave: () => _save(output),
             onReset: _reset,
           ),
-          const SizedBox(height: 12),
-          Text(
-            'Capture positions',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 6),
-          for (final frame in output.frames)
-            Text(
-              '${frame.captureIndex}. Row ${frame.row + 1}, column ${frame.column + 1}: yaw ${_signed(frame.yawDegrees)}, pitch ${_signed(frame.pitchDegrees)}',
-            ),
-        ],
       ],
     );
   }

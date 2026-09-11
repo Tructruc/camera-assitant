@@ -34,6 +34,20 @@ void main() {
     addTearDown(() => HttpOverrides.global = previous);
   }
 
+  /// Opens the result's collapsed details so the exact values are built.
+  Future<void> openDetails(WidgetTester tester, {double delta = 300}) async {
+    final details = find.text('Details');
+    await tester.scrollUntilVisible(
+      details,
+      delta,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(details.first);
+    await tester.pumpAndSettle();
+    await tester.tap(details.first, warnIfMissed: false);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('primary journey never creates a Dart network client', (
     tester,
   ) async {
@@ -130,6 +144,15 @@ void main() {
     await tester.tap(search);
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
+      find.text('Best window'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Best window'), findsOneWidget);
+    // The collapsed details still carry the search grid, and opening them must
+    // not reach for the network either.
+    await openDetails(tester);
+    await tester.scrollUntilVisible(
       find.text('Search resolution'),
       300,
       scrollable: find.byType(Scrollable).first,
@@ -157,7 +180,11 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('Input summary'), findsOneWidget);
+    // The full result is still rendered: the hero answer is visible and the
+    // details section can be opened without any network client being created.
+    expect(find.text('Save result'), findsOneWidget);
+    await openDetails(tester, delta: -300);
+    expect(find.text('Values used'), findsOneWidget);
 
     expect(find.textContaining('network request attempted'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());

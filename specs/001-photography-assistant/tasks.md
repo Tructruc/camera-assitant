@@ -505,3 +505,23 @@ shared formatter and record the unit used. The remaining three removed dead code
 barrel and the `Sensitivity` and `CircleOfConfusion` value objects) and added the missing
 unasked-but-grantable permission case. Verification at that point: 304 local tests, all eight host journeys,
 and a Linux release build.
+
+## Phase 21: Result-first interface redesign
+
+The user rejected the delivered interface as "way too cluttered... wall of numbers everywhere": every
+calculator was a long form followed by a result card that echoed its own inputs and listed every
+intermediate value, assumption and checklist at the same visual weight as the answer.
+
+The redesign keeps every requirement (FR-002 still renders units, assumptions, limitations, input summary
+and a practical interpretation; FR-013 still renders the full planning context) but changes the
+presentation: one hero answer carries the decision, two to four tiles carry the numbers a photographer
+compares, and inputs, exact intermediates and assumptions move into collapsed sections. Secondary inputs
+move behind "More settings"; no control, calculation, snapshot field or warning is removed.
+
+- [ ] T152 Add the result-first primitives (`CalculationResultView` hero/tiles/details, `CalculatorAdvancedSection`) and convert `depth_of_field_screen` as the reference
+- [ ] T153 Convert `exposure_comparison`, `long_exposure`, `flash_exposure` and `timelapse` to the hero/tiles/details shape
+- [ ] T154 Convert `macro`, the three optics tools, and `panorama` (collapsing the focus-distance list and the panorama frame grid)
+- [ ] T155 Convert `astronomy`, `alignment` (collapsing the candidate table and the sky-path samples) and give `saved_locations` scannable rows
+- [ ] T156 Update the widget, privacy and integration tests to assert the hero, the visible tiles and the expanded details, and re-pin the affected journeys
+- [ ] T157 Regenerate the host-rendered screenshots and verify the redesigned screens visually at phone width and at 200% text scale
+- [ ] T158 Extend the same presentation to the equipment, saved-calculation and settings screens

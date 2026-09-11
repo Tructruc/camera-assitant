@@ -37,7 +37,10 @@ class _OpticsScreen extends ConsumerStatefulWidget {
 class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
   late final List<TextEditingController> _controllers;
   Map<String, String> _errors = const {};
-  List<(String, String)>? _rows;
+  List<(String, String)>? _details;
+  (String, String) _highlight = const ('', '');
+  String _caption = '';
+  List<(String, String)> _tiles = const [];
   List<String> _assumptions = const [];
   List<CalculationWarning> _warnings = const [];
   String _guidance = '';
@@ -80,6 +83,27 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
       'Generate ordered focus distances with controlled overlap.',
   };
 
+  /// The two or three inputs a photographer sets for this tool. Everything
+  /// else — sensor dimensions, wavelength, circle of confusion, overlap — is a
+  /// convention or a preference and stays behind one expander.
+  List<int> get _primaryFieldIndices => switch (widget.tool) {
+    _OpticsTool.fieldOfView => const [2, 3],
+    _OpticsTool.diffraction => const [0, 2],
+    _OpticsTool.focusStack => const [0, 1, 3, 4],
+  };
+
+  List<int> get _advancedFieldIndices => [
+    for (var index = 0; index < _fields.length; index++)
+      if (!_primaryFieldIndices.contains(index)) index,
+  ];
+
+  Widget _fieldFor(int index) => CalculatorNumberField(
+    label: _fields[index].$1,
+    controller: _controllers[index],
+    errorText: _errors[_fields[index].$3],
+    fieldKey: Key('${widget.tool.name}-${_fields[index].$3}'),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -113,9 +137,9 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
     return CalculatorPage(
       inputControllers: _controllers,
       onInputsChanged: () {
-        if (_rows != null || _errors.isNotEmpty) {
+        if (_details != null || _errors.isNotEmpty) {
           setState(() {
-            _rows = null;
+            _details = null;
             _errors = const {};
           });
         }
@@ -125,23 +149,6 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         const SizedBox(height: 8),
         Text(_description),
         const SizedBox(height: 16),
-        if (widget.tool != _OpticsTool.diffraction) ...[
-          EquipmentPicker<CameraBody>(
-            label: 'Saved camera (optional)',
-            items: cameras,
-            itemLabel: (item) => item.name,
-            value: _camera,
-            onSelected: _applyCamera,
-          ),
-          if (_camera case final camera?)
-            AppliedEquipmentNotice(
-              equipmentName: camera.name,
-              sourceLabel: camera.provenance.source.label,
-              appliedValues: widget.tool == _OpticsTool.fieldOfView
-                  ? '${_controllers[0].text} × ${_controllers[1].text} mm sensor'
-                  : '${_controllers[2].text} mm circle of confusion',
-            ),
-        ],
         EquipmentPicker<Lens>(
           label: 'Saved lens (optional)',
           items: lenses,
@@ -155,23 +162,46 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
             sourceLabel: lens.provenance.source.label,
             appliedValues: _lensAppliedValues,
           ),
-        for (var index = 0; index < _fields.length; index++)
-          CalculatorNumberField(
-            label: _fields[index].$1,
-            controller: _controllers[index],
-            errorText: _errors[_fields[index].$3],
-            fieldKey: Key('${widget.tool.name}-${_fields[index].$3}'),
-          ),
+        for (final index in _primaryFieldIndices) _fieldFor(index),
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: [
+            if (widget.tool != _OpticsTool.diffraction) ...[
+              EquipmentPicker<CameraBody>(
+                label: 'Saved camera (optional)',
+                items: cameras,
+                itemLabel: (item) => item.name,
+                value: _camera,
+                onSelected: _applyCamera,
+              ),
+              if (_camera case final camera?)
+                AppliedEquipmentNotice(
+                  equipmentName: camera.name,
+                  sourceLabel: camera.provenance.source.label,
+                  appliedValues: widget.tool == _OpticsTool.fieldOfView
+                      ? '${_controllers[0].text} × ${_controllers[1].text} mm sensor'
+                      : '${_controllers[2].text} mm circle of confusion',
+                ),
+              const SizedBox(height: 12),
+            ],
+            for (final index in _advancedFieldIndices) _fieldFor(index),
+          ],
+        ),
         FilledButton(onPressed: _calculate, child: const Text('Calculate')),
         const SizedBox(height: 16),
-        if (_rows case final rows?)
+        if (_details case final details?)
           CalculationResultView(
             title: '$_title result',
+            highlight: _highlight,
+            highlightCaption: _caption,
+            tiles: _tiles,
+            details: details,
             inputs: [
               for (var index = 0; index < _fields.length; index++)
                 (_fields[index].$1, _controllers[index].text.trim()),
             ],
-            rows: rows,
             assumptions: _assumptions,
             warnings: _warningMessages,
             guidance: _guidance,
@@ -197,17 +227,28 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         );
         _applyErrors(result.errors.map((e) => (e.field, e.code)));
         if (result.output case final value?) {
-          _rows = [
+          _highlight = (
+            'Scene width at this distance',
+            _distance(value.sceneWidthMm),
+          );
+          _caption = 'Scene height ${_distance(value.sceneHeightMm)}.';
+          _tiles = [
             (
               'Horizontal angle',
               '${value.horizontalDegrees.toStringAsFixed(1)}°',
             ),
             ('Vertical angle', '${value.verticalDegrees.toStringAsFixed(1)}°'),
             ('Diagonal angle', '${value.diagonalDegrees.toStringAsFixed(1)}°'),
+          ];
+          _details = [
             (
-              'Scene coverage',
-              '${_distance(value.sceneWidthMm)} × ${_distance(value.sceneHeightMm)}',
+              'Horizontal angle',
+              '${value.horizontalDegrees.toStringAsFixed(2)}°',
             ),
+            ('Vertical angle', '${value.verticalDegrees.toStringAsFixed(2)}°'),
+            ('Diagonal angle', '${value.diagonalDegrees.toStringAsFixed(2)}°'),
+            ('Scene width', '${value.sceneWidthMm.toStringAsFixed(1)} mm'),
+            ('Scene height', '${value.sceneHeightMm.toStringAsFixed(1)} mm'),
           ];
           _outputs = {
             'horizontalDegrees': value.horizontalDegrees,
@@ -234,18 +275,34 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         );
         _applyErrors(result.errors.map((e) => (e.field, e.code)));
         if (result.output case final value?) {
-          _rows = [
-            (
-              'Airy disk diameter',
-              '${value.airyDiskMicrometres.toStringAsFixed(2)} µm',
-            ),
+          final visible = value.airyDiskPixels >= 2;
+          _highlight = (
+            'Airy disk on the sensor',
+            '${value.airyDiskPixels.toStringAsFixed(2)} pixels',
+          );
+          _caption = visible
+              ? 'Diffraction is visible at this pixel pitch.'
+              : 'Smaller than two pixels: sampling is not the limit here.';
+          _tiles = [
+            ('Airy disk', '${value.airyDiskMicrometres.toStringAsFixed(2)} µm'),
             (
               'Airy radius',
               '${value.airyRadiusMicrometres.toStringAsFixed(2)} µm',
             ),
+            ('Sampling', visible ? 'Visible' : 'Not limiting'),
+          ];
+          _details = [
+            (
+              'Airy disk diameter',
+              '${value.airyDiskMicrometres.toStringAsFixed(3)} µm',
+            ),
+            (
+              'Airy radius',
+              '${value.airyRadiusMicrometres.toStringAsFixed(3)} µm',
+            ),
             (
               'Diameter on sensor',
-              '${value.airyDiskPixels.toStringAsFixed(2)} pixels',
+              '${value.airyDiskPixels.toStringAsFixed(3)} pixels',
             ),
           ];
           _outputs = {
@@ -258,7 +315,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
             'Single selected wavelength; real light is broadband',
           ];
           _warnings = result.warnings;
-          _guidance = value.airyDiskPixels >= 2
+          _guidance = visible
               ? 'Diffraction spans at least two pixels; compare sharpness against the depth of field you need.'
               : 'Sensor sampling is coarser than the calculated Airy disk at this wavelength.';
         }
@@ -275,12 +332,25 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         );
         _applyErrors(result.errors.map((e) => (e.field, e.code)));
         if (result.output case final value?) {
-          _rows = [
-            ('Frame count', '${value.frameCount}'),
+          final distances = value.focusDistancesMm;
+          _highlight = ('Frames to shoot', '${value.frameCount}');
+          _caption = distances.isEmpty
+              ? 'No focus positions were needed.'
+              : 'From ${_distance(distances.first)} to '
+                    '${_distance(distances.last)}.';
+          _tiles = [
             (
-              'Focus distances',
-              value.focusDistancesMm.map(_distance).join(' • '),
+              'First frame',
+              distances.isEmpty ? '—' : _distance(distances.first),
             ),
+            ('Last frame', distances.isEmpty ? '—' : _distance(distances.last)),
+            ('Overlap', '${_value(5).toStringAsFixed(1)}%'),
+          ];
+          // The full near-to-far list is the biggest wall of numbers in the
+          // app, so it lives inside the collapsed Details section.
+          _details = [
+            for (var index = 0; index < distances.length; index++)
+              ('Frame ${index + 1}', _distance(distances[index])),
           ];
           _outputs = {
             'frameCount': value.frameCount,
@@ -302,7 +372,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
   void _applyErrors(Iterable<(String, String)> errors) {
     _errors = {for (final error in errors) error.$1: _errorMessage(error.$2)};
     if (_errors.isNotEmpty) {
-      _rows = null;
+      _details = null;
       _outputs = const {};
       _warnings = const [];
     }
@@ -369,7 +439,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
     }
     setState(() {
       _errors = const {};
-      _rows = null;
+      _details = null;
       _outputs = const {};
       _camera = null;
       _lens = null;
@@ -393,7 +463,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         _controllers[2].text = camera.defaultCircleOfConfusionMm.toString();
       }
     }
-    _rows = null;
+    _details = null;
   });
 
   void _applyLens(Lens? lens) => setState(() {
@@ -413,7 +483,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
           if (aperture != null) _controllers[1].text = aperture.toString();
       }
     }
-    _rows = null;
+    _details = null;
   });
 
   String get _lensAppliedValues => switch (widget.tool) {

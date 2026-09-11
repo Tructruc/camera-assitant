@@ -110,10 +110,19 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
           keyboardType: TextInputType.text,
         ),
         const SizedBox(height: 12),
-        CalculatorNumberField(
-          label: 'Optional target time (seconds)',
-          controller: _target,
-          errorText: _errors['targetTimeSeconds'],
+        // A target time only reframes the answer; the exposure itself comes
+        // from the base time and the stacked filters.
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: <Widget>[
+            CalculatorNumberField(
+              label: 'Optional target time (seconds)',
+              controller: _target,
+              errorText: _errors['targetTimeSeconds'],
+            ),
+          ],
         ),
         FilledButton(
           onPressed: _calculate,
@@ -122,32 +131,54 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         const SizedBox(height: 16),
         if (_result?.output case final output?)
           CalculationResultView(
-            title: preferences.shutterDisplay == ShutterDisplay.conventional
-                ? formatConventionalShutter(
-                    output.filteredTime.seconds,
-                    preferences.fractionStep,
-                  )
-                : '${output.filteredTime.seconds.toStringAsFixed(6)} seconds',
+            title: 'Long exposure result',
+            highlight: (
+              'Filtered exposure time',
+              _humanDuration(output.filteredTime.seconds),
+            ),
+            highlightCaption:
+                '${_shutterLabel(output, preferences)} · base '
+                '${_humanDuration(_number(_base.text))}',
+            tiles: <(String, String)>[
+              (
+                'Total ND strength',
+                '${output.totalStrength.stops.toStringAsFixed(1)} stops',
+              ),
+              if (output.requiredStrength case final required?)
+                (
+                  'Required strength',
+                  '${required.stops.toStringAsFixed(1)} stops',
+                ),
+              (
+                'Shutter mode',
+                output.requiresBulbOrTimer ? 'Bulb or timer' : 'Standard range',
+              ),
+            ],
+            details: <(String, String)>[
+              (
+                'Filtered time (exact)',
+                '${output.filteredTime.seconds.toStringAsFixed(6)} s',
+              ),
+              ('Shutter display', _shutterLabel(output, preferences)),
+              (
+                'Base time (exact)',
+                '${_number(_base.text).toStringAsFixed(6)} s',
+              ),
+              (
+                'Total ND strength (exact)',
+                '${output.totalStrength.stops.toStringAsFixed(2)} stops',
+              ),
+              if (output.requiredStrength case final required?)
+                (
+                  'Required strength (exact)',
+                  '${required.stops.toStringAsFixed(2)} stops',
+                ),
+            ],
             inputs: <(String, String)>[
               ('Base shutter time', '${_base.text.trim()} s'),
               ('ND filter strengths', '${_stops.text.trim()} stops'),
               if (_target.text.trim().isNotEmpty)
                 ('Target time', '${_target.text.trim()} s'),
-            ],
-            rows: <(String, String)>[
-              (
-                'Raw exposure',
-                '${output.filteredTime.seconds.toStringAsFixed(6)} s',
-              ),
-              (
-                'Total ND strength',
-                '${output.totalStrength.stops.toStringAsFixed(2)} stops',
-              ),
-              if (output.requiredStrength case final required?)
-                (
-                  'Required strength',
-                  '${required.stops.toStringAsFixed(2)} stops',
-                ),
             ],
             assumptions: const <String>[
               'Each ND stop doubles exposure time',
@@ -162,6 +193,15 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
       ],
     );
   }
+
+  /// The shutter wording the result and the snapshot both report.
+  String _shutterLabel(LongExposureOutput output, AppPreferences preferences) =>
+      preferences.shutterDisplay == ShutterDisplay.conventional
+      ? formatConventionalShutter(
+          output.filteredTime.seconds,
+          preferences.fractionStep,
+        )
+      : '${output.filteredTime.seconds.toStringAsFixed(6)} seconds';
 
   String? get _filterError {
     for (final entry in _errors.entries) {
@@ -236,13 +276,7 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         displayContext: <String, Object?>{
           'shutterDisplay': preferences.shutterDisplay.name,
           'fractionStep': preferences.fractionStep.name,
-          'shutterLabel':
-              preferences.shutterDisplay == ShutterDisplay.conventional
-              ? formatConventionalShutter(
-                  output.filteredTime.seconds,
-                  preferences.fractionStep,
-                )
-              : '${output.filteredTime.seconds.toStringAsFixed(6)} seconds',
+          'shutterLabel': _shutterLabel(output, preferences),
           'secondsPrecision': 6,
         },
         assumptions: result.assumptions,
@@ -279,3 +313,26 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
 }
 
 double _number(String text) => double.tryParse(text.trim()) ?? double.nan;
+
+/// A duration a photographer can read at a glance, e.g. `4 min 16 s`.
+///
+/// The exact seconds stay in the result details; this is the human summary.
+String _humanDuration(double seconds) {
+  if (!seconds.isFinite) return 'Beyond the model';
+  if (seconds < 1) return '${seconds.toStringAsFixed(2)} s';
+  if (seconds < 60) return '${seconds.toStringAsFixed(1)} s';
+  final total = seconds.round();
+  if (total < 3600) {
+    final minutes = total ~/ 60;
+    final rest = total % 60;
+    return rest == 0 ? '$minutes min' : '$minutes min $rest s';
+  }
+  if (total < 86400) {
+    final hours = total ~/ 3600;
+    final minutes = (total % 3600) ~/ 60;
+    return minutes == 0 ? '$hours h' : '$hours h $minutes min';
+  }
+  final days = total ~/ 86400;
+  final hours = (total % 86400) ~/ 3600;
+  return hours == 0 ? '$days d' : '$days d $hours h';
+}

@@ -160,22 +160,76 @@ class AppliedEquipmentNotice extends StatelessWidget {
   );
 }
 
+/// A collapsed group of secondary inputs.
+///
+/// Photographers act on two or three numbers per calculator; everything else is
+/// a convention or a preference. Keeping those fields behind one expander
+/// leaves the default screen readable without removing any control.
+class CalculatorAdvancedSection extends StatelessWidget {
+  const CalculatorAdvancedSection({
+    required this.children,
+    this.title = 'More settings',
+    super.key,
+  });
+
+  final List<Widget> children;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Theme(
+    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+    child: ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(top: 4),
+      shape: const Border(),
+      collapsedShape: const Border(),
+      leading: const Icon(Icons.tune),
+      title: Text(title),
+      children: children,
+    ),
+  );
+}
+
+/// Result-first presentation shared by every calculator.
+///
+/// One hero answer carries the decision, a short row of tiles carries the
+/// numbers a photographer compares, and the inputs, exact intermediates and
+/// model assumptions live in a collapsed details section. Warnings stay visible
+/// above the hero because they can change how the result may be used.
 class CalculationResultView extends StatelessWidget {
   const CalculationResultView({
     required this.title,
-    required this.inputs,
-    required this.rows,
-    required this.assumptions,
+    required this.highlight,
     required this.onReset,
     required this.onSave,
+    this.highlightCaption,
+    this.tiles = const <(String, String)>[],
+    this.details = const <(String, String)>[],
+    this.inputs = const <(String, String)>[],
+    this.assumptions = const <String>[],
     this.guidance,
     this.warnings = const <String>[],
     super.key,
   });
 
+  /// Screen title, also the accessibility name of the result region.
   final String title;
+
+  /// The single number (or wording) this calculator exists to produce.
+  final (String, String) highlight;
+
+  /// Optional plain-language note printed under the hero value.
+  final String? highlightCaption;
+
+  /// Secondary answers, rendered as compact half-width tiles.
+  final List<(String, String)> tiles;
+
+  /// Intermediates and exact values, collapsed under "Details".
+  final List<(String, String)> details;
+
+  /// Values actually used, collapsed under "Details".
   final List<(String, String)> inputs;
-  final List<(String, String)> rows;
+
   final List<String> assumptions;
 
   /// User-facing limitations the calculator reported for this result.
@@ -185,104 +239,276 @@ class CalculationResultView extends StatelessWidget {
   final VoidCallback onSave;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    liveRegion: true,
-    label: '$title calculation result',
-    child: Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Semantics(
-              container: true,
-              label:
-                  'Input summary: ${inputs.map((input) => '${input.$1} ${input.$2}').join('; ')}',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label:
+          '$title calculation result: ${highlight.$1} ${highlight.$2}'
+          '${warnings.isEmpty ? '' : '. Warnings: ${warnings.join('; ')}'}',
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                title,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (warnings.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 10),
+                _WarningBanner(warnings: warnings),
+              ],
+              const SizedBox(height: 10),
+              Text(
+                highlight.$1,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              Text(
+                highlight.$2,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (highlightCaption case final caption?) ...<Widget>[
+                const SizedBox(height: 4),
+                Text(caption, style: theme.textTheme.bodySmall),
+              ],
+              if (guidance case final text?) ...<Widget>[
+                const SizedBox(height: 8),
+                Text(text, style: theme.textTheme.bodyMedium),
+              ],
+              if (tiles.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 16),
+                _ResultTiles(tiles: tiles),
+              ],
+              if (details.isNotEmpty ||
+                  inputs.isNotEmpty ||
+                  assumptions.isNotEmpty)
+                _DetailsSection(
+                  // Stable identity: a warning appearing above must not reset
+                  // the section the user just opened.
+                  key: const ValueKey('details'),
+                  details: details,
+                  inputs: inputs,
+                  assumptions: assumptions,
+                ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: <Widget>[
-                  Text(
-                    'Input summary',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  FilledButton.icon(
+                    onPressed: onSave,
+                    icon: const Icon(Icons.bookmark_add_outlined),
+                    label: const Text('Save result'),
                   ),
-                  const SizedBox(height: 6),
-                  for (final (label, value) in inputs)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Expanded(child: Text(label)),
-                          const SizedBox(width: 12),
-                          Flexible(
-                            child: Text(value, textAlign: TextAlign.end),
-                          ),
-                        ],
+                  TextButton(onPressed: onReset, child: const Text('Reset')),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WarningBanner extends StatelessWidget {
+  const _WarningBanner({required this.warnings});
+
+  final List<String> warnings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Semantics(
+      container: true,
+      label: 'Warnings: ${warnings.join('; ')}',
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Icon(
+              Icons.info_outline,
+              size: 20,
+              color: theme.colorScheme.onTertiaryContainer,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (final warning in warnings)
+                    Text(
+                      warning,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer,
                       ),
                     ),
                 ],
               ),
             ),
-            const Divider(height: 24),
-            Text('Results', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 6),
-            for (final (label, value) in rows)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Expanded(child: Text(label)),
-                    const SizedBox(width: 12),
-                    Flexible(child: Text(value, textAlign: TextAlign.end)),
-                  ],
-                ),
-              ),
-            if (guidance case final text?) ...<Widget>[
-              const SizedBox(height: 4),
-              Text(text),
-            ],
-            const Divider(height: 24),
-            Text('Assumptions', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 6),
-            for (final assumption in assumptions) Text('• $assumption'),
-            if (warnings.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 12),
-              Semantics(
-                container: true,
-                label: 'Warnings: ${warnings.join('; ')}',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Text(
-                      'Warnings',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    for (final warning in warnings) Text('• $warning'),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                FilledButton.icon(
-                  onPressed: onSave,
-                  icon: const Icon(Icons.bookmark_add_outlined),
-                  label: const Text('Save result'),
-                ),
-                OutlinedButton(onPressed: onReset, child: const Text('Reset')),
-              ],
-            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ResultTiles extends StatelessWidget {
+  const _ResultTiles({required this.tiles});
+
+  final List<(String, String)> tiles;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        // Two columns whenever a phone-width card can hold them; the tiles stay
+        // scannable instead of turning into another full-width value list.
+        final tileWidth = width >= 240 ? (width - 10) / 2 : width;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: <Widget>[
+            for (final (label, value) in tiles)
+              SizedBox(
+                width: tileWidth,
+                child: Semantics(
+                  container: true,
+                  label: '$label $value',
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          label,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          value,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DetailsSection extends StatelessWidget {
+  const _DetailsSection({
+    required this.details,
+    required this.inputs,
+    required this.assumptions,
+    super.key,
+  });
+
+  final List<(String, String)> details;
+  final List<(String, String)> inputs;
+  final List<String> assumptions;
+
+  @override
+  Widget build(BuildContext context) => Theme(
+    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+    child: ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: EdgeInsets.zero,
+      shape: const Border(),
+      collapsedShape: const Border(),
+      title: const Text('Details'),
+      children: <Widget>[
+        if (inputs.isNotEmpty) ...<Widget>[
+          _DetailHeading('Values used', inputs),
+          const SizedBox(height: 12),
+        ],
+        if (details.isNotEmpty) ...<Widget>[
+          _DetailHeading('Exact values', details),
+          const SizedBox(height: 12),
+        ],
+        if (assumptions.isNotEmpty) ...<Widget>[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Model assumptions',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+          ),
+          const SizedBox(height: 4),
+          for (final assumption in assumptions)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('• $assumption'),
+            ),
+        ],
+      ],
+    ),
+  );
+}
+
+class _DetailHeading extends StatelessWidget {
+  const _DetailHeading(this.label, this.rows);
+
+  final String label;
+  final List<(String, String)> rows;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: '$label: ${rows.map((row) => '${row.$1} ${row.$2}').join('; ')}',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(label, style: Theme.of(context).textTheme.labelLarge),
+        ),
+        const SizedBox(height: 4),
+        for (final (name, value) in rows)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(child: Text(name)),
+                const SizedBox(width: 12),
+                Flexible(child: Text(value, textAlign: TextAlign.end)),
+              ],
+            ),
+          ),
+      ],
     ),
   );
 }

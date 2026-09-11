@@ -53,6 +53,8 @@ void main() {
       await reveal('Plan night sky');
       await tester.tap(find.text('Plan night sky'));
       await tester.pumpAndSettle();
+      // The orientation row lives in the result card's collapsed Details.
+      await openSection(tester, 'Details');
       await reveal('Milky Way orientation');
       expect(find.textContaining('relative to horizon'), findsOneWidget);
       await reveal('Save result');

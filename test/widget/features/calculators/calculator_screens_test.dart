@@ -26,6 +26,25 @@ import 'package:photography_assistant/features/planning/domain/planning_capabili
 import 'package:photography_assistant/features/planning/domain/saved_location.dart';
 import 'package:photography_assistant/features/timelapse/presentation/timelapse_screen.dart';
 
+/// Expands a collapsed [ExpansionTile] before its contents are asserted.
+///
+/// A collapsed tile does not build its children, so targets inside the result
+/// `Details` section or the `More settings` advanced section cannot be found
+/// until the tile is tapped. The scroll is deliberate: a header below the fold
+/// is not built either, and a missing header should fail loudly here rather
+/// than silently skip the expansion.
+Future<void> openExpander(WidgetTester tester, String title) async {
+  final tile = find.text(title);
+  await tester.scrollUntilVisible(
+    tile,
+    300,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   late AppDatabase database;
 
@@ -65,6 +84,7 @@ void main() {
     await tester.pumpWidget(app(const DepthOfFieldScreen()));
 
     expect(find.text('Focal length (mm)'), findsOneWidget);
+    await openExpander(tester, 'More settings');
     expect(find.text('Circle of confusion (mm)'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('dof-focal')), '0');
     await tester.scrollUntilVisible(
@@ -82,13 +102,14 @@ void main() {
     await tester.enterText(find.byKey(const Key('dof-focal')), '50');
     await tester.tap(find.text('Calculate'));
     await tester.pump();
-    expect(find.text('Input summary'), findsOneWidget);
+    await openExpander(tester, 'Details');
+    expect(find.text('Values used'), findsOneWidget);
     expect(find.text('50 mm'), findsOneWidget);
     expect(find.text('f/8'), findsOneWidget);
     expect(find.text('Near limit'), findsOneWidget);
     await tester.drag(find.byType(ListView).first, const Offset(0, -900));
     await tester.pumpAndSettle();
-    expect(find.text('Assumptions'), findsOneWidget);
+    expect(find.text('Model assumptions'), findsOneWidget);
     expect(find.textContaining('Thin-lens geometric model'), findsOneWidget);
     expect(find.text('Save result'), findsOneWidget);
     expect(find.text('Reset'), findsOneWidget);
@@ -102,6 +123,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Equivalent exposure'), findsOneWidget);
+    await openExpander(tester, 'Details');
     expect(find.text('Aperture contribution'), findsOneWidget);
     expect(find.text('Shutter contribution'), findsOneWidget);
     expect(find.text('ISO contribution'), findsOneWidget);
@@ -119,8 +141,18 @@ void main() {
     await tester.tap(find.text('Calculate exposure'));
     await tester.pump();
 
-    expect(find.text('34.133333 seconds'), findsOneWidget);
-    expect(find.textContaining('Bulb or timer'), findsOneWidget);
+    expect(find.text('Filtered exposure time'), findsOneWidget);
+    expect(find.text('34.1 s'), findsOneWidget);
+    expect(find.textContaining('34.133333 seconds'), findsOneWidget);
+    expect(find.text('Total ND strength'), findsOneWidget);
+    expect(find.text('10.0 stops'), findsOneWidget);
+    // The tile and the guidance both name the required shutter mode.
+    expect(find.text('Bulb or timer'), findsOneWidget);
+    expect(find.textContaining('Bulb or timer mode'), findsOneWidget);
+
+    await openExpander(tester, 'Details');
+    expect(find.text('Filtered time (exact)'), findsOneWidget);
+    expect(find.text('34.133333 s'), findsOneWidget);
     expect(find.text('10.00 stops'), findsOneWidget);
   });
 
@@ -132,6 +164,7 @@ void main() {
     await tester.pump();
     expect(find.text('f/8.0'), findsOneWidget);
     expect(find.text('Effective guide number'), findsOneWidget);
+    await openExpander(tester, 'Details');
     expect(find.textContaining('bounce loss'), findsOneWidget);
   });
 
@@ -142,7 +175,9 @@ void main() {
     await tester.tap(find.text('Plan timelapse'));
     await tester.pump();
     expect(find.text('361'), findsOneWidget);
-    expect(find.text('12.03 seconds'), findsOneWidget);
+    await openExpander(tester, 'Details');
+    expect(find.text('Playback duration'), findsOneWidget);
+    expect(find.text('12.033 s'), findsOneWidget);
     expect(find.text('8.81 GB'), findsOneWidget);
     expect(find.text('+2.00 stops'), findsOneWidget);
   });
@@ -160,6 +195,7 @@ void main() {
     await tester.pump();
     expect(find.text('0.70×'), findsOneWidget);
     expect(find.text('f/13.6'), findsOneWidget);
+    await openExpander(tester, 'Details');
     expect(find.textContaining('Working distance'), findsOneWidget);
   });
 
@@ -174,8 +210,9 @@ void main() {
     );
     await tester.tap(find.text('Plan panorama'));
     await tester.pump();
-    expect(find.text('3 columns × 2 rows'), findsOneWidget);
+    expect(find.textContaining('3 columns × 2 rows'), findsOneWidget);
     expect(find.text('6'), findsOneWidget);
+    await openExpander(tester, 'Details');
     expect(find.textContaining('yaw'), findsWidgets);
     expect(find.textContaining('lens distortion'), findsOneWidget);
   });
@@ -221,6 +258,7 @@ void main() {
       );
       await tester.tap(find.text('Plan night sky'));
       await tester.pumpAndSettle();
+      await openExpander(tester, 'Details');
       await tester.scrollUntilVisible(
         find.text('Milky Way orientation'),
         300,
@@ -294,6 +332,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mountain site').last);
     await tester.pumpAndSettle();
+    await openExpander(tester, 'More settings');
     expect(
       tester
           .widget<TextField>(
@@ -311,6 +350,13 @@ void main() {
     );
     await tester.tap(find.text('Plan night sky'));
     await tester.pumpAndSettle();
+    // The context card sits below the shorter result-first card, so it has to
+    // be scrolled into view before it is built.
+    await tester.scrollUntilVisible(
+      find.text('Planning context'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Planning context'), findsOneWidget);
     expect(find.text('Mountain site'), findsOneWidget);
     expect(find.textContaining('±8 m reported accuracy'), findsOneWidget);
@@ -397,6 +443,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(search);
     await tester.pumpAndSettle();
+    await openExpander(tester, 'Details');
     await tester.scrollUntilVisible(
       find.text('Search resolution'),
       300,
@@ -639,7 +686,7 @@ void main() {
     );
     await tester.tap(find.text('Calculate exposure'));
     await tester.pump();
-    expect(find.text('32 s'), findsOneWidget);
+    expect(find.textContaining('32 s'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Save result'),
       300,
@@ -668,6 +715,7 @@ void main() {
       app(const AstronomyScreen(), preferences: preferences),
     );
     await tester.pumpAndSettle();
+    await openExpander(tester, 'More settings');
     await tester.scrollUntilVisible(
       find.text('Default: strict from Settings'),
       300,
@@ -800,6 +848,7 @@ void main() {
     );
     await tester.pumpWidget(app(const FieldOfViewScreen()));
     await tester.pumpAndSettle();
+    await openExpander(tester, 'More settings');
     await tester.tap(find.text('Saved camera (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('APS-C Camera').last);
@@ -900,6 +949,7 @@ void main() {
       app(const AstronomyScreen(), preferences: imperial),
     );
     await tester.pumpAndSettle();
+    await openExpander(tester, 'More settings');
     await tester.enterText(
       find.widgetWithText(TextField, 'Observer elevation (m)'),
       '1200',
@@ -912,7 +962,14 @@ void main() {
     );
     await tester.tap(find.text('Plan night sky'));
     await tester.pumpAndSettle();
-    // 1200 m is about 3937 ft; the canonical input stays in metres.
+    // 1200 m is about 3937 ft; the canonical input stays in metres. The
+    // elevation sits in the planning-context card below the result now, so the
+    // list has to build it before it can be asserted.
+    await tester.scrollUntilVisible(
+      find.textContaining('3937.01 ft'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.textContaining('3937.01 ft'), findsOneWidget);
   });
 
@@ -934,12 +991,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(calculate);
     await tester.pump();
-    expect(find.text('Scene coverage'), findsOneWidget);
+    expect(find.text('Scene width at this distance'), findsOneWidget);
     expect(
       tester
           .widgetList<Text>(find.textContaining('ft'))
           .map((widget) => widget.data),
-      contains('23.62 ft × 15.75 ft'),
+      containsAll(<String>['23.62 ft', 'Scene height 15.75 ft.']),
     );
 
     await tester.pumpWidget(app(const MacroScreen(), preferences: imperial));

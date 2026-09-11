@@ -10,8 +10,8 @@ import 'package:photography_assistant/features/equipment/data/drift_equipment_re
 import 'support/journey.dart';
 
 /// Quickstart scenarios 8 and 26 end to end: the whole journey — navigate,
-/// calculate, read the labelled input summary, and save — must complete at 200%
-/// system text scale on a phone-sized viewport.
+/// calculate, read the labelled hero answer and its collapsed values, and save —
+/// must complete at 200% system text scale on a phone-sized viewport.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -48,14 +48,21 @@ void main() {
     // 200% text must not overflow or clip any frame.
     expect(tester.takeException(), isNull);
 
-    // The labelled input summary is present and exposed to assistive tech.
-    await tester.scrollUntilVisible(
-      find.text('Input summary'),
-      300,
-      scrollable: find.byType(Scrollable).first,
+    // The hero answer is the first thing assistive tech receives, without
+    // expanding anything.
+    expect(find.text('Hyperfocal distance'), findsWidgets);
+    expect(
+      find.bySemanticsLabel(RegExp('Depth of field result calculation result')),
+      findsWidgets,
     );
-    expect(find.text('Input summary'), findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp('Input summary')), findsWidgets);
+    expect(tester.takeException(), isNull);
+
+    // The collapsed provenance stays reachable and labelled at this scale.
+    await openSection(tester, 'Details');
+    await reveal(tester, find.text('Values used'));
+    expect(find.text('Values used'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('Values used')), findsWidgets);
+    expect(find.text('Focal length'), findsWidgets);
     expect(tester.takeException(), isNull);
 
     // The whole action row is still reachable and usable at this scale.

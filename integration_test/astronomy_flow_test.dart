@@ -40,7 +40,9 @@ void main() {
     await tapVisible(tester, find.text('Plan night sky'), delta: 300);
 
     // The core preset is the default target, so the orientation row is present
-    // without changing the target list.
+    // without changing the target list. It now lives in the collapsed Details
+    // section of the result card.
+    await openSection(tester, 'Details');
     await reveal(tester, find.text('Milky Way orientation'));
     expect(find.text('Milky Way orientation'), findsOneWidget);
     expect(find.textContaining('relative to horizon'), findsWidgets);

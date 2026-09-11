@@ -41,15 +41,37 @@ Future<void> reveal(
   await tester.pumpAndSettle();
 }
 
+/// Expands a collapsed result section or advanced input group by its title.
+///
+/// The result-first layout keeps exact values and secondary fields behind the
+/// `Details` and `More settings` expanders, so a journey that reads one of them
+/// has to open the section first. A missing section is a no-op, which keeps the
+/// helper usable for screens that do not collapse that group.
+Future<void> openSection(WidgetTester tester, String title) async {
+  final tile = find.text(title);
+  if (tile.evaluate().isEmpty) return;
+  await reveal(tester, tile);
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
+}
+
 /// Scrolls a planner list to the end of its result card so the save action is
 /// fully inside the viewport before it is tapped. [extra] nudges further for
 /// screens whose action row sits under a taller result.
+///
+/// The result-first cards are far shorter than the old value tables, so the
+/// nudge can overshoot and leave the row above the fold; the closing
+/// [WidgetTester.ensureVisible] puts the button back in view either way.
 Future<void> scrollToResultActions(
   WidgetTester tester, {
   double extra = 250,
 }) async {
   await reveal(tester, find.text('Save result'));
-  await tester.drag(find.byType(ListView).first, Offset(0, -extra));
+  if (extra > 0) {
+    await tester.drag(find.byType(ListView).first, Offset(0, -extra));
+    await tester.pumpAndSettle();
+  }
+  await tester.ensureVisible(find.widgetWithText(FilledButton, 'Save result'));
   await tester.pumpAndSettle();
 }
 

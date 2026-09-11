@@ -70,11 +70,6 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
           fieldKey: const Key('flash-guide-number'),
         ),
         CalculatorNumberField(
-          label: 'ISO',
-          controller: _iso,
-          errorText: _errors['iso'],
-        ),
-        CalculatorNumberField(
           label: 'Power fraction (1, 0.5, 0.25…)',
           controller: _power,
           errorText: _errors['powerFraction'],
@@ -84,6 +79,21 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
           controller: _distance,
           errorText: _errors['subjectDistanceMetres'],
         ),
+        // ISO scales the guide number but is set once per shoot, so it lives
+        // with the other conventions; the value used stays visible in the
+        // result caption.
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: <Widget>[
+            CalculatorNumberField(
+              label: 'ISO',
+              controller: _iso,
+              errorText: _errors['iso'],
+            ),
+          ],
+        ),
         FilledButton(
           onPressed: _calculate,
           child: const Text('Calculate flash exposure'),
@@ -92,6 +102,45 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
         if (_result?.output case final output?)
           CalculationResultView(
             title: 'Flash exposure result',
+            highlight: (
+              'Recommended aperture',
+              'f/${output.recommendedAperture.toStringAsFixed(1)}',
+            ),
+            highlightCaption:
+                'At ${distance(_number(_distance))} on ISO '
+                '${_iso.text.trim()} at ${_powerLabel()}.',
+            tiles: <(String, String)>[
+              (
+                'Effective guide number',
+                distance(output.effectiveGuideNumberMetres),
+              ),
+              (
+                'Power reduction',
+                _stopsText(output.powerReductionStops, fractionDigits: 1),
+              ),
+              (
+                'Full-power range',
+                distance(output.fullPowerRangeAtRecommendedApertureMetres),
+              ),
+            ],
+            details: <(String, String)>[
+              (
+                'Recommended aperture (exact)',
+                'f/${output.recommendedAperture.toStringAsFixed(2)}',
+              ),
+              (
+                'Effective guide number (exact)',
+                '${output.effectiveGuideNumberMetres.toStringAsFixed(2)} m',
+              ),
+              (
+                'Power reduction (exact)',
+                _stopsText(output.powerReductionStops, fractionDigits: 2),
+              ),
+              (
+                'Full-power range (exact)',
+                '${output.fullPowerRangeAtRecommendedApertureMetres.toStringAsFixed(2)} m',
+              ),
+            ],
             inputs: [
               (
                 'Guide number at ISO 100',
@@ -104,24 +153,6 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
               (
                 'Subject distance',
                 distance(double.tryParse(_distance.text.trim()) ?? double.nan),
-              ),
-            ],
-            rows: [
-              (
-                'Recommended aperture',
-                'f/${output.recommendedAperture.toStringAsFixed(1)}',
-              ),
-              (
-                'Effective guide number',
-                distance(output.effectiveGuideNumberMetres),
-              ),
-              (
-                'Power reduction',
-                '${output.powerReductionStops.toStringAsFixed(1)} stops',
-              ),
-              (
-                'Full-power range at that aperture',
-                distance(output.fullPowerRangeAtRecommendedApertureMetres),
               ),
             ],
             assumptions: const [
@@ -144,6 +175,17 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
 
   double _number(TextEditingController controller) =>
       double.tryParse(controller.text.trim()) ?? double.nan;
+
+  /// Plain-language power wording: `full power` or `half power`.
+  String _powerLabel() {
+    final text = _power.text.trim();
+    return switch (text) {
+      '1' => 'full power',
+      '0.5' => 'half power',
+      _ => '$text power',
+    };
+  }
+
   void _calculate() {
     final result = const FlashExposureCalculator().calculate(
       FlashExposureInput(
@@ -210,4 +252,10 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
       _errors = const {};
     });
   }
+}
+
+/// A stop figure without the misleading `-0.0` that `-log(1)` produces.
+String _stopsText(double stops, {required int fractionDigits}) {
+  final normalized = stops == 0 ? 0.0 : stops;
+  return '${normalized.toStringAsFixed(fractionDigits)} stops';
 }

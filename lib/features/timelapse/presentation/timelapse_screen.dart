@@ -31,6 +31,9 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
     ('Starting exposure (seconds)', 'startExposureSeconds'),
     ('Ending exposure (seconds)', 'endExposureSeconds'),
   ];
+
+  /// How many of [_fields] define the capture plan itself.
+  static const primaryFieldCount = 3;
   CalculationResult<TimelapseOutput>? _result;
   Map<String, String> _errors = const {};
 
@@ -63,34 +66,72 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
         'Plan capture cadence, playback length, storage, and an exposure ramp.',
       ),
       const SizedBox(height: 16),
-      for (var index = 0; index < _fields.length; index++)
+      // Cadence, duration, and playback rate define the plan; per-frame size
+      // and the exposure ramp refine it.
+      for (var index = 0; index < primaryFieldCount; index++)
         CalculatorNumberField(
           label: _fields[index].$1,
           controller: _controllers[index],
           errorText: _errors[_fields[index].$2],
           fieldKey: Key('timelapse-${_fields[index].$2}'),
         ),
+      CalculatorAdvancedSection(
+        // Stable identity: applying equipment above must not collapse
+        // the section the user is working in.
+        key: const ValueKey('advanced'),
+        children: <Widget>[
+          for (var index = primaryFieldCount; index < _fields.length; index++)
+            CalculatorNumberField(
+              label: _fields[index].$1,
+              controller: _controllers[index],
+              errorText: _errors[_fields[index].$2],
+              fieldKey: Key('timelapse-${_fields[index].$2}'),
+            ),
+        ],
+      ),
       FilledButton(onPressed: _calculate, child: const Text('Plan timelapse')),
       const SizedBox(height: 16),
       if (_result?.output case final output?)
         CalculationResultView(
           title: 'Timelapse plan',
-          inputs: [
-            for (var index = 0; index < _fields.length; index++)
-              (_fields[index].$1, _controllers[index].text.trim()),
-          ],
-          rows: [
-            ('Frames', '${output.frameCount}'),
+          highlight: ('Frames', '${output.frameCount}'),
+          highlightCaption:
+              'At a ${_controllers[0].text.trim()} s interval across '
+              '${_humanDuration(_value(1))}.',
+          tiles: <(String, String)>[
             (
               'Playback duration',
-              '${output.playbackDurationSeconds.toStringAsFixed(2)} seconds',
+              _humanDuration(output.playbackDurationSeconds),
             ),
             ('Estimated storage', _storage(output.storageMegabytes)),
-            ('Exposure ramp', '${_signed(output.exposureRampStops)} stops'),
+            (
+              'Exposure ramp',
+              '${_signed(output.exposureRampStops, fractionDigits: 1)} stops',
+            ),
+          ],
+          details: <(String, String)>[
+            (
+              'Playback duration (exact)',
+              '${output.playbackDurationSeconds.toStringAsFixed(3)} s',
+            ),
+            (
+              'Estimated storage (exact)',
+              '${output.storageMegabytes.toStringAsFixed(2)} MB',
+            ),
+            (
+              'Exposure ramp (exact)',
+              '${_signed(output.exposureRampStops)} stops',
+            ),
             (
               'Maximum exposure duty cycle',
               '${(output.maximumDutyCycle * 100).toStringAsFixed(0)}%',
             ),
+            ('Starting exposure', '${_controllers[4].text.trim()} s'),
+            ('Ending exposure', '${_controllers[5].text.trim()} s'),
+          ],
+          inputs: [
+            for (var index = 0; index < _fields.length; index++)
+              (_fields[index].$1, _controllers[index].text.trim()),
           ],
           assumptions: const [
             'A frame is captured at both sequence endpoints',
@@ -172,6 +213,29 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
   String _storage(double megabytes) => megabytes >= 1024
       ? '${(megabytes / 1024).toStringAsFixed(2)} GB'
       : '${megabytes.toStringAsFixed(0)} MB';
-  String _signed(double value) =>
-      '${value >= 0 ? '+' : ''}${value.toStringAsFixed(2)}';
+  String _signed(double value, {int fractionDigits = 2}) =>
+      '${value >= 0 ? '+' : ''}${value.toStringAsFixed(fractionDigits)}';
+}
+
+/// A duration a photographer can read at a glance, e.g. `1 h 30 min`.
+///
+/// The exact seconds stay in the result details; this is the human summary.
+String _humanDuration(double seconds) {
+  if (!seconds.isFinite) return 'Beyond the model';
+  if (seconds < 1) return '${seconds.toStringAsFixed(2)} s';
+  if (seconds < 60) return '${seconds.toStringAsFixed(1)} s';
+  final total = seconds.round();
+  if (total < 3600) {
+    final minutes = total ~/ 60;
+    final rest = total % 60;
+    return rest == 0 ? '$minutes min' : '$minutes min $rest s';
+  }
+  if (total < 86400) {
+    final hours = total ~/ 3600;
+    final minutes = (total % 3600) ~/ 60;
+    return minutes == 0 ? '$hours h' : '$hours h $minutes min';
+  }
+  final days = total ~/ 86400;
+  final hours = (total % 86400) ~/ 3600;
+  return hours == 0 ? '$days d' : '$days d $hours h';
 }

@@ -61,8 +61,11 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Save'));
     await tester.pumpAndSettle();
     expect(find.text('Dark site'), findsOneWidget);
-    expect(find.textContaining('45.00000, 5.00000'), findsOneWidget);
-    await tester.tap(find.byTooltip('Delete Dark site'));
+    expect(find.textContaining('45.00°N, 5.00°E'), findsOneWidget);
+    // Deleting is now a deliberate step behind the row's overflow menu.
+    await tester.tap(find.byTooltip('Actions for Dark site'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
     expect(find.text('Dark site'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -311,7 +314,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // The delete path fails, and says so instead of throwing.
-      await tester.tap(find.byTooltip('Delete Current location'));
+      await tester.tap(find.byTooltip('Actions for Current location'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
       await tester.pumpAndSettle();
       expect(find.textContaining('could not be deleted'), findsOneWidget);
       expect(find.text('Current location'), findsWidgets);

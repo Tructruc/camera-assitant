@@ -50,12 +50,36 @@ class SavedLocationsScreen extends ConsumerWidget {
                       child: ListTile(
                         title: Text(location.name),
                         subtitle: Text(
-                          '${location.latitudeDegrees.toStringAsFixed(5)}, ${location.longitudeDegrees.toStringAsFixed(5)} • ${location.timeZoneId}${location.accuracyMetres == null ? '' : ' • ±${location.accuracyMetres!.round()} m'}',
+                          '${_coordinate(location.latitudeDegrees, 'N', 'S')}, '
+                          '${_coordinate(location.longitudeDegrees, 'E', 'W')} · '
+                          '${location.timeZoneId}',
                         ),
-                        trailing: IconButton(
-                          tooltip: 'Delete ${location.name}',
-                          onPressed: () => _delete(context, ref, location),
-                          icon: const Icon(Icons.delete_outline),
+                        // Destructive actions stay one deliberate step away
+                        // from a row that is also tapped to edit.
+                        trailing: PopupMenuButton<_LocationAction>(
+                          tooltip: 'Actions for ${location.name}',
+                          onSelected: (action) => switch (action) {
+                            _LocationAction.edit => _edit(
+                              context,
+                              ref,
+                              location: location,
+                            ),
+                            _LocationAction.delete => _delete(
+                              context,
+                              ref,
+                              location,
+                            ),
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: _LocationAction.edit,
+                              child: Text('Edit'),
+                            ),
+                            PopupMenuItem(
+                              value: _LocationAction.delete,
+                              child: Text('Delete'),
+                            ),
+                          ],
                         ),
                         onTap: () => _edit(context, ref, location: location),
                       ),
@@ -336,3 +360,10 @@ Map<String, String> validateLocationDraft({
   }
   return errors;
 }
+
+/// The deliberate actions behind a saved-location row's overflow menu.
+enum _LocationAction { edit, delete }
+
+/// Formats a signed coordinate the way a place is read: `51.48°N, 0.00°E`.
+String _coordinate(double value, String positive, String negative) =>
+    '${value.abs().toStringAsFixed(2)}°${value < 0 ? negative : positive}';

@@ -37,6 +37,9 @@ class _ExposureComparisonScreenState
     ('Candidate ISO', 'candidate.iso'),
   ];
 
+  /// How many of [_fields] describe the reference exposure.
+  static const baselineFieldCount = 3;
+
   @override
   void dispose() {
     for (final controller in _controllers) {
@@ -66,12 +69,28 @@ class _ExposureComparisonScreenState
         'Compare how aperture, shutter time, and ISO change exposure.',
       ),
       const SizedBox(height: 16),
-      for (var index = 0; index < _fields.length; index++)
+      // The baseline triple is the reference the candidate is judged against,
+      // so it stays visible; the candidate triple is a deliberate alternative.
+      for (var index = 0; index < baselineFieldCount; index++)
         CalculatorNumberField(
           label: _fields[index].$1,
           controller: _controllers[index],
           errorText: _errors[_fields[index].$2],
         ),
+      CalculatorAdvancedSection(
+        // Stable identity: applying equipment above must not collapse
+        // the section the user is working in.
+        key: const ValueKey('advanced'),
+        title: 'Candidate settings',
+        children: <Widget>[
+          for (var index = baselineFieldCount; index < _fields.length; index++)
+            CalculatorNumberField(
+              label: _fields[index].$1,
+              controller: _controllers[index],
+              errorText: _errors[_fields[index].$2],
+            ),
+        ],
+      ),
       FilledButton(
         onPressed: _calculate,
         child: const Text('Compare exposures'),
@@ -84,11 +103,17 @@ class _ExposureComparisonScreenState
             ExposureDirection.equivalent => 'Equivalent exposure',
             ExposureDirection.darker => 'Candidate is darker',
           },
-          inputs: [
-            for (var index = 0; index < _fields.length; index++)
-              (_fields[index].$1, _controllers[index].text.trim()),
+          highlight: (
+            'Total difference',
+            _heroStops(output.totalDifference.stops),
+          ),
+          highlightCaption: _directionCaption(output),
+          tiles: <(String, String)>[
+            ('Aperture', _signedStops(output.apertureContribution.stops)),
+            ('Shutter', _signedStops(output.timeContribution.stops)),
+            ('ISO', _signedStops(output.isoContribution.stops)),
           ],
-          rows: <(String, String)>[
+          details: <(String, String)>[
             (
               'Total difference',
               '${output.totalDifference.stops.toStringAsFixed(2)} stops',
@@ -105,7 +130,14 @@ class _ExposureComparisonScreenState
               'ISO contribution',
               '${output.isoContribution.stops.toStringAsFixed(2)} stops',
             ),
-            ('Exposure multiplier', '${output.multiplier.toStringAsFixed(2)}×'),
+            (
+              'Exposure multiplier (exact)',
+              '${output.multiplier.toStringAsFixed(2)}×',
+            ),
+          ],
+          inputs: [
+            for (var index = 0; index < _fields.length; index++)
+              (_fields[index].$1, _controllers[index].text.trim()),
           ],
           assumptions: const <String>[
             'Each stop doubles or halves exposure',
@@ -202,3 +234,26 @@ class _ExposureComparisonScreenState
 }
 
 double _number(String text) => double.tryParse(text.trim()) ?? double.nan;
+
+/// The hero number: one rounded stop figure a photographer can act on.
+String _heroStops(double stops) => stops == 0
+    ? '0.0 stops'
+    : '${stops > 0 ? '+' : ''}${stops.toStringAsFixed(1)} stops';
+
+/// A tile-sized contribution, rounded to one decimal place.
+String _signedStops(double stops) =>
+    '${stops > 0 ? '+' : ''}${stops.toStringAsFixed(1)} stops';
+
+/// Plain-language direction plus the linear factor behind the stop figure.
+String _directionCaption(ExposureComparisonOutput output) =>
+    switch (output.direction) {
+      ExposureDirection.equivalent => 'Both settings give the same exposure.',
+      ExposureDirection.brighter =>
+        'Candidate is ${_linearFactor(output.multiplier)} brighter.',
+      ExposureDirection.darker =>
+        'Candidate is ${_linearFactor(output.multiplier)} darker.',
+    };
+
+String _linearFactor(double multiplier) => multiplier >= 10
+    ? '${multiplier.toStringAsFixed(0)}×'
+    : '${multiplier.toStringAsFixed(1)}×';

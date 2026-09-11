@@ -158,16 +158,6 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
             controller: _primaryFocal,
             errorText: _errors['focalLengthMm'],
           ),
-          CalculatorNumberField(
-            label: 'Extension length (mm)',
-            controller: _extension,
-            errorText: _errors['extensionLengthMm'],
-          ),
-          CalculatorNumberField(
-            label: 'Lens native magnification (×)',
-            controller: _nativeMagnification,
-            errorText: _errors['nativeMagnification'],
-          ),
         ],
         if (_configuration == MacroConfiguration.reversedLens) ...[
           EquipmentPicker<Lens>(
@@ -187,11 +177,6 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
             label: 'Reversed lens focal length (mm)',
             controller: _reversedFocal,
             errorText: _errors['reversedFocalLengthMm'],
-          ),
-          CalculatorNumberField(
-            label: 'Flange distance / extension (mm)',
-            controller: _flangeDistance,
-            errorText: _errors['flangeDistanceMm'],
           ),
         ],
         if (_configuration == MacroConfiguration.coupledLenses) ...[
@@ -219,28 +204,54 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
             errorText: _errors['reversedFocalLengthMm'],
           ),
         ],
-        EquipmentPicker<CameraBody>(
-          label: 'Saved camera (optional)',
-          items: cameras,
-          itemLabel: (item) => item.name,
-          value: _selectedCamera,
-          onSelected: _applyCamera,
-        ),
-        if (_selectedCamera case final camera?)
-          AppliedEquipmentNotice(
-            equipmentName: camera.name,
-            sourceLabel: camera.provenance.source.label,
-            appliedValues: '${_sensorWidth.text} mm sensor width',
-          ),
         CalculatorNumberField(
           label: 'Nominal aperture (f-number)',
           controller: _aperture,
           errorText: _errors['nominalAperture'],
         ),
-        CalculatorNumberField(
-          label: 'Sensor width (mm)',
-          controller: _sensorWidth,
-          errorText: _errors['sensorWidthMm'],
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          children: [
+            EquipmentPicker<CameraBody>(
+              label: 'Saved camera (optional)',
+              items: cameras,
+              itemLabel: (item) => item.name,
+              value: _selectedCamera,
+              onSelected: _applyCamera,
+            ),
+            if (_selectedCamera case final camera?)
+              AppliedEquipmentNotice(
+                equipmentName: camera.name,
+                sourceLabel: camera.provenance.source.label,
+                appliedValues: '${_sensorWidth.text} mm sensor width',
+              ),
+            const SizedBox(height: 12),
+            if (_configuration == MacroConfiguration.extensionTube) ...[
+              CalculatorNumberField(
+                label: 'Extension length (mm)',
+                controller: _extension,
+                errorText: _errors['extensionLengthMm'],
+              ),
+              CalculatorNumberField(
+                label: 'Lens native magnification (×)',
+                controller: _nativeMagnification,
+                errorText: _errors['nativeMagnification'],
+              ),
+            ],
+            if (_configuration == MacroConfiguration.reversedLens)
+              CalculatorNumberField(
+                label: 'Flange distance / extension (mm)',
+                controller: _flangeDistance,
+                errorText: _errors['flangeDistanceMm'],
+              ),
+            CalculatorNumberField(
+              label: 'Sensor width (mm)',
+              controller: _sensorWidth,
+              errorText: _errors['sensorWidthMm'],
+            ),
+          ],
         ),
         FilledButton(
           onPressed: _calculate,
@@ -250,22 +261,39 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         if (_result?.output case final output?)
           CalculationResultView(
             title: 'Macro estimate',
-            inputs: _inputSummary,
-            rows: [
+            highlight: (
+              'Subject width across frame',
+              formatDisplayLength(output.subjectWidthMm, _lengthDisplay),
+            ),
+            highlightCaption:
+                'At ${output.magnification.toStringAsFixed(2)}× magnification.',
+            tiles: <(String, String)>[
               ('Magnification', '${output.magnification.toStringAsFixed(2)}×'),
               (
                 'Effective aperture',
                 'f/${output.effectiveAperture.toStringAsFixed(1)}',
               ),
               (
-                'Subject width across frame',
-                formatDisplayLength(output.subjectWidthMm, _lengthDisplay),
-              ),
-              (
                 'Exposure compensation',
                 '+${output.exposureCompensationStops.toStringAsFixed(2)} stops',
               ),
             ],
+            details: <(String, String)>[
+              (
+                'Subject width',
+                '${output.subjectWidthMm.toStringAsFixed(2)} mm',
+              ),
+              ('Magnification', '${output.magnification.toStringAsFixed(4)}×'),
+              (
+                'Effective aperture',
+                'f/${output.effectiveAperture.toStringAsFixed(2)}',
+              ),
+              (
+                'Exposure compensation',
+                '+${output.exposureCompensationStops.toStringAsFixed(3)} stops',
+              ),
+            ],
+            inputs: _inputSummary,
             assumptions: [
               '${_configurationLabel()} approximation',
               'Thin-lens geometry with pupil magnification 1',
