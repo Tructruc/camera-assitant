@@ -54,7 +54,9 @@ end to end; it passes on the host engine (1/1).
 
 `integration_test/accessibility_flow_test.dart` completes the calculator journey at 200% system text scale
 on a 400x800 viewport, reads the labelled input summary, and saves (quickstart scenarios 8 and 26); it
-passes on the host engine (1/1). With these, the suite defines eight Android journeys rather than four.
+passes on the host engine (1/1). `integration_test/astronomy_flow_test.dart` saves a Milky Way plan and
+reopens it to prove the orientation and its convention persist, covering scenario 24 end to end; it passes
+(1/1). With these, the suite defines eight Android journeys rather than four.
 
 The local suite additionally covers the independent orientation references and singularities, 200%
 text scaling, camera notes, permanent deletion guards, input-summary semantics, golden layout, and a

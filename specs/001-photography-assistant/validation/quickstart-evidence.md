@@ -21,6 +21,7 @@ dart format --output=none --set-exit-if-changed lib test integration_test   # cl
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/preferences_flow_test.dart  # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/ar_fallback_flow_test.dart  # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/accessibility_flow_test.dart  # 1 passed
+./.tooling/flutterw --no-version-check test --no-pub integration_test/astronomy_flow_test.dart     # 1 passed
 ./.tooling/flutterw --no-version-check build linux --release   # built build/linux/x64/release/bundle (55 MB)
 ```
 
@@ -59,7 +60,7 @@ hardware run described in `quickstart.md`.
 | 21 | Live AR with real camera and compass | none | **Device only — pending T058/T059** |
 | 22 | Stop increments and planner defaults | `test/unit/core/presentation/conventional_shutter_formatter_test.dart`; `calculator_screens_test.dart`: planner defaults come from preferences and remain overridable | Automated |
 | 23 | Night-sky snapshot preserves planning context | `integration_test/preferences_flow_test.dart` asserts a saved plan keeps its `distanceUnit: metric` context after the display preference changes; `calculator_screens_test.dart`: night-sky plans preserve saved observer elevation; `saved_calculations_test.dart`: opens immutable details and edits metadata only; `solar_lunar_fixture_test.dart` for the astronomy tolerances | Automated |
-| 24 | Milky Way projected orientation | `test/unit/features/astronomy/milky_way_orientation_test.dart` (eight orientation, wrap, and singularity cases) | Automated |
+| 24 | Milky Way projected orientation | `test/unit/features/astronomy/milky_way_orientation_test.dart` (eight orientation, wrap, and singularity cases); `integration_test/astronomy_flow_test.dart` saves the plan and reopens it to prove the value and its convention persist | Automated |
 | 25 | Camera notes, delete, archive | `equipment_screens_test.dart`: archive action retires active equipment; referenced equipment is archived instead of deleted; editor preserves an existing teleconverter kind; `app_database_test.dart` v3 and v5 fixtures | Automated |
 | 26 | Labelled input summary at 200% | `integration_test/accessibility_flow_test.dart` reads the summary and saves at 200% scale; `calculator_components_test.dart`: result exposes the exact calculation inputs accessibly; `text_scale_test.dart` | Automated |
 | 27 | Editing invalidates until recalculation | `test/widget/features/calculators/calculation_invalidation_test.dart` (thirteen screens, cursor-only edits, provenance-only swap, save journey) | Automated |

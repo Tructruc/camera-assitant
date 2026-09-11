@@ -494,3 +494,14 @@ accuracy (FR-013); the catalog, planet positions, and moving-body events are all
 references; and the saved-location device path now reports the denied or unsupported capability state
 before asking for a position (FR-017) instead of failing generically. The journey helpers are shared rather
 than duplicated. Nothing new was appended because nothing remained unfixed.
+
+Independent review (2026-09-11): a fifth pass over the app shell, preferences, and the most recently changed
+files produced six findings, all closed. Two were in the duplicate-name pre-check added earlier: it ignored
+archived rows (the unique index is partial, so a retired name must stay reusable) and normalized the typed
+name differently from the domain, missing names that differ only by repeated spaces. One was a real
+consistency gap: the length preference reached only three screens, so flash kept metres in its guide number
+and range while both planners rendered elevations in metres (FR-020); all three now present through the
+shared formatter and record the unit used. The remaining three removed dead code (the `core_domain.dart`
+barrel and the `Sensitivity` and `CircleOfConfusion` value objects) and added the missing
+unasked-but-grantable permission case. Verification at that point: 304 local tests, all eight host journeys,
+and a Linux release build.
