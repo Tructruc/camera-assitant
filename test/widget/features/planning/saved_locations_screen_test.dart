@@ -6,15 +6,24 @@ import 'package:photography_assistant/core/data/database/app_database.dart'
     hide SavedLocation;
 import 'package:photography_assistant/features/planning/data/device_planning_service.dart';
 import 'package:photography_assistant/features/planning/data/saved_location_repository.dart';
+import 'package:photography_assistant/features/planning/domain/planning_capabilities.dart';
 import 'package:photography_assistant/features/planning/domain/saved_location.dart';
 import 'package:photography_assistant/features/planning/presentation/saved_locations_screen.dart';
 
 /// Substitutes the two device paths the widget test cannot exercise.
 final class _FakePlanningService extends DevicePlanningService {
-  _FakePlanningService({this.reading, this.failure});
+  _FakePlanningService({
+    this.reading,
+    this.failure,
+    this.status = CapabilityStatus.available,
+  });
 
   final DeviceLocationReading? reading;
   final Object? failure;
+  final CapabilityStatus status;
+
+  @override
+  Future<CapabilityStatus> locationStatus() async => status;
 
   @override
   Future<DeviceLocationReading> requestCurrentLocation() async {
@@ -272,6 +281,53 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
     },
   );
+
+  testWidgets('a denied or absent location service explains the fallback', (
+    tester,
+  ) async {
+    for (final (status, expected, fallback)
+        in <(CapabilityStatus, String, String)>[
+          (
+            CapabilityStatus.denied,
+            'Location permission is denied for this app',
+            'Enable it in system settings, or add the coordinates manually.',
+          ),
+          (
+            CapabilityStatus.unsupported,
+            'Location services are unavailable on this device',
+            'Add the coordinates manually.',
+          ),
+        ]) {
+      // Closed inside the loop: drift warns when two in-memory databases are
+      // alive at once, and each iteration needs its own instance.
+      final database = AppDatabase.inMemory();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(database),
+            devicePlanningServiceProvider.overrideWithValue(
+              _FakePlanningService(status: status),
+            ),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: SavedLocationsScreen()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Use current location'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(expected), findsOneWidget);
+      expect(find.textContaining(fallback), findsOneWidget);
+      // Nothing is prefilled, because no location could be read.
+      expect(find.text('Add saved location'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 1));
+      await database.close();
+    }
+  });
 }
 
 /// Fails deletes only, standing in for a locked or full database.

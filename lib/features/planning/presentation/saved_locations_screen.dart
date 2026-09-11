@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../app/providers.dart';
 import '../data/device_planning_service.dart';
+import '../domain/planning_capabilities.dart';
 import '../domain/planning_time_context.dart';
 import '../domain/saved_location.dart';
 
@@ -91,9 +92,26 @@ class SavedLocationsScreen extends ConsumerWidget {
     try {
       // Read the service from the provider so the device path is injectable and
       // consistent with the capability detection that uses the same instance.
-      final reading = await ref
-          .read(devicePlanningServiceProvider)
-          .requestCurrentLocation();
+      final service = ref.read(devicePlanningServiceProvider);
+      // Report the capability state before asking. Checking status does not
+      // prompt, so a denied or absent service explains the fallback instead of
+      // failing a request the user cannot complete (FR-012, FR-017).
+      final status = await service.locationStatus();
+      if (!context.mounted) return;
+      final blocked = switch (status) {
+        CapabilityStatus.unsupported =>
+          'Location services are unavailable on this device. Add the coordinates manually.',
+        CapabilityStatus.denied =>
+          'Location permission is denied for this app. Enable it in system settings, or add the coordinates manually.',
+        _ => null,
+      };
+      if (blocked != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(blocked)));
+        return;
+      }
+      final reading = await service.requestCurrentLocation();
       if (!context.mounted) return;
       await _edit(context, ref, reading: reading);
     } on Object {
