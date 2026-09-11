@@ -104,7 +104,7 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
             title: 'Flash exposure result',
             highlight: (
               'Recommended aperture',
-              'f/${output.recommendedAperture.toStringAsFixed(1)}',
+              'f/${_apertureLabel(output.recommendedAperture)}',
             ),
             highlightCaption:
                 'At ${distance(_number(_distance))} on ISO '
@@ -259,3 +259,8 @@ String _stopsText(double stops, {required int fractionDigits}) {
   final normalized = stops == 0 ? 0.0 : stops;
   return '${normalized.toStringAsFixed(fractionDigits)} stops';
 }
+
+/// Photographers write whole f-stops as `f/8`, not `f/8.0`.
+String _apertureLabel(double aperture) => aperture == aperture.roundToDouble()
+    ? aperture.toStringAsFixed(0)
+    : aperture.toStringAsFixed(1);

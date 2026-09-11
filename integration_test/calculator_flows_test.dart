@@ -46,7 +46,7 @@ void main() {
     await tapVisible(tester, find.text('Flash exposure'), delta: -300);
     await tester.tap(find.text('Calculate flash exposure'));
     await tester.pumpAndSettle();
-    expect(find.text('f/8.0'), findsOneWidget);
+    expect(find.text('f/8'), findsOneWidget);
     await scrollToResultActions(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save result'));
     await tester.pumpAndSettle();
@@ -183,10 +183,16 @@ void main() {
     expect(find.text('Saved calculation needs recovery'), findsOneWidget);
     await tester.tap(find.text('Depth of field result'));
     await tester.pumpAndSettle();
+    // The saved plan leads with the same answer as the live screen; the raw
+    // provenance maps open one section at a time.
+    expect(find.text('Hyperfocal distance'), findsOneWidget);
+    await tapVisible(tester, find.text('Values used'), delta: 300);
     expect(find.text('focalLengthMm: 70.0'), findsOneWidget);
+    await tapVisible(tester, find.text('Display context'), delta: 300);
     expect(find.text('distanceUnit: metric'), findsOneWidget);
-    expect(find.text('24-70 mm f/2.8'), findsOneWidget);
-    expect(find.text('Full Frame Camera'), findsOneWidget);
+    await tapVisible(tester, find.text('Applied equipment'), delta: 300);
+    expect(find.textContaining('24-70 mm f/2.8'), findsOneWidget);
+    expect(find.textContaining('Full Frame Camera'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.textContaining('immutable'),
       300,

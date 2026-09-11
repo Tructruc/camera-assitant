@@ -91,6 +91,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Milky Way core night-sky plan'));
       await tester.pumpAndSettle();
+      // The orientation is one of the saved outputs, not display context.
+      await openSection(tester, 'Exact values');
       await tester.scrollUntilVisible(
         find.textContaining('milkyWayOrientationDegrees:'),
         300,

@@ -109,7 +109,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Offline result'));
     await tester.pumpAndSettle();
-    expect(find.text('Original inputs'), findsOneWidget);
+    // The saved plan leads with its answer; the stored payload is still there,
+    // one expander down.
+    expect(find.text('Near limit'), findsOneWidget);
+    await tester.tap(find.text('Values used'));
+    await tester.pumpAndSettle();
+    expect(find.text('focalLengthMm: 50.0'), findsOneWidget);
 
     expect(find.textContaining('network request attempted'), findsNothing);
     // Let Riverpod dispose the local database streams while the fake clock can

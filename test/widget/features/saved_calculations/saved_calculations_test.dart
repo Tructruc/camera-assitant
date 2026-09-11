@@ -46,9 +46,14 @@ void main() {
 
     await tester.tap(find.text('Field depth'));
     await tester.pumpAndSettle();
-    expect(find.text('Original inputs'), findsOneWidget);
-    expect(find.text('focalLengthMm: 50.0'), findsOneWidget);
+    // The answer leads: the saved hero is readable without expanding anything.
+    expect(find.text('Near limit'), findsOneWidget);
+    expect(find.text('4.50 m'), findsOneWidget);
     expect(find.textContaining('immutable'), findsOneWidget);
+    // Raw provenance is one deliberate step away, not deleted.
+    expect(find.text('focalLengthMm: 50.0'), findsNothing);
+    await _openSection(tester, 'Values used');
+    expect(find.text('focalLengthMm: 50.0'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Edit title and notes'));
     await tester.pumpAndSettle();
@@ -106,6 +111,7 @@ void main() {
         },
         canonicalOutputs: const {
           'altitudeDegrees': 30.0,
+          'aboveHorizon': true,
           'fieldChecklist': [
             {'task': 'Focus on a bright star', 'complete': false},
           ],
@@ -118,6 +124,8 @@ void main() {
     await tester.tap(find.text('Jupiter plan'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Target altitude'), findsOneWidget);
+    expect(find.text('30° above the horizon'), findsOneWidget);
     expect(find.text('Offline observation plan'), findsOneWidget);
     expect(find.text('Field checklist'), findsOneWidget);
     final checklistItem = find.widgetWithText(
@@ -129,7 +137,97 @@ void main() {
     await tester.tap(checklistItem);
     await tester.pump();
     expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
-    expect(find.textContaining('fieldChecklist:'), findsNothing);
+    // The checklist stays interactive; the raw payload key never becomes text.
+    await _openSection(tester, 'Exact values');
+    expect(find.text('altitudeDegrees: 30.0'), findsOneWidget);
+    expect(find.textContaining('fieldChecklist'), findsNothing);
+    await _disposeSubject(tester);
+  });
+
+  testWidgets('a reopened plan leads with its answer, not its provenance', (
+    tester,
+  ) async {
+    await repository.save(
+      CalculationSnapshot(
+        id: 'timelapse-1',
+        calculatorId: 'timelapse',
+        formulaVersion: 1,
+        createdAt: DateTime.utc(2026, 8, 22),
+        title: 'Sunset timelapse',
+        canonicalInputs: const <String, Object?>{'intervalSeconds': 10.0},
+        canonicalOutputs: const <String, Object?>{
+          'frameCount': 361,
+          'playbackDurationSeconds': 12.033333333333333,
+        },
+        displayContext: const <String, Object?>{},
+      ),
+    );
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sunset timelapse'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Frames'), findsOneWidget);
+    expect(find.text('361'), findsOneWidget);
+    expect(find.textContaining('Playback 12 s'), findsOneWidget);
+    expect(find.text('Values used'), findsOneWidget);
+    expect(find.text('Exact values'), findsOneWidget);
+    expect(find.text('intervalSeconds: 10.0'), findsNothing);
+    expect(find.text('frameCount: 361'), findsNothing);
+
+    await _openSection(tester, 'Values used');
+    expect(find.text('intervalSeconds: 10.0'), findsOneWidget);
+    await _openSection(tester, 'Exact values');
+    expect(find.text('frameCount: 361'), findsOneWidget);
+    await _disposeSubject(tester);
+  });
+
+  testWidgets('nothing stored is lost when the sections collapse', (
+    tester,
+  ) async {
+    await repository.save(
+      CalculationSnapshot(
+        id: 'macro-1',
+        calculatorId: 'macro',
+        formulaVersion: 1,
+        createdAt: DateTime.utc(2026, 8, 23),
+        title: 'Extension tube trial',
+        canonicalInputs: const <String, Object?>{'extensionLengthMm': 20.0},
+        canonicalOutputs: const <String, Object?>{
+          'subjectWidthMm': 120.0,
+          'magnification': 0.6,
+        },
+        displayContext: const <String, Object?>{'lengthUnit': 'imperial'},
+        assumptions: const <CalculationAssumption>[
+          CalculationAssumption(key: 'optics', value: 'thinLensApproximation'),
+        ],
+        equipment: <AppliedEquipmentSnapshot>[
+          AppliedEquipmentSnapshot(
+            id: 'lens-1',
+            type: SnapshotEquipmentType.lens,
+            name: 'Macro 100mm',
+            source: 'bundled',
+            values: const <String, Object?>{'focalLengthMm': 100.0},
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Extension tube trial'));
+    await tester.pumpAndSettle();
+
+    // Hero uses the stored display unit (imperial) and the saved magnification.
+    expect(find.text('Subject width across frame'), findsOneWidget);
+    expect(find.textContaining('4.72 in'), findsOneWidget);
+    expect(find.textContaining('At 0.60× magnification'), findsOneWidget);
+
+    await _openSection(tester, 'Applied equipment');
+    expect(find.textContaining('Macro 100mm: bundled'), findsOneWidget);
+    await _openSection(tester, 'Display context');
+    expect(find.text('lengthUnit: imperial'), findsOneWidget);
+    await _openSection(tester, 'Model assumptions');
+    expect(find.text('optics: thinLensApproximation'), findsOneWidget);
     await _disposeSubject(tester);
   });
 
@@ -204,4 +302,17 @@ Future<void> _disposeSubject(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(const Duration(milliseconds: 1));
   await tester.pump();
+}
+
+/// Opens a collapsed provenance section before its rows are asserted.
+Future<void> _openSection(WidgetTester tester, String title) async {
+  final tile = find.text(title);
+  await tester.scrollUntilVisible(
+    tile,
+    200,
+    scrollable: find.byType(Scrollable).first,
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
 }

@@ -84,6 +84,9 @@ void main() {
     await tester.pumpWidget(app(const DepthOfFieldScreen()));
 
     expect(find.text('Focal length (mm)'), findsOneWidget);
+    // The circle of confusion is a convention, not a per-shot decision, so it
+    // starts collapsed and stays reachable one tap away.
+    expect(find.text('Circle of confusion (mm)'), findsNothing);
     await openExpander(tester, 'More settings');
     expect(find.text('Circle of confusion (mm)'), findsOneWidget);
     await tester.enterText(find.byKey(const Key('dof-focal')), '0');
@@ -102,6 +105,9 @@ void main() {
     await tester.enterText(find.byKey(const Key('dof-focal')), '50');
     await tester.tap(find.text('Calculate'));
     await tester.pump();
+    // The answer leads; the input echo and model assumptions stay collapsed.
+    expect(find.text('Hyperfocal distance'), findsOneWidget);
+    expect(find.text('Values used'), findsNothing);
     await openExpander(tester, 'Details');
     expect(find.text('Values used'), findsOneWidget);
     expect(find.text('50 mm'), findsOneWidget);
@@ -133,17 +139,18 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(app(const LongExposureScreen()));
-    await tester.enterText(
-      find.byKey(const Key('long-base')),
-      '0.0333333333333333',
-    );
+    // A photographer's shutter fraction, not a repeating decimal.
+    await tester.enterText(find.byKey(const Key('long-base')), '1/30');
     await tester.enterText(find.byKey(const Key('long-stops')), '3, 7');
     await tester.tap(find.text('Calculate exposure'));
     await tester.pump();
 
     expect(find.text('Filtered exposure time'), findsOneWidget);
     expect(find.text('34.1 s'), findsOneWidget);
-    expect(find.textContaining('34.133333 seconds'), findsOneWidget);
+    expect(
+      find.textContaining('From 1/30 s at 10 stops of ND.'),
+      findsOneWidget,
+    );
     expect(find.text('Total ND strength'), findsOneWidget);
     expect(find.text('10.0 stops'), findsOneWidget);
     // The tile and the guidance both name the required shutter mode.
@@ -154,6 +161,21 @@ void main() {
     expect(find.text('Filtered time (exact)'), findsOneWidget);
     expect(find.text('34.133333 s'), findsOneWidget);
     expect(find.text('10.00 stops'), findsOneWidget);
+    // The fraction and its exact seconds are both recorded.
+    expect(find.text('1/30 · 0.033333 s'), findsOneWidget);
+  });
+
+  testWidgets('a decimal shutter time is still accepted', (tester) async {
+    await tester.pumpWidget(app(const LongExposureScreen()));
+    await tester.enterText(find.byKey(const Key('long-base')), '0.5');
+    await tester.tap(find.text('Calculate exposure'));
+    await tester.pump();
+
+    expect(find.text('8 min 32 s'), findsOneWidget);
+    expect(
+      find.textContaining('From 0.50 s at 10 stops of ND.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('flash exposure calculates aperture and explains limitations', (
@@ -162,7 +184,7 @@ void main() {
     await tester.pumpWidget(app(const FlashExposureScreen()));
     await tester.tap(find.text('Calculate flash exposure'));
     await tester.pump();
-    expect(find.text('f/8.0'), findsOneWidget);
+    expect(find.text('f/8'), findsOneWidget);
     expect(find.text('Effective guide number'), findsOneWidget);
     await openExpander(tester, 'Details');
     expect(find.textContaining('bounce loss'), findsOneWidget);
@@ -848,14 +870,29 @@ void main() {
     );
     await tester.pumpWidget(app(const FieldOfViewScreen()));
     await tester.pumpAndSettle();
+
+    // The saved lens is a primary picker; its applied-value notice appears
+    // above More settings, so it is applied before the section is opened.
+    // Selecting a saved item above that section rebuilds the list and collapses
+    // the expander, which is why the order matters here.
+    await tester.tap(find.text('Saved lens (optional)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Prime 35').last);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('From Prime 35'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('fieldOfView-focalLengthMm')))
+          .controller!
+          .text,
+      '35.0',
+    );
+
+    // The camera picker and the sensor dimensions live behind More settings.
     await openExpander(tester, 'More settings');
     await tester.tap(find.text('Saved camera (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('APS-C Camera').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Saved lens (optional)'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Prime 35').last);
     await tester.pumpAndSettle();
 
     expect(
@@ -865,15 +902,7 @@ void main() {
           .text,
       '23.5',
     );
-    expect(
-      tester
-          .widget<TextField>(find.byKey(const Key('fieldOfView-focalLengthMm')))
-          .controller!
-          .text,
-      '35.0',
-    );
     expect(find.textContaining('From APS-C Camera'), findsOneWidget);
-    expect(find.textContaining('From Prime 35'), findsOneWidget);
 
     await tester.scrollUntilVisible(
       find.text('Calculate'),

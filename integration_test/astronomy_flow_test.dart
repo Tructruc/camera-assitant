@@ -76,6 +76,7 @@ void main() {
       find.text('Milky Way core night-sky plan'),
       delta: 300,
     );
+    await openSection(tester, 'Display context');
     await reveal(tester, find.textContaining('milkyWayOrientationConvention'));
     expect(
       find.textContaining('milkyWayOrientationConvention:'),

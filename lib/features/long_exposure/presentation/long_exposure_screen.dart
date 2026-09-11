@@ -21,7 +21,7 @@ class LongExposureScreen extends ConsumerStatefulWidget {
 }
 
 class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
-  final _base = TextEditingController(text: '0.0333333333');
+  final _base = TextEditingController(text: '1/30');
   final _stops = TextEditingController(text: '10');
   final _target = TextEditingController();
   CalculationResult<LongExposureOutput>? _result;
@@ -93,11 +93,17 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
                 : '${_stops.text.trim()} stops applied',
           ),
         const SizedBox(height: 12),
-        CalculatorNumberField(
-          label: 'Base shutter time (seconds)',
+        TextField(
+          key: const Key('long-base'),
           controller: _base,
-          fieldKey: const Key('long-base'),
-          errorText: _errors['baseTimeSeconds'],
+          decoration: InputDecoration(
+            labelText: 'Base shutter time (seconds)',
+            // Photographers read shutters as fractions; the calculation still
+            // receives seconds.
+            helperText: 'Accepts 1/30, 1/125 or 0.008',
+            errorText: _errors['baseTimeSeconds'],
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
         ),
         TextField(
           key: const Key('long-stops'),
@@ -137,9 +143,17 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
               _humanDuration(output.filteredTime.seconds),
             ),
             highlightCaption:
-                '${_shutterLabel(output, preferences)} · base '
-                '${_humanDuration(_number(_base.text))}',
+                'From ${_baseLabel()} at '
+                '${output.totalStrength.stops.toStringAsFixed(0)} stops of ND.',
             tiles: <(String, String)>[
+              if (preferences.shutterDisplay == ShutterDisplay.conventional)
+                (
+                  // The label a photographer actually dials in. In exact mode
+                  // the hero already carries the time and the six-decimal
+                  // string would be noise.
+                  'Shutter to set',
+                  _shutterLabel(output, preferences),
+                ),
               (
                 'Total ND strength',
                 '${output.totalStrength.stops.toStringAsFixed(1)} stops',
@@ -162,7 +176,10 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
               ('Shutter display', _shutterLabel(output, preferences)),
               (
                 'Base time (exact)',
-                '${_number(_base.text).toStringAsFixed(6)} s',
+                _base.text.contains('/')
+                    ? '${_base.text.trim()} · '
+                          '${_number(_base.text).toStringAsFixed(6)} s'
+                    : '${_number(_base.text).toStringAsFixed(6)} s',
               ),
               (
                 'Total ND strength (exact)',
@@ -300,8 +317,14 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
     );
   }
 
+  /// The base shutter as the user typed it when it is a fraction, otherwise a
+  /// human duration: an entered `0.0333333333333333` is not a caption.
+  String _baseLabel() => _base.text.contains('/')
+      ? '${_base.text.trim()} s'
+      : _humanDuration(_number(_base.text));
+
   void _reset() {
-    _base.text = '0.0333333333';
+    _base.text = '1/30';
     _stops.text = '10';
     _target.clear();
     setState(() {
@@ -312,7 +335,19 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
   }
 }
 
-double _number(String text) => double.tryParse(text.trim()) ?? double.nan;
+double _number(String text) {
+  final trimmed = text.trim();
+  final slash = trimmed.indexOf('/');
+  if (slash > 0) {
+    final numerator = double.tryParse(trimmed.substring(0, slash).trim());
+    final denominator = double.tryParse(trimmed.substring(slash + 1).trim());
+    if (numerator == null || denominator == null || denominator == 0) {
+      return double.nan;
+    }
+    return numerator / denominator;
+  }
+  return double.tryParse(trimmed) ?? double.nan;
+}
 
 /// A duration a photographer can read at a glance, e.g. `4 min 16 s`.
 ///

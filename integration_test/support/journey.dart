@@ -48,8 +48,9 @@ Future<void> reveal(
 /// has to open the section first. A missing section is a no-op, which keeps the
 /// helper usable for screens that do not collapse that group.
 Future<void> openSection(WidgetTester tester, String title) async {
+  // No early return: a section that is missing or renamed must fail the
+  // journey rather than silently skipping the assertions that follow.
   final tile = find.text(title);
-  if (tile.evaluate().isEmpty) return;
   await reveal(tester, tile);
   await tester.tap(tile);
   await tester.pumpAndSettle();

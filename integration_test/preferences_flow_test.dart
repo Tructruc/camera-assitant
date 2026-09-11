@@ -79,6 +79,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Depth of field result'));
     await tester.pumpAndSettle();
+    // The saved plan keeps its own context; the raw rows open on demand.
+    await openSection(tester, 'Display context');
     expect(find.text('distanceUnit: metric'), findsOneWidget);
     final stored = await DriftSnapshotRepository(database).listNewestFirst();
     expect(stored, hasLength(1));

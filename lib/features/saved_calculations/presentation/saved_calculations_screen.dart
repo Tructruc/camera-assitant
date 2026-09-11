@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/domain/repositories/snapshot_repository.dart';
 import '../../../core/presentation/calculator/calculation_warning_text.dart';
+import '../../../core/presentation/calculator/calculator_components.dart';
+import '../../planning/domain/planning_time_context.dart';
 
 class SavedCalculationsScreen extends ConsumerWidget {
   const SavedCalculationsScreen({super.key});
@@ -125,52 +128,40 @@ class _SavedCalculationDetailScreenState
           Text(notes),
         ],
         const SizedBox(height: 16),
+        _summaryCard(context),
         if (_isObservationPlan) _planSummary(context),
-        _section(context, 'Original inputs', _snapshot.canonicalInputs),
-        _section(
-          context,
-          'Original results',
-          Map<String, Object?>.of(_snapshot.canonicalOutputs)
+        if (_fieldChecklist.isNotEmpty) _actionableChecklist(context),
+        // The stored provenance stays complete but stops competing with the
+        // answer: each block opens only when a photographer asks for it.
+        _ExpansionSection(
+          title: 'Values used',
+          entries: _snapshot.canonicalInputs,
+        ),
+        _ExpansionSection(
+          title: 'Exact values',
+          entries: Map<String, Object?>.of(_snapshot.canonicalOutputs)
             ..remove('fieldChecklist'),
         ),
-        _section(context, 'Display context', _snapshot.displayContext),
-        if (_fieldChecklist.isNotEmpty) _actionableChecklist(context),
-        if (_snapshot.equipment.isNotEmpty) ...<Widget>[
-          Text(
-            'Applied equipment',
-            style: Theme.of(context).textTheme.titleMedium,
+        if (_snapshot.displayContext.isNotEmpty)
+          _ExpansionSection(
+            title: 'Display context',
+            entries: _snapshot.displayContext,
           ),
-          for (final item in _snapshot.equipment)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(item.name),
-              subtitle: Text('${item.source} · ${_mapText(item.values)}'),
-            ),
-        ],
-        if (_snapshot.assumptions.isNotEmpty) ...<Widget>[
-          Text('Assumptions', style: Theme.of(context).textTheme.titleMedium),
-          for (final item in _snapshot.assumptions)
-            Text('• ${item.key}: ${item.value}'),
-        ],
-        if (_snapshot.warnings.isNotEmpty) ...<Widget>[
-          const SizedBox(height: 12),
-          Semantics(
-            container: true,
-            label:
-                'Warnings: ${_snapshot.warnings.map((item) => calculationWarningText(item.code)).join('; ')}',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Text(
-                  'Warnings',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                for (final item in _snapshot.warnings)
-                  Text('• ${calculationWarningText(item.code)}'),
-              ],
-            ),
+        if (_snapshot.equipment.isNotEmpty)
+          _ExpansionSection(
+            title: 'Applied equipment',
+            entries: <String, Object?>{
+              for (final item in _snapshot.equipment)
+                item.name: '${item.source} · ${_mapText(item.values)}',
+            },
           ),
-        ],
+        if (_snapshot.assumptions.isNotEmpty)
+          _ExpansionSection(
+            title: 'Model assumptions',
+            entries: <String, Object?>{
+              for (final item in _snapshot.assumptions) item.key: item.value,
+            },
+          ),
         const SizedBox(height: 16),
         const Text(
           'This saved result is immutable and is not recalculated when equipment or settings change.',
@@ -178,6 +169,99 @@ class _SavedCalculationDetailScreenState
       ],
     ),
   );
+
+  /// The one answer this saved result exists to carry, in the same wording the
+  /// live screen uses, with its warnings kept visible above it.
+  Widget _summaryCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final (label, value, caption) = _heroFor(_snapshot);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              '${_calculatorLabel(_snapshot.calculatorId)} · saved ${_date(_snapshot.createdAt)}',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (_snapshot.warnings.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 10),
+              _warningsBanner(context),
+            ],
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            Text(
+              value,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (caption case final text?) ...<Widget>[
+              const SizedBox(height: 4),
+              Text(text, style: theme.textTheme.bodySmall),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _warningsBanner(BuildContext context) {
+    final theme = Theme.of(context);
+    final warnings = <String>[
+      for (final item in _snapshot.warnings) calculationWarningText(item.code),
+    ];
+    return Semantics(
+      container: true,
+      label: 'Warnings: ${warnings.join('; ')}',
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.tertiaryContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Icon(
+              Icons.warning_amber_rounded,
+              size: 20,
+              color: theme.colorScheme.onTertiaryContainer,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Warnings',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.onTertiaryContainer,
+                    ),
+                  ),
+                  for (final warning in warnings)
+                    Text(
+                      warning,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onTertiaryContainer,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _planSummary(BuildContext context) {
     final inputs = _snapshot.canonicalInputs;
@@ -192,7 +276,14 @@ class _SavedCalculationDetailScreenState
         leading: const Icon(Icons.event_available_outlined),
         title: const Text('Offline observation plan'),
         subtitle: Text(
-          'Location $latitude, $longitude${elevation == null ? '' : ' · elevation $elevation m'}\nTime $time\n${_snapshot.displayContext['timeZone'] ?? 'UTC'} · ${_snapshot.displayContext['northReference'] ?? _snapshot.displayContext['azimuthReference'] ?? 'true north'}',
+          <String>[
+            'Location $latitude, $longitude'
+                '${elevation == null ? '' : ' · elevation $elevation m'}',
+            // Legacy payloads can omit the instant; never print "Time null".
+            if (time != null) 'Time $time',
+            '${_snapshot.displayContext['timeZone'] ?? 'UTC'} · '
+                '${_snapshot.displayContext['northReference'] ?? _snapshot.displayContext['azimuthReference'] ?? 'true north'}',
+          ].join('\n'),
         ),
       ),
     );
@@ -235,24 +326,159 @@ class _SavedCalculationDetailScreenState
     };
   }
 
-  Widget _section(
-    BuildContext context,
-    String title,
-    Map<String, Object?> values,
-  ) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          for (final entry in values.entries)
-            Text('${entry.key}: ${entry.value}'),
-        ],
-      ),
-    ),
-  );
+  /// The saved plan's headline value, using the same wording as the live
+  /// result card, or a plain fallback when a payload predates that key.
+  (String, String, String?) _heroFor(CalculationSnapshot snapshot) {
+    final outputs = snapshot.canonicalOutputs;
+    final inputs = snapshot.canonicalInputs;
+    final display = _storedLengthDisplay(snapshot);
+    String length(Object? value) =>
+        value is num ? formatDisplayLength(value.toDouble(), display) : '—';
+
+    switch (snapshot.calculatorId) {
+      case 'depth_of_field':
+        if (outputs['hyperfocalDistanceMm'] is num) {
+          final near = outputs['nearLimitMm'];
+          final far = outputs['farLimitMm'];
+          return (
+            'Hyperfocal distance',
+            length(outputs['hyperfocalDistanceMm']),
+            near is num && far is num
+                ? 'Sharp from ${length(near)} to ${length(far)}.'
+                : null,
+          );
+        }
+        if (outputs['nearLimitMm'] is num) {
+          return ('Near limit', length(outputs['nearLimitMm']), null);
+        }
+      case 'long_exposure_nd':
+        final seconds = outputs['filteredTimeSeconds'];
+        if (seconds is num) {
+          final base = inputs['baseTimeSeconds'];
+          return (
+            'Filtered exposure time',
+            _humanDuration(seconds.toDouble()),
+            base is num ? 'Base ${_humanDuration(base.toDouble())}' : null,
+          );
+        }
+      case 'flash_exposure':
+        final aperture = outputs['recommendedAperture'];
+        if (aperture is num) {
+          final distance = inputs['subjectDistanceMetres'];
+          return (
+            'Recommended aperture',
+            'f/${aperture.toStringAsFixed(1)}',
+            distance is num ? 'At ${length(distance * 1000)}' : null,
+          );
+        }
+      case 'field_of_view':
+        final width = outputs['sceneWidthMm'];
+        if (width is num) {
+          final height = outputs['sceneHeightMm'];
+          return (
+            'Scene width at this distance',
+            length(width),
+            height is num ? 'Scene height ${length(height)}.' : null,
+          );
+        }
+      case 'diffraction':
+        final pixels = outputs['airyDiskPixels'];
+        if (pixels is num) {
+          final micrometres = outputs['airyDiskMicrometres'];
+          return (
+            'Airy disk on the sensor',
+            '${pixels.toStringAsFixed(2)} pixels',
+            micrometres is num
+                ? '${micrometres.toStringAsFixed(2)} µm across'
+                : null,
+          );
+        }
+      case 'macro':
+        final subject = outputs['subjectWidthMm'];
+        if (subject is num) {
+          final magnification = outputs['magnification'];
+          return (
+            'Subject width across frame',
+            length(subject),
+            magnification is num
+                ? 'At ${magnification.toStringAsFixed(2)}× magnification.'
+                : null,
+          );
+        }
+      case 'timelapse':
+      case 'focus_stacking':
+      case 'panorama':
+        final frames = outputs['frameCount'];
+        if (frames is num) {
+          final playback = outputs['playbackDurationSeconds'];
+          final columns = outputs['columns'];
+          final rows = outputs['rows'];
+          return (
+            snapshot.calculatorId == 'timelapse' ? 'Frames' : 'Frames to shoot',
+            '${frames.round()}',
+            playback is num
+                ? 'Playback ${_humanDuration(playback.toDouble())}'
+                : columns is num && rows is num
+                ? '${columns.round()} columns × ${rows.round()} rows'
+                : null,
+          );
+        }
+      case 'exposure_comparison':
+        final stops = outputs['totalDifferenceStops'];
+        if (stops is num) {
+          final value = stops.toDouble();
+          final direction = outputs['direction'];
+          return (
+            'Total difference',
+            '${value >= 0 ? '+' : ''}${value.toStringAsFixed(1)} stops',
+            direction is String ? 'Candidate is $direction' : null,
+          );
+        }
+      case 'astronomy':
+        final altitude = outputs['altitudeDegrees'];
+        if (altitude is num) {
+          final azimuth = outputs['azimuthDegrees'];
+          return (
+            'Target altitude',
+            '${altitude.toStringAsFixed(0)}° '
+                '${outputs['aboveHorizon'] == true ? 'above' : 'below'} the horizon',
+            azimuth is num
+                ? 'Azimuth ${azimuth.toStringAsFixed(0)}° true'
+                : null,
+          );
+        }
+      case 'sun_moon_alignment':
+        final candidates = outputs['candidates'];
+        if (candidates is List && candidates.isNotEmpty) {
+          final first = candidates.first;
+          final instant = first is Map ? first['instantUtc'] : null;
+          final formatted = instant is String
+              ? _formatInstant(snapshot, instant)
+              : null;
+          if (formatted != null) {
+            // The hero is the clock time; date, zone and the match count read
+            // better as one caption line than as a wrapped headline.
+            final parts = formatted.split(' ');
+            final zone = snapshot.displayContext['timeZone'];
+            return (
+              'Best window',
+              parts.length > 1 ? parts[1] : formatted,
+              <String>[
+                if (parts.isNotEmpty) parts.first,
+                if (zone is String && zone.isNotEmpty) zone,
+                '${candidates.length} matching '
+                    'window${candidates.length == 1 ? '' : 's'}',
+              ].join(' · '),
+            );
+          }
+        }
+        final altitude = outputs['desiredAltitudeDegrees'];
+        if (altitude is num) {
+          return ('Target altitude', '${altitude.toStringAsFixed(0)}°', null);
+        }
+    }
+    return ('Saved result', _calculatorLabel(snapshot.calculatorId), null);
+  }
 
   Future<void> _edit() async {
     final title = TextEditingController(text: _snapshot.title);
@@ -382,3 +608,74 @@ String _date(DateTime value) =>
     '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 String _mapText(Map<String, Object?> values) =>
     values.entries.map((entry) => '${entry.key}: ${entry.value}').join(', ');
+
+/// The unit the result was saved in, so a reopened plan keeps the display it
+/// was created with instead of silently switching to today's preference.
+LengthDisplay _storedLengthDisplay(CalculationSnapshot snapshot) {
+  final stored =
+      snapshot.displayContext['distanceUnit'] ??
+      snapshot.displayContext['lengthUnit'];
+  return stored == LengthDisplay.imperial.name
+      ? LengthDisplay.imperial
+      : LengthDisplay.metric;
+}
+
+/// A saved instant rendered in the plan's own zone when one was recorded.
+String? _formatInstant(CalculationSnapshot snapshot, String iso) {
+  final instant = DateTime.tryParse(iso);
+  if (instant == null) return null;
+  final zone = snapshot.displayContext['timeZone'];
+  if (zone is String && zone.isNotEmpty) {
+    return PlanningTimeContext.parse(zone).format(instant.toUtc());
+  }
+  final utc = instant.toUtc().toIso8601String();
+  return '${utc.substring(0, 10)} ${utc.substring(11, 16)} UTC';
+}
+
+/// A duration a photographer reads at a glance, e.g. `4 min 16 s`.
+String _humanDuration(double seconds) {
+  if (!seconds.isFinite || seconds <= 0) return '—';
+  if (seconds < 10) return '${seconds.toStringAsFixed(1)} s';
+  if (seconds < 60) return '${seconds.toStringAsFixed(0)} s';
+  if (seconds < 3600) {
+    final minutes = seconds ~/ 60;
+    final remainder = (seconds - minutes * 60).round();
+    return remainder == 0 ? '$minutes min' : '$minutes min $remainder s';
+  }
+  final hours = seconds ~/ 3600;
+  final minutes = ((seconds - hours * 3600) / 60).round();
+  return minutes == 0 ? '$hours h' : '$hours h $minutes min';
+}
+
+/// One collapsed block of stored provenance.
+class _ExpansionSection extends StatelessWidget {
+  const _ExpansionSection({required this.title, required this.entries});
+
+  final String title;
+  final Map<String, Object?> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    if (entries.isEmpty) return const SizedBox.shrink();
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        shape: const Border(),
+        collapsedShape: const Border(),
+        title: Text(title),
+        children: <Widget>[
+          for (final entry in entries.entries)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text('${entry.key}: ${entry.value}'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
