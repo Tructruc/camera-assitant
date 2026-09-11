@@ -90,11 +90,11 @@ class _MacroScreenState extends ConsumerState<MacroScreen> {
         }
       },
       children: [
-        Text('Macro planner', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        const Text(
-          'Compare extension tubes, a reversed lens, or two coupled lenses without implying calibrated optical precision. '
-          'Teleconverters are inventory-only: multiply the focal length you enter by the converter factor.',
+        const CalculatorHeader(
+          icon: Icons.local_florist_outlined,
+          description:
+              'Compare extension tubes, a reversed lens, or two coupled lenses without implying calibrated optical precision. '
+              'Teleconverters are inventory-only: multiply the focal length you enter by the converter factor.',
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<MacroConfiguration>(

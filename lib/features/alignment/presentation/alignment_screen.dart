@@ -114,13 +114,10 @@ class _AlignmentScreenState extends ConsumerState<AlignmentScreen> {
         }
       },
       children: [
-        Text(
-          'Sun & Moon alignment',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Search up to one year for the closest bearing and elevation match. All calculations run offline.',
+        const CalculatorHeader(
+          icon: Icons.align_horizontal_left,
+          description:
+              'Search up to one year for the closest bearing and elevation match. All calculations run offline.',
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<SavedLocation>(

@@ -127,13 +127,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         }
       },
       children: [
-        Text(
-          'Night-sky planner',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Plan celestial targets entirely offline. Calculations use UTC and bearings use true north; saved locations can display local civil time.',
+        const CalculatorHeader(
+          icon: Icons.nightlight_round,
+          description:
+              'Plan celestial targets entirely offline. Calculations use UTC and bearings use true north; saved locations can display local civil time.',
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<SavedLocation>(

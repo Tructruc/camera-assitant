@@ -54,13 +54,10 @@ class _FlashExposureScreenState extends ConsumerState<FlashExposureScreen> {
         }
       },
       children: [
-        Text(
-          'Flash exposure',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Estimate direct-flash aperture from guide number, ISO, power, and distance.',
+        const CalculatorHeader(
+          icon: Icons.flash_on_outlined,
+          description:
+              'Estimate direct-flash aperture from guide number, ISO, power, and distance.',
         ),
         const SizedBox(height: 16),
         CalculatorNumberField(

@@ -383,9 +383,18 @@ class _EquipmentCard extends StatelessWidget {
       container: true,
       label: '${_kindLabel(entry.kind)} ${entry.item.name}',
       child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
         child: ListTile(
           onTap: archived ? null : onEdit,
-          leading: Icon(_kindIcon(entry.kind)),
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(_kindIcon(entry.kind), size: 20),
+          ),
           title: Text(entry.item.name),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

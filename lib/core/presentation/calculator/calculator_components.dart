@@ -18,6 +18,62 @@ String formatDisplayLength(double millimetres, LengthDisplay display) {
       : '${millimetres.toStringAsFixed(1)} mm';
 }
 
+/// Identity block at the top of a calculator screen.
+///
+/// The route's app bar already carries the tool's name, so the header leads with
+/// the tool's icon and a one-line explanation of what it answers instead of
+/// repeating the title.
+class CalculatorHeader extends StatelessWidget {
+  const CalculatorHeader({
+    required this.icon,
+    required this.description,
+    this.title,
+    super.key,
+  });
+
+  final IconData icon;
+  final String description;
+
+  /// Optional title for screens rendered without an app bar.
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: AppRadius.controlAll,
+          ),
+          child: Icon(
+            icon,
+            size: 22,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+        ),
+        const SizedBox(width: AppGap.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (title case final text?) ...<Widget>[
+                Text(text, style: theme.textTheme.headlineSmall),
+                const SizedBox(height: AppGap.xs),
+              ],
+              Text(description, style: theme.textTheme.bodySmall),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// Splits a formatted value into its number and its unit so the two can carry
 /// different weight (`10.47` large, `m` small and quiet).
 (String, String, String) _splitValueUnit(String value) {

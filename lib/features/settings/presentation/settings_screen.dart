@@ -25,9 +25,9 @@ class SettingsScreen extends ConsumerWidget {
       data: (value) => ListView(
         padding: const EdgeInsets.all(16),
         children: <Widget>[
-          Text('Display', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
+          const _SectionHeader(icon: Icons.straighten, label: 'Display'),
           _SettingCard<LengthDisplay>(
+            icon: Icons.straighten,
             title: 'Distance units',
             subtitle: 'Canonical calculation values are never changed.',
             value: value.lengthDisplay,
@@ -39,6 +39,7 @@ class SettingsScreen extends ConsumerWidget {
                 _save(context, ref, value.copyWith(lengthDisplay: choice)),
           ),
           _SettingCard<ShutterDisplay>(
+            icon: Icons.timer_outlined,
             title: 'Shutter display',
             subtitle: 'Choose raw seconds or a conventional camera value.',
             value: value.shutterDisplay,
@@ -50,6 +51,7 @@ class SettingsScreen extends ConsumerWidget {
                 _save(context, ref, value.copyWith(shutterDisplay: choice)),
           ),
           _SettingCard<FractionStep>(
+            icon: Icons.exposure_outlined,
             title: 'Exposure increments',
             subtitle: 'Used when presenting conventional photographic values.',
             value: value.fractionStep,
@@ -62,6 +64,7 @@ class SettingsScreen extends ConsumerWidget {
                 _save(context, ref, value.copyWith(fractionStep: choice)),
           ),
           _SettingCard<NorthReference>(
+            icon: Icons.explore_outlined,
             title: 'North reference',
             subtitle:
                 'Magnetic bearings require local declination; planners keep true bearings visible when it is unavailable.',
@@ -74,12 +77,12 @@ class SettingsScreen extends ConsumerWidget {
                 _save(context, ref, value.copyWith(northReference: choice)),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Planner defaults',
-            style: Theme.of(context).textTheme.titleLarge,
+          const _SectionHeader(
+            icon: Icons.explore_outlined,
+            label: 'Planner defaults',
           ),
-          const SizedBox(height: 8),
           _SettingCard<DefaultStarSharpness>(
+            icon: Icons.nightlight_round,
             title: 'Default star sharpness',
             subtitle:
                 'Applied when opening or resetting the night-sky planner.',
@@ -96,6 +99,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           _SettingCard<double>(
+            icon: Icons.align_horizontal_left,
             title: 'Alignment angular tolerance',
             subtitle:
                 'Applied when opening or resetting the alignment planner.',
@@ -114,9 +118,12 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
+          const _SectionHeader(
+            icon: Icons.dark_mode_outlined,
+            label: 'Appearance',
+          ),
           _SettingCard<AppThemeMode>(
+            icon: Icons.brightness_6_outlined,
             title: 'Theme',
             subtitle:
                 'Low-light mode uses a black surface and restrained red accents.',
@@ -131,8 +138,10 @@ class SettingsScreen extends ConsumerWidget {
                 _save(context, ref, value.copyWith(themeMode: choice)),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Privacy: equipment, preferences, and saved calculations stay on this device. The app has no account, advertising, or telemetry.',
+          Text(
+            'Privacy: equipment, preferences, and saved calculations stay on '
+            'this device. The app has no account, advertising, or telemetry.',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
@@ -155,8 +164,38 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
+/// A small muted section label with an icon, matching the catalog headers.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: <Widget>[
+          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SettingCard<T> extends StatelessWidget {
   const _SettingCard({
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.value,
@@ -164,6 +203,7 @@ class _SettingCard<T> extends StatelessWidget {
     required this.onChanged,
   });
 
+  final IconData icon;
   final String title;
   final String subtitle;
   final T value;
@@ -171,33 +211,65 @@ class _SettingCard<T> extends StatelessWidget {
   final ValueChanged<T> onChanged;
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          Text(subtitle),
-          const SizedBox(height: 4),
-          RadioGroup<T>(
-            groupValue: value,
-            onChanged: (choice) {
-              if (choice != null && choice != value) onChanged(choice);
-            },
-            child: Column(
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                for (final option in options)
-                  RadioListTile<T>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(option.$2),
-                    value: option.$1,
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(10),
                   ),
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(title, style: theme.textTheme.titleSmall),
+                      const SizedBox(height: 2),
+                      Text(subtitle, style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            RadioGroup<T>(
+              groupValue: value,
+              onChanged: (choice) {
+                if (choice != null && choice != value) onChanged(choice);
+              },
+              child: Column(
+                children: <Widget>[
+                  for (final option in options)
+                    RadioListTile<T>(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      title: Text(option.$2),
+                      value: option.$1,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

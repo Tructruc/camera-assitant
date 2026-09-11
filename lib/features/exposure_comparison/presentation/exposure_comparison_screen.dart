@@ -60,13 +60,10 @@ class _ExposureComparisonScreenState
       }
     },
     children: <Widget>[
-      Text(
-        'Exposure comparison',
-        style: Theme.of(context).textTheme.headlineSmall,
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Compare how aperture, shutter time, and ISO change exposure.',
+      const CalculatorHeader(
+        icon: Icons.exposure,
+        description:
+            'Compare how aperture, shutter time, and ISO change exposure.',
       ),
       const SizedBox(height: 16),
       // The baseline triple is the reference the candidate is judged against,

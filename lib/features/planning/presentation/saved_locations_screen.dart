@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/presentation/calculator/calculator_components.dart';
 import '../data/device_planning_service.dart';
 import '../domain/planning_capabilities.dart';
 import '../domain/planning_time_context.dart';
@@ -16,12 +17,10 @@ class SavedLocationsScreen extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          'Saved locations',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const Text(
-          'Coordinates stay on this device and remain available offline.',
+        const CalculatorHeader(
+          icon: Icons.location_on_outlined,
+          description:
+              'Coordinates stay on this device and remain available offline.',
         ),
         const SizedBox(height: 12),
         FilledButton.icon(

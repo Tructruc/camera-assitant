@@ -184,28 +184,32 @@ class _CalculatorCatalogScreenState
           return leftFavorite ? -1 : 1;
         });
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: <Widget>[
         Text(
           'Choose a calculator',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-        const SizedBox(height: 8),
-        const Text(
+        const SizedBox(height: 6),
+        Text(
           'All calculations work offline and preserve raw physical values.',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SearchBar(
           hintText: 'Search calculators and planners',
           leading: const Icon(Icons.search),
           onChanged: (value) => setState(() => _query = value),
         ),
         const SizedBox(height: 8),
-        FilterChip(
-          avatar: const Icon(Icons.star_outline),
-          label: const Text('Favorites only'),
-          selected: _favoritesOnly,
-          onSelected: (value) => setState(() => _favoritesOnly = value),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilterChip(
+            avatar: const Icon(Icons.star_outline, size: 18),
+            label: const Text('Favorites only'),
+            selected: _favoritesOnly,
+            onSelected: (value) => setState(() => _favoritesOnly = value),
+          ),
         ),
         if (calculators.isEmpty)
           const Padding(
@@ -219,33 +223,80 @@ class _CalculatorCatalogScreenState
         for (final purpose in CalculatorPurpose.values)
           if (calculators.any((item) => item.purpose == purpose)) ...[
             Padding(
-              padding: const EdgeInsets.fromLTRB(0, 20, 0, 4),
-              child: Text(
-                purpose.label,
-                style: Theme.of(context).textTheme.titleMedium,
+              padding: const EdgeInsets.fromLTRB(0, 24, 0, 8),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    _purposeIcon(purpose),
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    purpose.label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ],
               ),
             ),
             for (final calculator in calculators.where(
               (item) => item.purpose == purpose,
             ))
               Card(
+                margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
-                  leading: Icon(calculator.icon),
-                  title: Text(calculator.label),
-                  subtitle: Text(calculator.description),
-                  trailing: IconButton(
-                    tooltip: favorites.contains(calculator.id)
-                        ? 'Remove ${calculator.label} from favorites'
-                        : 'Add ${calculator.label} to favorites',
-                    onPressed: preferences == null
-                        ? null
-                        : () =>
-                              _toggleFavorite(ref, preferences, calculator.id),
-                    icon: Icon(
-                      favorites.contains(calculator.id)
-                          ? Icons.star
-                          : Icons.star_border,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
+                  ),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(10),
                     ),
+                    child: Icon(calculator.icon, size: 20),
+                  ),
+                  title: Text(calculator.label),
+                  subtitle: Text(
+                    calculator.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      IconButton(
+                        tooltip: favorites.contains(calculator.id)
+                            ? 'Remove ${calculator.label} from favorites'
+                            : 'Add ${calculator.label} to favorites',
+                        onPressed: preferences == null
+                            ? null
+                            : () => _toggleFavorite(
+                                ref,
+                                preferences,
+                                calculator.id,
+                              ),
+                        icon: Icon(
+                          favorites.contains(calculator.id)
+                              ? Icons.star
+                              : Icons.star_border,
+                          size: 20,
+                          color: favorites.contains(calculator.id)
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ],
                   ),
                   onTap: () => Navigator.of(context).push<void>(
                     MaterialPageRoute<void>(
@@ -261,6 +312,14 @@ class _CalculatorCatalogScreenState
       ],
     );
   }
+
+  static IconData _purposeIcon(CalculatorPurpose purpose) => switch (purpose) {
+    CalculatorPurpose.planning => Icons.explore_outlined,
+    CalculatorPurpose.focusAndOptics => Icons.center_focus_strong_outlined,
+    CalculatorPurpose.exposureAndLight => Icons.exposure_outlined,
+    CalculatorPurpose.capturePlanning => Icons.movie_creation_outlined,
+    CalculatorPurpose.macro => Icons.local_florist_outlined,
+  };
 
   Future<void> _toggleFavorite(
     WidgetRef ref,

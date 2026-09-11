@@ -65,13 +65,10 @@ class _DepthOfFieldScreenState extends ConsumerState<DepthOfFieldScreen> {
         }
       },
       children: <Widget>[
-        Text(
-          'Depth of field',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Calculate hyperfocal distance and the acceptable focus range.',
+        const CalculatorHeader(
+          icon: Icons.center_focus_strong,
+          description:
+              'Calculate hyperfocal distance and the acceptable focus range.',
         ),
         const SizedBox(height: 16),
         EquipmentPicker<Lens>(

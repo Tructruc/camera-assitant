@@ -53,11 +53,32 @@ class SavedCalculationsScreen extends ConsumerWidget {
               itemCount: items.length,
               itemBuilder: (context, index) => switch (items[index]) {
                 SupportedSnapshot(snapshot: final snapshot) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
-                    leading: const Icon(Icons.bookmark),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainer,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        _calculatorIcon(snapshot.calculatorId),
+                        size: 20,
+                      ),
+                    ),
                     title: Text(snapshot.title),
                     subtitle: Text(
                       '${_calculatorLabel(snapshot.calculatorId)} · ${_date(snapshot.createdAt)}',
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.outline,
                     ),
                     onTap: () => Navigator.of(context).push<void>(
                       MaterialPageRoute<void>(
@@ -68,6 +89,7 @@ class SavedCalculationsScreen extends ConsumerWidget {
                   ),
                 ),
                 UnreadableSnapshot(reason: final reason) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
                   color: Theme.of(context).colorScheme.errorContainer,
                   child: ListTile(
                     leading: const Icon(Icons.warning_amber),
@@ -588,6 +610,22 @@ class _SavedCalculationDetailScreenState
     }
   }
 }
+
+IconData _calculatorIcon(String id) => switch (id) {
+  'depth_of_field' => Icons.center_focus_strong_outlined,
+  'exposure_comparison' => Icons.exposure_outlined,
+  'long_exposure_nd' => Icons.timer_outlined,
+  'field_of_view' => Icons.aspect_ratio_outlined,
+  'diffraction' => Icons.blur_circular_outlined,
+  'focus_stacking' => Icons.layers_outlined,
+  'flash_exposure' => Icons.flash_on_outlined,
+  'timelapse' => Icons.movie_creation_outlined,
+  'macro' => Icons.local_florist_outlined,
+  'panorama' => Icons.panorama_horizontal_outlined,
+  'astronomy' => Icons.nightlight_round,
+  'sun_moon_alignment' => Icons.align_horizontal_left,
+  _ => Icons.bookmark_outline,
+};
 
 String _calculatorLabel(String id) => switch (id) {
   'depth_of_field' => 'Depth of field',

@@ -57,13 +57,10 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
       }
     },
     children: [
-      Text(
-        'Timelapse planner',
-        style: Theme.of(context).textTheme.headlineSmall,
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        'Plan capture cadence, playback length, storage, and an exposure ramp.',
+      const CalculatorHeader(
+        icon: Icons.movie_creation_outlined,
+        description:
+            'Plan capture cadence, playback length, storage, and an exposure ramp.',
       ),
       const SizedBox(height: 16),
       // Cadence, duration, and playback rate define the plan; per-frame size

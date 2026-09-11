@@ -21,17 +21,25 @@ class EquipmentPicker<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<T>(
-      isExpanded: true,
-      decoration: InputDecoration(labelText: label),
-      initialValue: value,
-      items: items
-          .map(
-            (item) =>
-                DropdownMenuItem<T>(value: item, child: Text(itemLabel(item))),
-          )
-          .toList(growable: false),
-      onChanged: onSelected,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownButtonFormField<T>(
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.inventory_2_outlined, size: 18),
+        ),
+        initialValue: value,
+        items: items
+            .map(
+              (item) => DropdownMenuItem<T>(
+                value: item,
+                child: Text(itemLabel(item)),
+              ),
+            )
+            .toList(growable: false),
+        onChanged: onSelected,
+      ),
     );
   }
 }

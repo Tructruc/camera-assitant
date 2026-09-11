@@ -80,13 +80,10 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
         }
       },
       children: <Widget>[
-        Text(
-          'Panorama planner',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Build a gap-free horizontal, vertical, or multi-row capture grid with a serpentine shooting order.',
+        const CalculatorHeader(
+          icon: Icons.panorama_horizontal_outlined,
+          description:
+              'Build a gap-free horizontal, vertical, or multi-row capture grid with a serpentine shooting order.',
         ),
         const SizedBox(height: 16),
         EquipmentPicker<Lens>(

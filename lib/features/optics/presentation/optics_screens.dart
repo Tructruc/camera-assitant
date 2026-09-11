@@ -83,6 +83,13 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
       'Generate ordered focus distances with controlled overlap.',
   };
 
+  /// The same icon the catalog tile uses, so the two always agree.
+  IconData get _icon => switch (widget.tool) {
+    _OpticsTool.fieldOfView => Icons.aspect_ratio,
+    _OpticsTool.diffraction => Icons.blur_circular,
+    _OpticsTool.focusStack => Icons.layers_outlined,
+  };
+
   /// The two or three inputs a photographer sets for this tool. Everything
   /// else — sensor dimensions, wavelength, circle of confusion, overlap — is a
   /// convention or a preference and stays behind one expander.
@@ -145,9 +152,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
         }
       },
       children: [
-        Text(_title, style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 8),
-        Text(_description),
+        CalculatorHeader(icon: _icon, description: _description),
         const SizedBox(height: 16),
         EquipmentPicker<Lens>(
           label: 'Saved lens (optional)',

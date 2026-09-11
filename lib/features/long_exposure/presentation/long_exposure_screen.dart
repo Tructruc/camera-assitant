@@ -60,12 +60,10 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
         }
       },
       children: <Widget>[
-        Text(
-          'Long exposure / ND',
-          style: Theme.of(context).textTheme.headlineSmall,
+        const CalculatorHeader(
+          icon: Icons.timer_outlined,
+          description: 'Enter stacked ND strengths as comma-separated stops.',
         ),
-        const SizedBox(height: 8),
-        const Text('Enter stacked ND strengths as comma-separated stops.'),
         const SizedBox(height: 16),
         EquipmentPicker<NdFilter>(
           label: 'Saved ND filter (optional)',
