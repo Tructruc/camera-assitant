@@ -5,7 +5,7 @@
 /// screens looking like one instrument instead of a pile of default widgets.
 library;
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 /// Spacing ramp. Use these instead of raw numbers in new layout code.
 abstract final class AppGap {
@@ -39,4 +39,24 @@ extension AppTextStyles on TextStyle {
   /// Digits share a column width, so stacked numbers stop jittering.
   TextStyle get tabular =>
       copyWith(fontFeatures: const <FontFeature>[FontFeature.tabularFigures()]);
+}
+
+/// Centres and caps the width of a screen's content.
+///
+/// Phone layouts are unaffected; on a tablet or desktop window a form or result
+/// card stops stretching to the full width and stays readable.
+class AppContentFrame extends StatelessWidget {
+  const AppContentFrame({required this.child, this.maxWidth = 760, super.key});
+
+  final Widget child;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.topCenter,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: child,
+    ),
+  );
 }

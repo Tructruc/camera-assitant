@@ -12,6 +12,7 @@ import 'calculator_catalog.dart';
 import 'navigation.dart';
 import 'providers.dart';
 import 'theme/app_theme.dart';
+import 'theme/design_tokens.dart';
 
 class PhotographyAssistantApp extends ConsumerWidget {
   const PhotographyAssistantApp({super.key});
@@ -56,7 +57,7 @@ class _AppShellState extends State<AppShell> {
     final destination = AppDestination.values[_selectedIndex];
     return Scaffold(
       appBar: AppBar(title: Text(destination.label)),
-      body: SafeArea(child: _screen(destination)),
+      body: SafeArea(child: AppContentFrame(child: _screen(destination))),
       bottomNavigationBar: NavigationBar(
         destinations: AppDestination.values
             .map((item) => item.toNavigationDestination())

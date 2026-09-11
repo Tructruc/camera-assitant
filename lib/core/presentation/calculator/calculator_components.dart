@@ -186,15 +186,17 @@ class _CalculatorPageState extends State<CalculatorPage> {
   }
 
   @override
-  Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(
-      AppGap.lg,
-      AppGap.lg,
-      AppGap.lg,
-      AppGap.xxl,
+  Widget build(BuildContext context) => AppContentFrame(
+    child: ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppGap.lg,
+        AppGap.lg,
+        AppGap.lg,
+        AppGap.xxl,
+      ),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      children: widget.children,
     ),
-    keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-    children: widget.children,
   );
 }
 
@@ -388,112 +390,139 @@ class CalculationResultView extends StatelessWidget {
       label:
           '$title calculation result: ${highlight.$1} ${highlight.$2}'
           '${warnings.isEmpty ? '' : '. Warnings: ${warnings.join('; ')}'}',
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(AppGap.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Text(
-                title,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 1.1,
+      child: _ResultEntrance(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppGap.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  title,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    letterSpacing: 1.1,
+                  ),
                 ),
-              ),
-              if (warnings.isNotEmpty) ...<Widget>[
-                const SizedBox(height: AppGap.md),
-                _WarningBanner(warnings: warnings),
-              ],
-              const SizedBox(height: AppGap.lg),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppGap.lg,
-                  vertical: AppGap.lg,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: AppRadius.controlAll,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      highlight.$1,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                if (warnings.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppGap.md),
+                  _WarningBanner(warnings: warnings),
+                ],
+                const SizedBox(height: AppGap.lg),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppGap.lg,
+                    vertical: AppGap.lg,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: AppRadius.controlAll,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        highlight.$1,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: AppGap.xs),
-                    ResultValue(
-                      value: highlight.$2,
-                      valueStyle: theme.textTheme.displaySmall,
-                      unitStyle: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (highlightCaption case final caption?) ...<Widget>[
                       const SizedBox(height: AppGap.xs),
-                      Text(caption, style: theme.textTheme.bodySmall),
+                      ResultValue(
+                        value: highlight.$2,
+                        valueStyle: theme.textTheme.displaySmall,
+                        unitStyle: theme.textTheme.titleLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (highlightCaption case final caption?) ...<Widget>[
+                        const SizedBox(height: AppGap.xs),
+                        Text(caption, style: theme.textTheme.bodySmall),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (guidance case final text?) ...<Widget>[
+                if (guidance case final text?) ...<Widget>[
+                  const SizedBox(height: AppGap.md),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: AppGap.sm),
+                      Expanded(
+                        child: Text(text, style: theme.textTheme.bodySmall),
+                      ),
+                    ],
+                  ),
+                ],
+                if (tiles.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: AppGap.lg),
+                  _ResultTiles(tiles: tiles),
+                ],
+                if (details.isNotEmpty ||
+                    inputs.isNotEmpty ||
+                    assumptions.isNotEmpty)
+                  _DetailsSection(
+                    // Stable identity: a warning appearing above must not reset
+                    // the section the user just opened.
+                    key: const ValueKey('details'),
+                    details: details,
+                    inputs: inputs,
+                    assumptions: assumptions,
+                  ),
+                const SizedBox(height: AppGap.lg),
+                const Divider(),
                 const SizedBox(height: AppGap.md),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: theme.colorScheme.onSurfaceVariant,
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: onSave,
+                        icon: const Icon(Icons.bookmark_add_outlined, size: 20),
+                        label: const Text('Save result'),
+                      ),
                     ),
                     const SizedBox(width: AppGap.sm),
-                    Expanded(
-                      child: Text(text, style: theme.textTheme.bodySmall),
-                    ),
+                    TextButton(onPressed: onReset, child: const Text('Reset')),
                   ],
                 ),
               ],
-              if (tiles.isNotEmpty) ...<Widget>[
-                const SizedBox(height: AppGap.lg),
-                _ResultTiles(tiles: tiles),
-              ],
-              if (details.isNotEmpty ||
-                  inputs.isNotEmpty ||
-                  assumptions.isNotEmpty)
-                _DetailsSection(
-                  // Stable identity: a warning appearing above must not reset
-                  // the section the user just opened.
-                  key: const ValueKey('details'),
-                  details: details,
-                  inputs: inputs,
-                  assumptions: assumptions,
-                ),
-              const SizedBox(height: AppGap.lg),
-              const Divider(),
-              const SizedBox(height: AppGap.md),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: onSave,
-                      icon: const Icon(Icons.bookmark_add_outlined, size: 20),
-                      label: const Text('Save result'),
-                    ),
-                  ),
-                  const SizedBox(width: AppGap.sm),
-                  TextButton(onPressed: onReset, child: const Text('Reset')),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Fades and lifts a freshly built result card into place.
+///
+/// Opacity-only, so the widget tree is complete from the first frame and tests
+/// that pump a single frame still find every value.
+class _ResultEntrance extends StatelessWidget {
+  const _ResultEntrance({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween<double>(begin: 0, end: 1),
+    duration: AppMotion.medium,
+    curve: Curves.easeOutCubic,
+    builder: (context, value, child) => Opacity(
+      opacity: value,
+      child: Transform.translate(
+        offset: Offset(0, 10 * (1 - value)),
+        child: child,
+      ),
+    ),
+    child: child,
+  );
 }
 
 class _WarningBanner extends StatelessWidget {
