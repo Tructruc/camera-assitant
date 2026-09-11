@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/domain/repositories/equipment_repository.dart';
+import '../../../core/presentation/calculator/calculator_components.dart';
 import '../domain/equipment.dart';
 import 'equipment_controller.dart';
 import 'equipment_editor_screen.dart';
@@ -103,20 +104,11 @@ class EquipmentListScreen extends ConsumerWidget {
           ),
         ),
       ),
-      EquipmentLoadStatus.ready when state.items.isEmpty => ListView(
-        padding: const EdgeInsets.fromLTRB(24, 56, 24, 96),
-        children: const <Widget>[
-          Icon(Icons.camera_alt_outlined, size: 48),
-          SizedBox(height: 12),
-          Center(child: Text('No equipment yet')),
-          SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Add a camera, lens, filter, tube, or converter for faster calculations.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
+      EquipmentLoadStatus.ready when state.items.isEmpty => const EmptyState(
+        icon: Icons.camera_alt_outlined,
+        title: 'No equipment yet',
+        description:
+            'Add a camera, lens, filter, tube, or converter for faster calculations.',
       ),
       EquipmentLoadStatus.ready => ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),

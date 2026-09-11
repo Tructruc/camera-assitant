@@ -74,6 +74,69 @@ class CalculatorHeader extends StatelessWidget {
   }
 }
 
+/// An empty list, search result, or first-run screen.
+///
+/// One icon in a tinted well, a short title and a sentence that says what to do
+/// next; every empty surface in the app uses it so they read the same.
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.action,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final Widget? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppGap.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                icon,
+                size: 30,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppGap.lg),
+            Text(
+              title,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppGap.sm),
+            Text(
+              description,
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            if (action case final widget?) ...<Widget>[
+              const SizedBox(height: AppGap.lg),
+              widget,
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Splits a formatted value into its number and its unit so the two can carry
 /// different weight (`10.47` large, `m` small and quiet).
 (String, String, String) _splitValueUnit(String value) {

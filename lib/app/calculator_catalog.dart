@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/data/repositories/preferences_repository.dart';
+import '../core/presentation/calculator/calculator_components.dart';
 import '../features/alignment/presentation/alignment_screen.dart';
 import '../features/astronomy/presentation/astronomy_screen.dart';
 import '../features/depth_of_field/presentation/depth_of_field_screen.dart';
@@ -213,11 +214,12 @@ class _CalculatorCatalogScreenState
         ),
         if (calculators.isEmpty)
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: Center(
-              child: Text(
-                'No matching tools. Clear the search or favorites filter.',
-              ),
+            padding: EdgeInsets.only(top: 24),
+            child: EmptyState(
+              icon: Icons.search_off,
+              title: 'No matching tools',
+              description:
+                  'Clear the search or the favorites filter to see every calculator.',
             ),
           ),
         for (final purpose in CalculatorPurpose.values)
