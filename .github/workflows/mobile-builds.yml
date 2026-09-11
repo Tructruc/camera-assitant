@@ -151,13 +151,13 @@ jobs:
           # One file per invocation: a single `flutter test integration_test`
           # run shares one app launch across files, which has failed to start
           # the second app on some runners. Each file is self-contained.
+          #
+          # The action hands every line of `script` to `sh -c` separately, so
+          # the loop has to be one line — the previous multi-line `for … done`
+          # died with `Syntax error: end of file unexpected (expecting "done")`
+          # before running a single journey.
           script: |
-            set -e
-            for file in integration_test/*_test.dart; do
-              echo "::group::$file"
-              flutter test "$file" -d emulator-5554
-              echo "::endgroup::"
-            done
+            for file in integration_test/*_test.dart; do echo "::group::$file"; flutter test "$file" -d emulator-5554 || exit 1; echo "::endgroup::"; done
 
   ios-integration:
     runs-on: macos-latest
