@@ -43,7 +43,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapVisible(tester, find.text('Depth of field'), delta: 300);
+    // Filter the catalog with its own search instead of scrolling a 200%-text
+    // list down to the tile: on a phone-sized emulator viewport the tile is
+    // several screens down and `scrollUntilVisible` could not reach it.
+    await tester.enterText(find.byType(SearchBar), 'Depth of field');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Depth of field'));
+    await tester.pumpAndSettle();
     await tapVisible(tester, find.text('Calculate'), delta: 300);
     // 200% text must not overflow or clip any frame.
     expect(tester.takeException(), isNull);

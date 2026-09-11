@@ -124,7 +124,10 @@ jobs:
 
   android-integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Building the debug APK takes ~5 minutes on the runner and each of the
+    # eight journeys boots its own app; 20 minutes was not enough once the loop
+    # below actually started running them.
+    timeout-minutes: 45
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
