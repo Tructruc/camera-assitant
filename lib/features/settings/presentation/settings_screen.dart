@@ -40,8 +40,11 @@ class SettingsScreen extends ConsumerWidget {
                 (LengthDisplay.metric, 'Metric (m and mm)'),
                 (LengthDisplay.imperial, 'Imperial (ft and in)'),
               ],
-              onChanged: (choice) =>
-                  _save(context, ref, value.copyWith(lengthDisplay: choice)),
+              onChanged: (choice) => _save(
+                context,
+                ref,
+                (current) => current.copyWith(lengthDisplay: choice),
+              ),
             ),
             _SettingCard<ShutterDisplay>(
               icon: Icons.timer_outlined,
@@ -52,8 +55,11 @@ class SettingsScreen extends ConsumerWidget {
                 (ShutterDisplay.exact, 'Exact seconds'),
                 (ShutterDisplay.conventional, 'Conventional shutter'),
               ],
-              onChanged: (choice) =>
-                  _save(context, ref, value.copyWith(shutterDisplay: choice)),
+              onChanged: (choice) => _save(
+                context,
+                ref,
+                (current) => current.copyWith(shutterDisplay: choice),
+              ),
             ),
             _SettingCard<FractionStep>(
               icon: Icons.exposure_outlined,
@@ -66,8 +72,11 @@ class SettingsScreen extends ConsumerWidget {
                 (FractionStep.half, 'Half stops'),
                 (FractionStep.third, 'Third stops'),
               ],
-              onChanged: (choice) =>
-                  _save(context, ref, value.copyWith(fractionStep: choice)),
+              onChanged: (choice) => _save(
+                context,
+                ref,
+                (current) => current.copyWith(fractionStep: choice),
+              ),
             ),
             _SettingCard<NorthReference>(
               icon: Icons.explore_outlined,
@@ -79,8 +88,11 @@ class SettingsScreen extends ConsumerWidget {
                 (NorthReference.trueNorth, 'True north'),
                 (NorthReference.magneticNorth, 'Magnetic north'),
               ],
-              onChanged: (choice) =>
-                  _save(context, ref, value.copyWith(northReference: choice)),
+              onChanged: (choice) => _save(
+                context,
+                ref,
+                (current) => current.copyWith(northReference: choice),
+              ),
             ),
             const SizedBox(height: 16),
             const _SectionHeader(
@@ -101,7 +113,7 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (choice) => _save(
                 context,
                 ref,
-                value.copyWith(defaultStarSharpness: choice),
+                (current) => current.copyWith(defaultStarSharpness: choice),
               ),
             ),
             _SettingCard<double>(
@@ -120,7 +132,8 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (choice) => _save(
                 context,
                 ref,
-                value.copyWith(defaultAlignmentToleranceDegrees: choice),
+                (current) =>
+                    current.copyWith(defaultAlignmentToleranceDegrees: choice),
               ),
             ),
             const SizedBox(height: 16),
@@ -140,8 +153,11 @@ class SettingsScreen extends ConsumerWidget {
                 (AppThemeMode.dark, 'Dark'),
                 (AppThemeMode.lowLight, 'Low-light red'),
               ],
-              onChanged: (choice) =>
-                  _save(context, ref, value.copyWith(themeMode: choice)),
+              onChanged: (choice) => _save(
+                context,
+                ref,
+                (current) => current.copyWith(themeMode: choice),
+              ),
             ),
             const SizedBox(height: 16),
             Text(
@@ -158,10 +174,10 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _save(
     BuildContext context,
     WidgetRef ref,
-    AppPreferences preferences,
+    AppPreferences Function(AppPreferences current) transform,
   ) async {
     try {
-      await ref.read(preferencesRepositoryProvider).save(preferences);
+      await ref.read(preferencesRepositoryProvider).update(transform);
     } on Object {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

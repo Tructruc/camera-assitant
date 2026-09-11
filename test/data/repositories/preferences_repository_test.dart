@@ -70,4 +70,28 @@ void main() {
     await repository.save(const AppPreferences(themeMode: AppThemeMode.dark));
     expect((await darkPreference).themeMode, AppThemeMode.dark);
   });
+
+  test('concurrent updates preserve changes to separate preferences', () async {
+    await Future.wait(<Future<AppPreferences>>[
+      repository.update(
+        (current) => current.copyWith(lengthDisplay: LengthDisplay.imperial),
+      ),
+      repository.update(
+        (current) => current.copyWith(themeMode: AppThemeMode.lowLight),
+      ),
+      repository.update(
+        (current) => current.copyWith(
+          favoriteToolIds: <String>[
+            ...current.favoriteToolIds,
+            'depth-of-field',
+          ],
+        ),
+      ),
+    ]);
+
+    final updated = await repository.load();
+    expect(updated.lengthDisplay, LengthDisplay.imperial);
+    expect(updated.themeMode, AppThemeMode.lowLight);
+    expect(updated.favoriteToolIds, <String>['depth-of-field']);
+  });
 }

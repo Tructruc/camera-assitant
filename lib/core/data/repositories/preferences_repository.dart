@@ -155,28 +155,48 @@ class PreferencesRepository {
   Future<void> save(AppPreferences preferences) async {
     final immutable = preferences.immutable();
     await _database.transaction(() async {
-      await _database
-          .into(_database.userPreferences)
-          .insertOnConflictUpdate(
-            UserPreferencesCompanion(
-              id: const Value<int>(1),
-              lengthDisplay: Value<String>(immutable.lengthDisplay.name),
-              shutterDisplay: Value<String>(immutable.shutterDisplay.name),
-              fractionStep: Value<String>(immutable.fractionStep.name),
-              themeMode: Value<String>(immutable.themeMode.storageId),
-              favoriteToolIds: Value<String>(
-                jsonEncode(immutable.favoriteToolIds),
-              ),
-              northReference: Value<String>(immutable.northReference.name),
-              defaultStarSharpness: Value<String>(
-                immutable.defaultStarSharpness.name,
-              ),
-              defaultAlignmentToleranceDegrees: Value<double>(
-                immutable.defaultAlignmentToleranceDegrees,
-              ),
-            ),
-          );
+      await _write(immutable);
     });
+  }
+
+  /// Applies a change to the latest stored value in one transaction.
+  ///
+  /// Presentation actions use this instead of copying their last streamed
+  /// value, because another setting may have been saved before that stream
+  /// rebuild reaches the widget.
+  Future<AppPreferences> update(
+    AppPreferences Function(AppPreferences current) transform,
+  ) {
+    return _database.transaction(() async {
+      final row = await _database.select(_database.userPreferences).getSingle();
+      final updated = transform(_fromRow(row)).immutable();
+      await _write(updated);
+      return updated;
+    });
+  }
+
+  Future<void> _write(AppPreferences preferences) async {
+    await _database
+        .into(_database.userPreferences)
+        .insertOnConflictUpdate(
+          UserPreferencesCompanion(
+            id: const Value<int>(1),
+            lengthDisplay: Value<String>(preferences.lengthDisplay.name),
+            shutterDisplay: Value<String>(preferences.shutterDisplay.name),
+            fractionStep: Value<String>(preferences.fractionStep.name),
+            themeMode: Value<String>(preferences.themeMode.storageId),
+            favoriteToolIds: Value<String>(
+              jsonEncode(preferences.favoriteToolIds),
+            ),
+            northReference: Value<String>(preferences.northReference.name),
+            defaultStarSharpness: Value<String>(
+              preferences.defaultStarSharpness.name,
+            ),
+            defaultAlignmentToleranceDegrees: Value<double>(
+              preferences.defaultAlignmentToleranceDegrees,
+            ),
+          ),
+        );
   }
 
   AppPreferences _fromRow(UserPreference row) {

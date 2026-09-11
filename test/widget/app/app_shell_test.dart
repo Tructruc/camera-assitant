@@ -229,6 +229,7 @@ final class _FailingPreferencesRepository extends PreferencesRepository {
   _FailingPreferencesRepository(super.database);
 
   @override
-  Future<void> save(AppPreferences preferences) async =>
-      throw StateError('write failed');
+  Future<AppPreferences> update(
+    AppPreferences Function(AppPreferences current) transform,
+  ) async => throw StateError('write failed');
 }
