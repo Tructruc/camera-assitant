@@ -143,6 +143,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="continuous-v2-desktop"
+          built_at="$(date -u +'%Y-%m-%d %H:%M UTC')"
+          notes="Continuously updated desktop test builds from branch v2. Linux (x64 tarball), Windows (x64 zip), macOS (unsigned app zip). Last build: $built_at."
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" \
               -f sha="$GITHUB_SHA" -F force=true
@@ -152,14 +154,14 @@ jobs:
               --target "$GITHUB_SHA" \
               --prerelease \
               --title "Latest v2 desktop test build" \
-              --notes "Continuously updated desktop test builds from branch v2. Linux (x64 tarball), Windows (x64 zip), macOS (unsigned app zip)."
+              --notes "$notes"
           fi
           gh release edit "$tag" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "Latest v2 desktop test build" \
-            --notes "Continuously updated desktop test builds from branch v2. Linux (x64 tarball), Windows (x64 zip), macOS (unsigned app zip)."
+            --notes "$notes"
           gh release upload "$tag" \
             release-assets/camera-assistant-linux-x64.tar.gz \
             release-assets/camera-assistant-windows-x64.zip \
