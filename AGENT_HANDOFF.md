@@ -165,11 +165,27 @@ below.
 
 ```sh
 ./.tooling/flutterw --no-version-check analyze --fatal-infos
+# No path: `test/unit test/widget` misses test/data, test/privacy,
+# test/performance and test/golden — a stale golden is how the redesign first
+# broke CI.
 ./.tooling/flutterw --no-version-check test --no-pub --concurrency=1
 for f in integration_test/*_test.dart; do
   ./.tooling/flutterw --no-version-check test --no-pub "$f" || break
 done
-dart format --output=none --set-exit-if-changed lib test integration_test
+HOME=$PWD/.tooling/home ./.tooling/flutter/bin/cache/dart-sdk/bin/dart \
+  format --output=none --set-exit-if-changed lib test integration_test
 ```
+
+Intentional UI changes must regenerate the committed goldens:
+`./.tooling/flutterw --no-version-check test --no-pub --update-goldens test/golden`
+(then re-run without `--update-goldens` to prove they match).
+
+Two CI traps already fixed once, do not reintroduce them:
+
+- `aapt2 dump badging` prints `uses-feature-not-required: name='…'` on current
+  build-tools and `uses-feature-not-required:'…'` on older ones; the manifest
+  check normalises spaces and accepts both.
+- `reactivecircus/android-emulator-runner` hands each *line* of `script` to
+  `sh -c`, so a multi-line `for … done` loop fails immediately; keep it one line.
 
 Then commit (scoped message, no `--global` git config needed) and `git push origin v2`.
