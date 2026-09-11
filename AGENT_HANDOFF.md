@@ -4,6 +4,8 @@ Everything needed to resume this project from a fresh session. Read this first, 
 `specs/001-photography-assistant/tasks.md` for the task ledger and
 `specs/001-photography-assistant/validation/quickstart-evidence.md` for the acceptance evidence.
 
+**To resume, tell the agent:** "Read AGENT_HANDOFF.md, then continue with the next action it lists."
+
 ## Environment: the sandbox is read-only outside this directory
 
 The Flutter SDK lives in `/home/tructruc00/git/flutter/flutter`, which is **read-only** here. The official
@@ -32,14 +34,39 @@ T059, T061, and T062 are therefore blocked here; everything else can be verified
 
 ## Current state
 
-At the time of writing the tree is clean and `origin/v2` is at the commit that adds this file.
-The last full verification:
+The tree is clean and `origin/v2` is at the commit that adds this file (check
+`git log --oneline -1` and `git status --short` rather than trusting this line). The last full
+verification:
 
 - `flutter test --no-pub --concurrency=1` → **293 passed**
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **7 integration journeys** green three runs in a row:
   `calculator_flows`, `optics_flows`, `equipment_flow`, `planning_flow`, `preferences_flow`,
   `ar_fallback_flow`, `accessibility_flow`
+
+## Next action when work resumes
+
+**Run one more independent convergence audit** (read-only), then close whatever it finds. The brief that
+was queued for it:
+
+- Check the persistence error-handling refactor for a path where a failure is now silently swallowed,
+  where `load()` no longer runs, where a snackbar fires on a disposed context, or where success is
+  reported after a failed write — in `equipment_controller.dart` (`create/update/archive/delete/restore`
+  now return `Future<bool>` and never throw), every caller of those methods, and the
+  saved-calculation/saved-location/editor save paths.
+- Check `integration_test/support/journey.dart` and its use across the seven journeys: is `tapVisible`
+  correct for a negative delta (scrolling up)? Does pinning 1000x1600 at `devicePixelRatio` 1 hide
+  problems a real phone would show? Would any journey still pass against a broken implementation?
+- Check `elevationFromAltitude` and the now-nullable `DeviceLocationReading.elevationMetres`: any caller
+  that assumed non-null, or a null reaching arithmetic or formatting and producing a wrong value instead
+  of "unknown".
+- Check `SavedLocation` trimming `timeZoneId`: any code that compared or persisted the untrimmed value,
+  or a fixture that relied on it.
+- Check the 24 FRs, 12 SCs, 7 user stories, and the edge-case list at `spec.md:183-198` for anything still
+  uncovered.
+
+Delegate it or run it directly; it is read-only and needs no device. Then continue with the open work
+below.
 
 ## What is done
 
