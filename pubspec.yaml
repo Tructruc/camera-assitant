@@ -24,6 +24,7 @@ dependencies:
 
 dev_dependencies:
   build_runner: ^2.15.1
+  camera_platform_interface: ^2.13.1
   drift_dev: ^2.34.0
   flutter_lints: ^6.0.0
   flutter_test:

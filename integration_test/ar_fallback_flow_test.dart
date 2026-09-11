@@ -50,6 +50,18 @@ void main() {
       reason: 'the AR view must explain an unavailable camera or sensor',
     );
 
+    // Backgrounding invalidates any in-flight camera initialization. Resuming
+    // retries it and must return to an honest fallback on this camera-less
+    // host instead of hanging on a spinner or throwing.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    final resumedFallback =
+        find.textContaining('AR unavailable').evaluate().isNotEmpty ||
+        find.textContaining('Camera unavailable').evaluate().isNotEmpty;
+    expect(resumedFallback, isTrue);
+
     // The equivalent non-AR plan is still reachable and complete.
     await tapVisible(tester, find.text('Numeric'), delta: 300);
     expect(find.textContaining('altitude,'), findsWidgets);

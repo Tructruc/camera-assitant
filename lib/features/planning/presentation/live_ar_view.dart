@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
@@ -29,18 +31,30 @@ class LiveArView extends StatefulWidget {
   State<LiveArView> createState() => _LiveArViewState();
 }
 
-class _LiveArViewState extends State<LiveArView> {
+class _LiveArViewState extends State<LiveArView> with WidgetsBindingObserver {
   CameraController? _controller;
   Object? _error;
+  var _initializationGeneration = 0;
+  var _isForeground = true;
+  Future<void> _pendingDisposal = Future<void>.value();
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initialize();
   }
 
   Future<void> _initialize() async {
+    final generation = ++_initializationGeneration;
+    if (!_isForeground) return;
+    if (mounted) setState(() => _error = null);
+    CameraController? initializingController;
     try {
+      await _pendingDisposal;
+      if (!_isCurrentInitialization(generation)) return;
       final cameras = await availableCameras();
+      if (!_isCurrentInitialization(generation)) return;
       if (cameras.isEmpty) {
         throw StateError('No camera is available on this device.');
       }
@@ -56,20 +70,64 @@ class _LiveArViewState extends State<LiveArView> {
         ResolutionPreset.medium,
         enableAudio: false,
       );
+      initializingController = controller;
       await controller.initialize();
-      if (!mounted) {
-        await controller.dispose();
+      if (!_isCurrentInitialization(generation)) {
+        await _disposeCameraController(controller);
         return;
       }
       setState(() => _controller = controller);
+      initializingController = null;
     } on Object catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (initializingController != null) {
+        await _disposeCameraController(initializingController);
+      }
+      if (_isCurrentInitialization(generation)) {
+        setState(() => _error = error);
+      }
+    }
+  }
+
+  bool _isCurrentInitialization(int generation) =>
+      mounted && _isForeground && generation == _initializationGeneration;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _isForeground = true;
+      _initialize();
+      return;
+    }
+    _isForeground = false;
+    _suspendCamera();
+  }
+
+  void _suspendCamera() {
+    _initializationGeneration += 1;
+    final controller = _controller;
+    if (controller == null) return;
+    if (mounted) setState(() => _controller = null);
+    _pendingDisposal = _disposeCameraController(controller);
+  }
+
+  Future<void> _disposeCameraController(CameraController controller) async {
+    try {
+      await controller.dispose();
+    } on Object {
+      // Disposal is best-effort during lifecycle transitions. Initialization
+      // still gets a fresh controller and reports any failure in the view.
     }
   }
 
   @override
   void dispose() {
-    _controller?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _isForeground = false;
+    _initializationGeneration += 1;
+    final controller = _controller;
+    if (controller != null) {
+      unawaited(_disposeCameraController(controller));
+    }
     super.dispose();
   }
 
