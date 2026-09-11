@@ -41,7 +41,6 @@ final class LongExposureOutput {
     required this.totalStrength,
     required List<FilterStrength> appliedFilterStops,
     required this.filteredTime,
-    required this.conventionalGuidance,
     required this.requiredStrength,
     required this.requiresBulbOrTimer,
   }) : appliedFilterStops = List.unmodifiable(appliedFilterStops);
@@ -49,7 +48,6 @@ final class LongExposureOutput {
   final FilterStrength totalStrength;
   final List<FilterStrength> appliedFilterStops;
   final ExposureTime filteredTime;
-  final String conventionalGuidance;
   final FilterStrength? requiredStrength;
   final bool requiresBulbOrTimer;
 }
@@ -91,7 +89,6 @@ final class LongExposureCalculator {
         totalStrength: FilterStrength(totalStops),
         appliedFilterStops: appliedStops,
         filteredTime: ExposureTime.seconds(filteredSeconds),
-        conventionalGuidance: _formatShutter(filteredSeconds),
         requiredStrength: requiredStops == null
             ? null
             : FilterStrength(requiredStops),
@@ -151,11 +148,4 @@ final class LongExposureCalculator {
   };
 
   double _log2(double value) => math.log(value) / math.ln2;
-
-  String _formatShutter(double seconds) {
-    if (seconds >= 1) {
-      return '${seconds.toStringAsFixed(1)} s';
-    }
-    return '1/${(1 / seconds).round()} s';
-  }
 }

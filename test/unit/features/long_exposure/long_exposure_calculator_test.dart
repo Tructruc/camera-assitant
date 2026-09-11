@@ -96,7 +96,6 @@ void main() {
     );
 
     expect(result.output!.requiresBulbOrTimer, isTrue);
-    expect(result.output!.conventionalGuidance, '34.1 s');
     expect(
       result.output!.filteredTime.seconds,
       closeTo(34.13333333333333, 1e-12),
