@@ -72,11 +72,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="nightly-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}"
+          built_at="$(date -u +'%Y-%m-%d %H:%M UTC')"
           gh release create "$tag" \
             artifacts/photography-assistant-android.aab \
             artifacts/photography-assistant-ios-unsigned.zip \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Photography Assistant nightly $(date -u +%Y-%m-%d)" \
-            --notes "Automated prerelease from commit $GITHUB_SHA. The Android bundle uses development signing; the iOS app is unsigned and intended for validation only." \
+            --notes "Automated prerelease from commit $GITHUB_SHA. Last build: $built_at. The Android bundle uses development signing; the iOS app is unsigned and intended for validation only." \
             --prerelease
