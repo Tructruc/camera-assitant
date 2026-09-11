@@ -23,7 +23,7 @@
         tools:node="replace" />
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
     <application
-        android:label="photography_assistant"
+        android:label="Photography Assistant"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
