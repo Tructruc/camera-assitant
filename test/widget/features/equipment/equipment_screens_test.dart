@@ -500,6 +500,75 @@ void main() {
     expect(selected?.id, 'camera-1');
   });
 
+  testWidgets('a duplicate name is reported on the name field', (
+    WidgetTester tester,
+  ) async {
+    await repository.createCamera(
+      domain.CameraBody(
+        id: 'camera-taken',
+        name: 'Field Camera',
+        sensorWidthMm: 36,
+        sensorHeightMm: 24,
+        provenance: const domain.EquipmentProvenance(
+          source: domain.EquipmentSource.user,
+        ),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      ),
+    );
+    await tester.pumpWidget(listApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add equipment'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add camera'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Camera name'),
+      'field camera',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor width (mm)'),
+      '36',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sensor height (mm)'),
+      '24',
+    );
+    await tester.scrollUntilVisible(
+      find.text('Save camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('Save camera'));
+    await tester.pumpAndSettle();
+
+    // The clash is named on the field and nothing is written.
+    expect(
+      find.text('Another active item already uses this name.'),
+      findsOneWidget,
+    );
+    expect(find.text('Camera name'), findsOneWidget); // still editing
+    expect(await repository.listCameras(), hasLength(1));
+
+    // Changing the name saves normally. The error text shifted the form, so the
+    // action row is revealed again before tapping.
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Camera name'),
+      'Field Camera II',
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Save camera'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save camera'));
+    await tester.pumpAndSettle();
+    expect(await repository.listCameras(), hasLength(2));
+  });
+
   testWidgets('create, restart, and permanent delete remain fully offline', (
     tester,
   ) async {

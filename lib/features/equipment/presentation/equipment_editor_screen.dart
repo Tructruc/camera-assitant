@@ -41,6 +41,7 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
   var _source = EquipmentSource.user;
   var _accessoryKind = OpticalAccessoryKind.extensionTube;
   var _saving = false;
+  String? _nameError;
 
   bool get _isEditing => widget.item != null && !widget.duplicate;
 
@@ -105,9 +106,15 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
           children: <Widget>[
             TextFormField(
               controller: _name,
-              decoration: InputDecoration(labelText: '${_kindLabel()} name'),
+              decoration: InputDecoration(
+                labelText: '${_kindLabel()} name',
+                errorText: _nameError,
+              ),
               textInputAction: TextInputAction.next,
               validator: _required,
+              onChanged: (_) {
+                if (_nameError != null) setState(() => _nameError = null);
+              },
             ),
             const SizedBox(height: 12),
             ..._kindFields(),
@@ -236,7 +243,37 @@ class _EquipmentEditorScreenState extends ConsumerState<EquipmentEditorScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    setState(() => _saving = true);
+    // Active names must be unique per kind. Checking here names the field
+    // instead of letting the database constraint surface as a generic failure;
+    // the constraint stays as the backstop for a race or another kind.
+    final wanted = _name.text.trim().toLowerCase();
+    // Fail open: if the inventory is not reachable this convenience check is
+    // skipped and the database constraint decides, which the catch below turns
+    // into the generic recovery message. Isolated widget tests render the
+    // editor without a provider scope, and a missing list must not block a save.
+    var clash = false;
+    try {
+      clash = ref
+          .read(equipmentControllerProvider)
+          .items
+          .any(
+            (entry) =>
+                entry.item.normalizedName == wanted &&
+                entry.item.id != widget.item?.id,
+          );
+    } on Object {
+      clash = false;
+    }
+    if (clash) {
+      setState(
+        () => _nameError = 'Another active item already uses this name.',
+      );
+      return;
+    }
+    setState(() {
+      _nameError = null;
+      _saving = true;
+    });
     try {
       final now = DateTime.now().toUtc();
       final provenance = EquipmentProvenance(
