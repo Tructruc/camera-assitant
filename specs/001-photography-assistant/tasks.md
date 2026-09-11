@@ -485,3 +485,12 @@ the device's real UTC offset, and the location dialog validates its draft. Host 
 row after `integration_test/support/journey.dart` pinned their viewport and settled every scroll before
 tapping (the earlier flakiness was the varying host window size leaving controls unbuilt). Restart
 instructions and test gotchas are recorded in `AGENT_HANDOFF.md`.
+
+Convergence assessment (2026-09-11): a fourth pass found no missing requirements. Verified directly: every
+one of the ten calculator and planner result views carries both a guidance line and persisted warnings
+(FR-002's "explain its result and limitations"); both planners list location, local and UTC time, time zone
+with confidence, north reference, elevation, horizon/refraction policy, source freshness, and expected
+accuracy (FR-013); the catalog, planet positions, and moving-body events are all pinned to external
+references; and the saved-location device path now reports the denied or unsupported capability state
+before asking for a position (FR-017) instead of failing generically. The journey helpers are shared rather
+than duplicated. Nothing new was appended because nothing remained unfixed.
