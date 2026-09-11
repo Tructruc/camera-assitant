@@ -60,7 +60,13 @@ void main() {
       find.widgetWithText(TextFormField, 'Source note'),
       'Offline integration test',
     );
-    await tester.tap(find.text('Save camera'));
+    // The editor is a lazily built ListView: on a phone the software keyboard
+    // inset and the shorter viewport can leave the action outside the built
+    // range, so dismiss the keyboard and scroll the button into view first.
+    // A bare tap here is what failed on the iOS simulator.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Save camera'));
     await tester.pumpAndSettle();
 
     expect(find.text('Integration Camera'), findsOneWidget);

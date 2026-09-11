@@ -53,21 +53,34 @@ jobs:
       - name: Verify the merged release manifest
         if: github.event_name != 'pull_request'
         run: |
+          set -euo pipefail
           aapt2="$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f | sort -V | tail -1)"
           "$aapt2" dump xmltree --file AndroidManifest.xml camera-assistant-v2.apk > "$RUNNER_TEMP/manifest.xml"
-          if grep -q 'android.permission.RECORD_AUDIO' "$RUNNER_TEMP/manifest.xml"; then
-            echo '::error::RECORD_AUDIO must not appear in the release manifest (FR-017)'
-            exit 1
-          fi
-          if grep -q 'android.permission.WRITE_EXTERNAL_STORAGE' "$RUNNER_TEMP/manifest.xml"; then
-            echo '::error::WRITE_EXTERNAL_STORAGE must not appear in the release manifest (FR-017)'
-            exit 1
-          fi
-          "$aapt2" dump badging camera-assistant-v2.apk > "$RUNNER_TEMP/badging.txt"
-          if ! grep -q "uses-feature-not-required:'android.hardware.camera.any'" "$RUNNER_TEMP/badging.txt"; then
+          for permission in RECORD_AUDIO WRITE_EXTERNAL_STORAGE; do
+            if grep -q "android.permission.$permission" "$RUNNER_TEMP/manifest.xml"; then
+              echo "::error::$permission must not appear in the release manifest (FR-017)"
+              exit 1
+            fi
+          done
+          # aapt2 prints features as either `uses-feature-not-required:'name'`
+          # or `uses-feature-not-required: name='name'` depending on the
+          # build-tools version, so normalise the spacing instead of betting on
+          # one format (the previous pattern only matched the older aapt).
+          "$aapt2" dump badging camera-assistant-v2.apk | tr -d ' ' > "$RUNNER_TEMP/badging.txt"
+          echo 'Camera features in the merged release manifest:'
+          grep -i 'camera' "$RUNNER_TEMP/badging.txt" || true
+          if ! grep -Eq "uses-feature-not-required:(name=)?'android\.hardware\.camera\.any'" "$RUNNER_TEMP/badging.txt"; then
             echo '::error::android.hardware.camera.any must be declared not required so camera-less devices stay installable (FR-012)'
             exit 1
           fi
+      - name: Keep the built APK when verification fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-apk-unverified
+          path: camera-assistant-v2.apk
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload installable Android APK artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
