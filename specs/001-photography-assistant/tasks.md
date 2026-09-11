@@ -518,10 +518,23 @@ presentation: one hero answer carries the decision, two to four tiles carry the 
 compares, and inputs, exact intermediates and assumptions move into collapsed sections. Secondary inputs
 move behind "More settings"; no control, calculation, snapshot field or warning is removed.
 
-- [ ] T152 Add the result-first primitives (`CalculationResultView` hero/tiles/details, `CalculatorAdvancedSection`) and convert `depth_of_field_screen` as the reference
-- [ ] T153 Convert `exposure_comparison`, `long_exposure`, `flash_exposure` and `timelapse` to the hero/tiles/details shape
-- [ ] T154 Convert `macro`, the three optics tools, and `panorama` (collapsing the focus-distance list and the panorama frame grid)
-- [ ] T155 Convert `astronomy`, `alignment` (collapsing the candidate table and the sky-path samples) and give `saved_locations` scannable rows
-- [ ] T156 Update the widget, privacy and integration tests to assert the hero, the visible tiles and the expanded details, and re-pin the affected journeys
-- [ ] T157 Regenerate the host-rendered screenshots and verify the redesigned screens visually at phone width and at 200% text scale
-- [ ] T158 Extend the same presentation to the equipment, saved-calculation and settings screens
+- [x] T152 Add the result-first primitives (`CalculationResultView` hero/tiles/details, `CalculatorAdvancedSection`) and convert `depth_of_field_screen` as the reference
+- [x] T153 Convert `exposure_comparison`, `long_exposure`, `flash_exposure` and `timelapse` to the hero/tiles/details shape
+- [x] T154 Convert `macro`, the three optics tools, and `panorama` (collapsing the focus-distance list and the panorama frame grid)
+- [x] T155 Convert `astronomy`, `alignment` (collapsing the candidate table and the sky-path samples) and give `saved_locations` scannable rows
+- [x] T156 Update the widget, privacy and integration tests to assert the hero, the visible tiles and the expanded details, and re-pin the affected journeys
+- [x] T157 Regenerate the host-rendered screenshots and verify the redesigned screens visually at phone width and at 200% text scale
+- [x] T158 Extend the same presentation to the equipment, saved-calculation and settings screens
+
+Redesign completed (2026-09-11) across two commits (`594b53f`, `74a3053`). Every calculator, planner and
+saved plan now leads with its answer: a hero value with a plain-language caption, two-to-four comparison
+tiles, and one Details expander holding the values used, the exact values and the model assumptions.
+Secondary inputs sit behind "More settings". The focus-stack distance list, the panorama capture grid, the
+alignment candidate table, the astronomy sky-path samples and the saved-plan provenance maps no longer
+print at rest. Warnings stay visible above the hero everywhere. Equipment, saved-calculation list and
+settings screens needed no change — their rows were already name-plus-provenance. Two defects surfaced and
+were fixed on the way: the alignment `sampling` warning showed the diffraction sentence, and applying saved
+equipment collapsed the open "More settings" section (the inserted notice shifted the expander's position,
+so every section now carries a stable key). Verified at that point: clean analyzer and formatter, 286 local
+tests, all eight host journeys, and a screenshot pass over every screen rendered from the real app at phone
+width.
