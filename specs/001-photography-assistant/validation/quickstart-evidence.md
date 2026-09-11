@@ -21,7 +21,12 @@ dart format --output=none --set-exit-if-changed lib test integration_test   # cl
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/preferences_flow_test.dart  # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/ar_fallback_flow_test.dart  # 1 passed
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/accessibility_flow_test.dart  # 1 passed
+./.tooling/flutterw --no-version-check build linux --release   # built build/linux/x64/release/bundle (55 MB)
 ```
+
+The Linux release build is a release-compilation gate: it exercises the same optimizer, const evaluation,
+and assert stripping that the Android release build does in CI, which cannot run here (no writable Gradle
+cache). The Android and iOS release builds remain CI-only evidence.
 
 `flutter test integration_test/<file>` runs the journeys against the host Flutter engine (a Linux debug
 bundle is built). Real SQLite files, permissions, sensors, and process death still require the emulator or
