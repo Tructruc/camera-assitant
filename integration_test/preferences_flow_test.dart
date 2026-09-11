@@ -41,13 +41,7 @@ void main() {
     await tapVisible(tester, find.text('Depth of field'), delta: 300);
     await tester.tap(find.text('Calculate'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -300));
-    await tester.pumpAndSettle();
+    await scrollToResultActions(tester, extra: 300);
     expect(find.textContaining('mm'), findsWidgets);
     await tester.tap(find.text('Save result'));
     await tester.pumpAndSettle();

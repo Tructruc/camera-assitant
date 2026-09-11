@@ -37,13 +37,7 @@ void main() {
     await tapVisible(tester, find.text('Timelapse planner'), delta: 300);
     await tapVisible(tester, find.text('Plan timelapse'), delta: 300);
     expect(find.text('361'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
-    await tester.pumpAndSettle();
+    await scrollToResultActions(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save result'));
     await tester.pumpAndSettle();
 
@@ -53,13 +47,7 @@ void main() {
     await tester.tap(find.text('Calculate flash exposure'));
     await tester.pumpAndSettle();
     expect(find.text('f/8.0'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
-    await tester.pumpAndSettle();
+    await scrollToResultActions(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save result'));
     await tester.pumpAndSettle();
 
@@ -114,13 +102,7 @@ void main() {
     expect(find.text('Near limit'), findsOneWidget);
     expect(find.textContaining('From 24-70 mm'), findsWidgets);
     expect(find.textContaining('connect'), findsNothing);
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
-    await tester.pumpAndSettle();
+    await scrollToResultActions(tester, extra: 500);
     await tester.tap(find.text('Save result'));
     await tester.pumpAndSettle();
     expect(find.text('Result saved on this device.'), findsOneWidget);
@@ -131,13 +113,7 @@ void main() {
     await tapVisible(tester, find.text('Exposure comparison'), delta: 300);
     await tapVisible(tester, find.text('Compare exposures'), delta: 300);
     expect(find.text('Equivalent exposure'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
-    await tester.pumpAndSettle();
+    await scrollToResultActions(tester, extra: 500);
     await tester.tap(find.text('Save result'));
     await tester.pumpAndSettle();
 
@@ -158,13 +134,7 @@ void main() {
     expect(find.text('32 s'), findsOneWidget);
     expect(find.text('34.133333 s'), findsOneWidget);
     expect(find.textContaining('From 10-stop ND'), findsWidgets);
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
-    await tester.pumpAndSettle();
+    await scrollToResultActions(tester, extra: 500);
     await tester.tap(find.text('Save result'));
     await tester.pumpAndSettle();
 
@@ -261,13 +231,7 @@ void main() {
 
       // Recalculation restores a savable result and the journey completes.
       await tapVisible(tester, find.text('Calculate'), delta: -300);
-      await tester.scrollUntilVisible(
-        find.text('Save result'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.drag(find.byType(ListView).first, const Offset(0, -500));
-      await tester.pumpAndSettle();
+      await scrollToResultActions(tester, extra: 500);
       await tester.tap(find.text('Save result'));
       await tester.pumpAndSettle();
 

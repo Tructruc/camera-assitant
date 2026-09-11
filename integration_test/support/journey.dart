@@ -41,10 +41,15 @@ Future<void> reveal(
   await tester.pumpAndSettle();
 }
 
-/// Scrolls the planner list to the end of its result card.
-Future<void> scrollToResultActions(WidgetTester tester) async {
+/// Scrolls a planner list to the end of its result card so the save action is
+/// fully inside the viewport before it is tapped. [extra] nudges further for
+/// screens whose action row sits under a taller result.
+Future<void> scrollToResultActions(
+  WidgetTester tester, {
+  double extra = 250,
+}) async {
   await reveal(tester, find.text('Save result'));
-  await tester.drag(find.byType(ListView).first, const Offset(0, -250));
+  await tester.drag(find.byType(ListView).first, Offset(0, -extra));
   await tester.pumpAndSettle();
 }
 
