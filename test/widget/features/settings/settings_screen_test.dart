@@ -92,4 +92,37 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets('a failed setting write is reported and remains unchanged', (
+    tester,
+  ) async {
+    final failingRepository = _FailingPreferencesRepository(database);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          preferencesRepositoryProvider.overrideWithValue(failingRepository),
+        ],
+        child: const MaterialApp(home: Scaffold(body: SettingsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Imperial (ft and in)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Setting could not be saved.'), findsOneWidget);
+    expect((await repository.load()).lengthDisplay, LengthDisplay.metric);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+}
+
+final class _FailingPreferencesRepository extends PreferencesRepository {
+  _FailingPreferencesRepository(super.database);
+
+  @override
+  Future<void> save(AppPreferences preferences) async =>
+      throw StateError('write failed');
 }

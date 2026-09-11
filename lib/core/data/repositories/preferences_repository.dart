@@ -132,7 +132,10 @@ bool _listEquals(List<String> left, List<String> right) {
 }
 
 /// Reads and atomically replaces the single on-device preferences record.
-final class PreferencesRepository {
+///
+/// Kept extensible so presentation tests can substitute a failing local store
+/// and prove that write errors stay recoverable.
+class PreferencesRepository {
   const PreferencesRepository(this._database);
 
   final AppDatabase _database;

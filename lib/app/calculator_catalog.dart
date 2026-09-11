@@ -292,11 +292,7 @@ class _CalculatorCatalogScreenState
                             : 'Add ${calculator.label} to favorites',
                         onPressed: preferences == null
                             ? null
-                            : () => _toggleFavorite(
-                                ref,
-                                preferences,
-                                calculator.id,
-                              ),
+                            : () => _toggleFavorite(preferences, calculator.id),
                         icon: Icon(
                           favorites.contains(calculator.id)
                               ? Icons.star
@@ -337,15 +333,22 @@ class _CalculatorCatalogScreenState
     CalculatorPurpose.macro => Icons.local_florist_outlined,
   };
 
-  Future<void> _toggleFavorite(
-    WidgetRef ref,
-    AppPreferences preferences,
-    String id,
-  ) async {
+  Future<void> _toggleFavorite(AppPreferences preferences, String id) async {
     final favorites = [...preferences.favoriteToolIds];
     favorites.contains(id) ? favorites.remove(id) : favorites.add(id);
-    await ref
-        .read(preferencesRepositoryProvider)
-        .save(preferences.copyWith(favoriteToolIds: favorites));
+    try {
+      await ref
+          .read(preferencesRepositoryProvider)
+          .save(preferences.copyWith(favoriteToolIds: favorites));
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The favorite could not be saved. Your calculator list is unchanged; try again.',
+          ),
+        ),
+      );
+    }
   }
 }

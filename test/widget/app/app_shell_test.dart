@@ -17,10 +17,17 @@ void main() {
 
   tearDown(() => database.close());
 
-  Widget buildApp({double textScale = 1}) {
+  Widget buildApp({
+    double textScale = 1,
+    PreferencesRepository? preferencesRepository,
+  }) {
     return ProviderScope(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(database),
+        if (preferencesRepository != null)
+          preferencesRepositoryProvider.overrideWithValue(
+            preferencesRepository,
+          ),
         preferencesProvider.overrideWith(
           (ref) => Stream<AppPreferences>.value(const AppPreferences()),
         ),
@@ -147,6 +154,24 @@ void main() {
     expect(find.text('Depth of field'), findsNothing);
   });
 
+  testWidgets('a failed favorite write is reported without changing the list', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      buildApp(preferencesRepository: _FailingPreferencesRepository(database)),
+    );
+    await tester.pumpAndSettle();
+
+    const favoriteTooltip = 'Add Saved locations to favorites';
+    await tester.tap(find.byTooltip(favoriteTooltip));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('favorite could not be saved'), findsOneWidget);
+    expect(find.byTooltip(favoriteTooltip), findsOneWidget);
+    expect(find.text('Saved locations'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('settings exposes units, shutter, theme, and privacy guidance', (
     WidgetTester tester,
   ) async {
@@ -198,4 +223,12 @@ void main() {
       findsOneWidget,
     );
   });
+}
+
+final class _FailingPreferencesRepository extends PreferencesRepository {
+  _FailingPreferencesRepository(super.database);
+
+  @override
+  Future<void> save(AppPreferences preferences) async =>
+      throw StateError('write failed');
 }
