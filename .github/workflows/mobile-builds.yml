@@ -123,6 +123,10 @@ jobs:
           retention-days: 14
 
   android-integration:
+    # Cross-platform signal, not a gate: the job is `continue-on-error` and
+    # boots the app eight times on an emulator, so it runs on the nightly
+    # schedule and on demand instead of holding every push for ~30 minutes.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # Building the debug APK takes ~5 minutes on the runner and each of the
     # eight journeys boots its own app; 20 minutes was not enough once the loop
@@ -163,6 +167,8 @@ jobs:
             for file in integration_test/*_test.dart; do echo "::group::$file"; flutter test "$file" -d emulator-5554 || exit 1; echo "::endgroup::"; done
 
   ios-integration:
+    # Nightly and on demand for the same reason as the Android emulator job.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
     timeout-minutes: 20
     continue-on-error: true
