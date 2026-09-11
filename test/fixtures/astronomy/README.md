@@ -10,7 +10,8 @@ The moving-planet fixtures use the JPL Horizons geocentric astrometric ICRF tabl
 2026-01-01 00:00 UTC (`COMMAND=599`, `CENTER=500@399`, quantity 1): RA 112.72933°, Dec 22.03458°.
 Runtime planetary coordinates use JPL's published 1800-2050 approximate Keplerian elements and are
 accepted within a conservative 0.25° planning tolerance. Jupiter, Mars, and Saturn are pinned to
-Horizons values; Mercury and Venus are still model-derived and are covered only by that tolerance claim.
+Horizons values for all five supported planets (Mercury, Venus, Mars, Jupiter, Saturn), so the 0.25 degree
+claim is externally checked in both the inner and outer solar system.
 
 Runtime code and the small coordinate catalog are original project code/data and do not copy SOFA or JPL
 software. External services are used only to create and audit test fixtures, never while the app runs.
@@ -29,6 +30,9 @@ software. External services are used only to create and audit test fixtures, nev
 | `simbadSiriusIcrs` | SIMBAD TAP, `* alf CMa` ICRS J2000 | RA 101.28715533°, Dec −16.71611586° | 0.01° |
 | `horizonsMarsGeocentric` | JPL Horizons geocentric astrometric ICRF Mars, 2026-01-01 00:00 UTC, `COMMAND=499`, `CENTER=500@399`, `QUANTITIES=1` | RA 283.489041°, Dec −23.751667° | 0.25° (measured 0.001°) |
 | `horizonsSaturnGeocentric` | JPL Horizons geocentric astrometric ICRF Saturn, 2026-01-01 00:00 UTC, `COMMAND=699` | RA 357.047125°, Dec −3.740667° | 0.25° (measured 0.07°) |
+| `horizonsJupiterGeocentric` | JPL Horizons geocentric astrometric ICRF Jupiter, 2026-01-01 00:00 UTC, `COMMAND=599` | RA 112.72933°, Dec 22.03458° | 0.25° |
+| `horizonsMercuryGeocentric` | JPL Horizons geocentric astrometric ICRF Mercury, 2026-01-01 00:00 UTC, `COMMAND=199` | RA 268.131083°, Dec −23.994889° | 0.25° (measured 0.005°) |
+| `horizonsVenusGeocentric` | JPL Horizons geocentric astrometric ICRF Venus, 2026-01-01 00:00 UTC, `COMMAND=299` | RA 279.665458°, Dec −23.644694° | 0.25° (measured 0.006°) |
 | `usnoGreenwichSun` | USNO Astronomical Applications one-day table, Greenwich, 2026-03-20, `tz=0` | rise 06:03, transit 12:07, set 18:13 UTC | 2 min (transit) |
 | `usnoGreenwichMoon` | USNO one-day table, Greenwich, 2026-03-20, `tz=0` | rise 06:16, transit 13:15, set 20:35 UTC | 10 min (transit), 20 min (rise/set) |
 

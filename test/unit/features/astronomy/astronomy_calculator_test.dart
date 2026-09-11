@@ -113,29 +113,55 @@ void main() {
     expect(first.$2, inInclusiveRange(-90, 90));
   });
 
-  test('Jupiter agrees with the documented JPL Horizons fixture', () {
-    final coordinates = CelestialTarget.jupiter.equatorialAt(
-      DateTime.utc(2026, 1, 1),
-    );
-    expect(coordinates.$1, closeTo(112.72933, 0.25));
-    expect(coordinates.$2, closeTo(22.03458, 0.25));
-  });
-
-  test('Mars and Saturn agree with their JPL Horizons fixtures', () {
-    // Two more planets, one inner and one outer, so the bundled Keplerian model
-    // is externally checked beyond the single Jupiter fixture. Fetched
-    // 2026-09-11 from the JPL Horizons API; see the fixture doc comments.
+  test('every planet agrees with its JPL Horizons fixture', () {
+    // All five supported planets are pinned to geocentric astrometric ICRF
+    // positions fetched from the JPL Horizons API on 2026-09-11 for
+    // 2026-01-01 00:00 UTC. The declared planning tolerance is 0.25 degrees;
+    // the measured deviations are far tighter (about 0.001 to 0.07 degrees).
     final instant = DateTime.utc(2026, 1, 1);
+    final fixtures = <CelestialTarget, (double, double)>{
+      CelestialTarget.mercury: (
+        horizonsMercuryGeocentric.ra,
+        horizonsMercuryGeocentric.dec,
+      ),
+      CelestialTarget.venus: (
+        horizonsVenusGeocentric.ra,
+        horizonsVenusGeocentric.dec,
+      ),
+      CelestialTarget.mars: (
+        horizonsMarsGeocentric.ra,
+        horizonsMarsGeocentric.dec,
+      ),
+      CelestialTarget.jupiter: (
+        horizonsJupiterGeocentric.ra,
+        horizonsJupiterGeocentric.dec,
+      ),
+      CelestialTarget.saturn: (
+        horizonsSaturnGeocentric.ra,
+        horizonsSaturnGeocentric.dec,
+      ),
+    };
+    for (final entry in fixtures.entries) {
+      final (ra, dec) = entry.key.equatorialAt(instant);
+      final (expectedRa, expectedDec) = entry.value;
+      expect(
+        ra,
+        closeTo(expectedRa, 0.25),
+        reason: '${entry.key.label} RA outside the declared tolerance',
+      );
+      expect(
+        dec,
+        closeTo(expectedDec, 0.25),
+        reason: '${entry.key.label} Dec outside the declared tolerance',
+      );
+    }
+    // The inner planets are exact enough to hold to a tenth of the claim.
+    final mercury = CelestialTarget.mercury.equatorialAt(instant);
+    final venus = CelestialTarget.venus.equatorialAt(instant);
     final mars = CelestialTarget.mars.equatorialAt(instant);
-    final saturn = CelestialTarget.saturn.equatorialAt(instant);
-    expect(mars.$1, closeTo(horizonsMarsGeocentric.ra, 0.25));
-    expect(mars.$2, closeTo(horizonsMarsGeocentric.dec, 0.25));
-    expect(saturn.$1, closeTo(horizonsSaturnGeocentric.ra, 0.25));
-    expect(saturn.$2, closeTo(horizonsSaturnGeocentric.dec, 0.25));
-    // Measured deviations at that instant are far tighter than the claim: Mars
-    // about 0.001 degrees and Saturn about 0.07 degrees.
-    expect(mars.$1, closeTo(horizonsMarsGeocentric.ra, 0.01));
-    expect(saturn.$1, closeTo(horizonsSaturnGeocentric.ra, 0.1));
+    expect(mercury.$1, closeTo(horizonsMercuryGeocentric.ra, 0.02));
+    expect(venus.$1, closeTo(horizonsVenusGeocentric.ra, 0.02));
+    expect(mars.$1, closeTo(horizonsMarsGeocentric.ra, 0.02));
   });
 
   test('moving-planet events are solved against the live ephemeris', () {

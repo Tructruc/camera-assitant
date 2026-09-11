@@ -69,3 +69,18 @@ const horizonsMarsGeocentric = (ra: 283.489041, dec: -23.751667);
 /// 2026-01-01 00:00 UTC (`COMMAND=699`, same settings): RA 23 48 11.31,
 /// Dec -03 44 26.4.
 const horizonsSaturnGeocentric = (ra: 357.047125, dec: -3.740667);
+
+/// NASA JPL Horizons geocentric astrometric ICRF position of Jupiter for
+/// 2026-01-01 00:00 UTC (`COMMAND=599`, `CENTER=500@399`, `QUANTITIES=1`):
+/// RA 07 30 55.04, Dec +22 02 04.5.
+const horizonsJupiterGeocentric = (ra: 112.72933, dec: 22.03458);
+
+/// NASA JPL Horizons geocentric astrometric ICRF position of Mercury for
+/// 2026-01-01 00:00 UTC (`COMMAND=199`, same settings): RA 17 52 31.46,
+/// Dec -23 59 41.6.
+const horizonsMercuryGeocentric = (ra: 268.131083, dec: -23.994889);
+
+/// NASA JPL Horizons geocentric astrometric ICRF position of Venus for
+/// 2026-01-01 00:00 UTC (`COMMAND=299`, same settings): RA 18 38 39.71,
+/// Dec -23 38 40.9.
+const horizonsVenusGeocentric = (ra: 279.665458, dec: -23.644694);
