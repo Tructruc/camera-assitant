@@ -63,6 +63,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Finder equipmentPicker(String label) => find.ancestor(
+    of: find.text(label),
+    matching: find.byWidgetPredicate(
+      (widget) => widget is DropdownButtonFormField,
+    ),
+  );
+
   /// Opens the collapsed input groups so a moved control can be reached.
   ///
   /// The redesign hides conventions behind "More settings" (and the candidate
@@ -82,9 +89,13 @@ void main() {
         header = find.text(title);
       }
       if (header.evaluate().isEmpty) continue;
-      await tester.ensureVisible(header.first);
+      final tile = find.ancestor(
+        of: header,
+        matching: find.byType(ExpansionTile),
+      );
+      await tester.ensureVisible(tile);
       await tester.pumpAndSettle();
-      await tester.tap(header.first, warnIfMissed: false);
+      await tester.tap(tile);
       await tester.pumpAndSettle();
     }
   }
@@ -451,7 +462,7 @@ void main() {
       await tester.pumpWidget(app(screen));
       await tester.pumpAndSettle();
       await expandSections(tester);
-      final picker = find.text(pickerLabel);
+      final picker = equipmentPicker(pickerLabel);
       await reveal(tester, picker);
       await tester.tap(picker);
       await tester.pumpAndSettle();
@@ -465,12 +476,7 @@ void main() {
       await reveal(tester, find.widgetWithText(FilledButton, 'Save result'));
       expect(find.byType(CalculationResultView), findsOneWidget);
 
-      await tester.scrollUntilVisible(
-        picker,
-        -300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
+      await reveal(tester, picker, delta: -300);
       await tester.tap(picker);
       await tester.pumpAndSettle();
       await tester.tap(find.text(secondName).last);

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/app.dart';
@@ -42,9 +42,13 @@ void main() {
       delta,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.ensureVisible(details.first);
+    final tile = find.ancestor(
+      of: details,
+      matching: find.byType(ExpansionTile),
+    );
+    await tester.ensureVisible(tile);
     await tester.pumpAndSettle();
-    await tester.tap(details.first, warnIfMissed: false);
+    await tester.tap(tile);
     await tester.pumpAndSettle();
   }
 

@@ -59,6 +59,13 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Finder equipmentPicker(String label) => find.ancestor(
+    of: find.text(label),
+    matching: find.byWidgetPredicate(
+      (widget) => widget is DropdownButtonFormField,
+    ),
+  );
+
   /// Scrolls a collapsed expander into view. Returns false when the screen has
   /// no such section.
   Future<bool> scrollToExpander(WidgetTester tester, String title) async {
@@ -73,7 +80,11 @@ void main() {
       header = find.text(title);
     }
     if (header.evaluate().isEmpty) return false;
-    await tester.ensureVisible(header.first);
+    final tile = find.ancestor(
+      of: header,
+      matching: find.byType(ExpansionTile),
+    );
+    await tester.ensureVisible(tile);
     await tester.pumpAndSettle();
     return true;
   }
@@ -84,7 +95,9 @@ void main() {
       isTrue,
       reason: '"$title" is not reachable',
     );
-    await tester.tap(find.text(title).first, warnIfMissed: false);
+    await tester.tap(
+      find.ancestor(of: find.text(title), matching: find.byType(ExpansionTile)),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -96,7 +109,12 @@ void main() {
   Future<void> openAdvancedInputs(WidgetTester tester) async {
     for (final title in const <String>['More settings', 'Candidate settings']) {
       if (await scrollToExpander(tester, title)) {
-        await tester.tap(find.text(title).first, warnIfMissed: false);
+        await tester.tap(
+          find.ancestor(
+            of: find.text(title),
+            matching: find.byType(ExpansionTile),
+          ),
+        );
         await tester.pumpAndSettle();
       }
     }
@@ -177,7 +195,7 @@ void main() {
     );
     await tester.pumpWidget(app(const LongExposureScreen()));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Saved ND filter (optional)'));
+    await tester.tap(equipmentPicker('Saved ND filter (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('10-stop ND').last);
     await tester.pumpAndSettle();
@@ -203,9 +221,9 @@ void main() {
     await tester.pumpWidget(app(const AstronomyScreen()));
     await tester.pumpAndSettle();
     await openAdvancedInputs(tester);
-    final cameraPicker = find.text('Saved camera (optional)');
+    final cameraPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, cameraPicker);
-    await tester.tap(cameraPicker, warnIfMissed: false);
+    await tester.tap(cameraPicker);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
@@ -234,9 +252,9 @@ void main() {
     await tester.pumpWidget(app(const MacroScreen()));
     await tester.pumpAndSettle();
     await openAdvancedInputs(tester);
-    final cameraPicker = find.text('Saved camera (optional)');
+    final cameraPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, cameraPicker);
-    await tester.tap(cameraPicker, warnIfMissed: false);
+    await tester.tap(cameraPicker);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
@@ -335,7 +353,7 @@ void main() {
     await tester.pumpWidget(app(const AstronomyScreen()));
     await tester.pumpAndSettle();
 
-    final targetPicker = find.text('Search celestial targets');
+    final targetPicker = find.byType(DropdownMenu<CelestialTarget>);
     await reveal(tester, targetPicker);
     await tester.tap(targetPicker);
     await tester.pumpAndSettle();
@@ -362,9 +380,9 @@ void main() {
     await tester.pumpWidget(app(const AstronomyScreen()));
     await tester.pumpAndSettle();
     await openAdvancedInputs(tester);
-    final cameraPicker = find.text('Saved camera (optional)');
+    final cameraPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, cameraPicker);
-    await tester.tap(cameraPicker, warnIfMissed: false);
+    await tester.tap(cameraPicker);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
@@ -394,9 +412,9 @@ void main() {
     await tester.pumpWidget(app(const MacroScreen()));
     await tester.pumpAndSettle();
     await openAdvancedInputs(tester);
-    final macroPicker = find.text('Saved camera (optional)');
+    final macroPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, macroPicker);
-    await tester.tap(macroPicker, warnIfMissed: false);
+    await tester.tap(macroPicker);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
