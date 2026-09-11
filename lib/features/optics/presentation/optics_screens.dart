@@ -90,19 +90,32 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
     _OpticsTool.focusStack => Icons.layers_outlined,
   };
 
-  /// The two or three inputs a photographer sets for this tool. Everything
-  /// else — sensor dimensions, wavelength, circle of confusion, overlap — is a
+  /// The two or three inputs a photographer sets for this tool, paired where
+  /// the pair reads together (near/far, focal/aperture). Everything else —
+  /// sensor dimensions, wavelength, circle of confusion, overlap — is a
   /// convention or a preference and stays behind one expander.
-  List<int> get _primaryFieldIndices => switch (widget.tool) {
-    _OpticsTool.fieldOfView => const [2, 3],
-    _OpticsTool.diffraction => const [0, 2],
-    _OpticsTool.focusStack => const [0, 1, 3, 4],
+  List<Widget> get _primaryFields => switch (widget.tool) {
+    _OpticsTool.fieldOfView => [
+      CalculatorFieldPair(first: _fieldFor(2), second: _fieldFor(3)),
+    ],
+    _OpticsTool.diffraction => [
+      CalculatorFieldPair(first: _fieldFor(0), second: _fieldFor(2)),
+    ],
+    _OpticsTool.focusStack => [
+      CalculatorFieldPair(first: _fieldFor(0), second: _fieldFor(1)),
+      CalculatorFieldPair(first: _fieldFor(3), second: _fieldFor(4)),
+    ],
   };
 
-  List<int> get _advancedFieldIndices => [
-    for (var index = 0; index < _fields.length; index++)
-      if (!_primaryFieldIndices.contains(index)) index,
-  ];
+  List<Widget> get _advancedFields => switch (widget.tool) {
+    _OpticsTool.fieldOfView => [
+      CalculatorFieldPair(first: _fieldFor(0), second: _fieldFor(1)),
+    ],
+    _OpticsTool.diffraction => [_fieldFor(1)],
+    _OpticsTool.focusStack => [
+      CalculatorFieldPair(first: _fieldFor(2), second: _fieldFor(5)),
+    ],
+  };
 
   Widget _fieldFor(int index) => CalculatorNumberField(
     label: _fields[index].$1,
@@ -167,7 +180,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
             sourceLabel: lens.provenance.source.label,
             appliedValues: _lensAppliedValues,
           ),
-        for (final index in _primaryFieldIndices) _fieldFor(index),
+        ..._primaryFields,
         CalculatorAdvancedSection(
           // Stable identity: applying equipment above must not collapse
           // the section the user is working in.
@@ -191,7 +204,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
                 ),
               const SizedBox(height: 12),
             ],
-            for (final index in _advancedFieldIndices) _fieldFor(index),
+            ..._advancedFields,
           ],
         ),
         FilledButton(onPressed: _calculate, child: const Text('Calculate')),

@@ -74,6 +74,43 @@ class CalculatorHeader extends StatelessWidget {
   }
 }
 
+/// Two related inputs side by side on a wide window, stacked on a phone.
+///
+/// Sensor width/height, horizontal/vertical bounds and the like read as pairs;
+/// the row only forms when there is genuinely room for it.
+class CalculatorFieldPair extends StatelessWidget {
+  const CalculatorFieldPair({
+    required this.first,
+    required this.second,
+    this.minWidthForRow = 460,
+    super.key,
+  });
+
+  final Widget first;
+  final Widget second;
+  final double minWidthForRow;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth < minWidthForRow) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[first, second],
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(child: first),
+          const SizedBox(width: AppGap.md),
+          Expanded(child: second),
+        ],
+      );
+    },
+  );
+}
+
 /// An empty list, search result, or first-run screen.
 ///
 /// One icon in a tinted well, a short title and a sentence that says what to do

@@ -124,15 +124,17 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
           }),
         ),
         const SizedBox(height: 12),
-        CalculatorNumberField(
-          label: 'Horizontal scene bounds (degrees)',
-          controller: _horizontalBounds,
-          errorText: _errors['horizontalBoundsDegrees'],
-        ),
-        CalculatorNumberField(
-          label: 'Vertical scene bounds (degrees)',
-          controller: _verticalBounds,
-          errorText: _errors['verticalBoundsDegrees'],
+        CalculatorFieldPair(
+          first: CalculatorNumberField(
+            label: 'Horizontal scene bounds (degrees)',
+            controller: _horizontalBounds,
+            errorText: _errors['horizontalBoundsDegrees'],
+          ),
+          second: CalculatorNumberField(
+            label: 'Vertical scene bounds (degrees)',
+            controller: _verticalBounds,
+            errorText: _errors['verticalBoundsDegrees'],
+          ),
         ),
         CalculatorAdvancedSection(
           // Stable identity: applying equipment above must not collapse
@@ -154,25 +156,29 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
                     '${_sensorWidth.text} × ${_sensorHeight.text} mm sensor',
               ),
             const SizedBox(height: 12),
-            CalculatorNumberField(
-              label: 'Sensor width (mm)',
-              controller: _sensorWidth,
-              errorText: _errors['sensorWidthMm'],
+            CalculatorFieldPair(
+              first: CalculatorNumberField(
+                label: 'Sensor width (mm)',
+                controller: _sensorWidth,
+                errorText: _errors['sensorWidthMm'],
+              ),
+              second: CalculatorNumberField(
+                label: 'Sensor height (mm)',
+                controller: _sensorHeight,
+                errorText: _errors['sensorHeightMm'],
+              ),
             ),
-            CalculatorNumberField(
-              label: 'Sensor height (mm)',
-              controller: _sensorHeight,
-              errorText: _errors['sensorHeightMm'],
-            ),
-            CalculatorNumberField(
-              label: 'Horizontal overlap (%)',
-              controller: _horizontalOverlap,
-              errorText: _errors['horizontalOverlapPercent'],
-            ),
-            CalculatorNumberField(
-              label: 'Vertical overlap (%)',
-              controller: _verticalOverlap,
-              errorText: _errors['verticalOverlapPercent'],
+            CalculatorFieldPair(
+              first: CalculatorNumberField(
+                label: 'Horizontal overlap (%)',
+                controller: _horizontalOverlap,
+                errorText: _errors['horizontalOverlapPercent'],
+              ),
+              second: CalculatorNumberField(
+                label: 'Vertical overlap (%)',
+                controller: _verticalOverlap,
+                errorText: _errors['verticalOverlapPercent'],
+              ),
             ),
           ],
         ),
