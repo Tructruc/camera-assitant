@@ -475,3 +475,13 @@ saved-plan freezing, AR-unavailable fallback, and the 200% text-scale accessibil
 cases in total. The remaining work is genuinely device-bound: scenario 21 (live AR against real camera and
 compass hardware), physical permission grants and denials, Android and iOS process death, and the T062
 representative-photographer sessions. `validation/ios.md` records that no iOS evidence exists yet.
+
+Post-audit hardening (2026-09-10): a third independent pass found persistence paths that could throw
+unhandled or leak raw database errors, and the fixes are in place — equipment mutations report success
+instead of throwing, every list/editor/saved-calculation/saved-location action recovers with an actionable
+message, a device reading with no vertical fix no longer fabricates 0 m, a new saved location defaults to
+the device's real UTC offset, and the location dialog validates its draft. Host verification at that point:
+293 local tests, clean analyzer and formatter, and all seven integration journeys green three runs in a
+row after `integration_test/support/journey.dart` pinned their viewport and settled every scroll before
+tapping (the earlier flakiness was the varying host window size leaving controls unbuilt). Restart
+instructions and test gotchas are recorded in `AGENT_HANDOFF.md`.
