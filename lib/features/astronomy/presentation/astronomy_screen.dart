@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/providers.dart';
+import '../../../app/theme/design_tokens.dart';
 import '../../../core/data/repositories/preferences_repository.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
@@ -499,11 +500,13 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
           const SizedBox(height: 8),
           _planningView(output),
           const SizedBox(height: 12),
-          Text('Next events', style: Theme.of(context).textTheme.titleMedium),
-          for (final event in output.events)
-            Text(
-              '${event.type.name}: ${PlanningTimeContext.parse(_timeZoneId).format(event.instantUtc)}',
-            ),
+          Text('Next events', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          _EventsTimeline(
+            events: output.events,
+            timeZone: PlanningTimeContext.parse(_timeZoneId),
+            onDark: false,
+          ),
           FieldChecklist(
             items: _checklist,
             onChanged: (items) => setState(() => _checklist = items),
@@ -939,3 +942,106 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     };
   }
 }
+
+/// The event list as a timeline: one row per rise, transit or set, with the
+/// clock time in the plan's own zone and a connecting rail.
+class _EventsTimeline extends StatelessWidget {
+  const _EventsTimeline({
+    required this.events,
+    required this.timeZone,
+    required this.onDark,
+  });
+
+  final List<CelestialEvent> events;
+  final PlanningTimeContext timeZone;
+  final bool onDark;
+
+  @override
+  Widget build(BuildContext context) {
+    if (events.isEmpty) {
+      return Text(
+        'No rise, transit or set in the search window.',
+        style: Theme.of(context).textTheme.bodySmall,
+      );
+    }
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        for (final (index, event) in events.indexed)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                SizedBox(
+                  width: 32,
+                  child: Column(
+                    children: <Widget>[
+                      Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHigh,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _eventIcon(event.type),
+                          size: 14,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (index != events.length - 1)
+                        Expanded(
+                          child: Container(
+                            width: 1.5,
+                            color: theme.colorScheme.outlineVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppGap.md),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      top: 3,
+                      bottom: index == events.length - 1 ? 0 : AppGap.lg,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            _eventLabel(event.type),
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                        Text(
+                          DateFormat(
+                            'HH:mm',
+                          ).format(timeZone.localCivilTime(event.instantUtc)),
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+IconData _eventIcon(CelestialEventType type) => switch (type) {
+  CelestialEventType.rise => Icons.arrow_upward,
+  CelestialEventType.transit => Icons.height,
+  CelestialEventType.set => Icons.arrow_downward,
+};
+
+String _eventLabel(CelestialEventType type) => switch (type) {
+  CelestialEventType.rise => 'Rises',
+  CelestialEventType.transit => 'Transits',
+  CelestialEventType.set => 'Sets',
+};
