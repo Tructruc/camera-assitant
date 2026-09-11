@@ -94,6 +94,54 @@ void main() {
     await _disposeSubject(tester);
   });
 
+  testWidgets('failed metadata and delete writes remain recoverable', (
+    tester,
+  ) async {
+    repository = _FailingSnapshotRepository(database);
+    await repository.save(_snapshot());
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Field depth'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Edit title and notes'));
+    await tester.pumpAndSettle();
+    final titleField = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextField && widget.decoration?.labelText == 'Title',
+    );
+    await tester.enterText(titleField, 'Unsaved portrait setup');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('changes are still here'), findsOneWidget);
+    expect(find.text('Edit saved calculation'), findsOneWidget);
+    expect(
+      tester.widget<TextField>(titleField).controller!.text,
+      'Unsaved portrait setup',
+    );
+    final unchanged = await DriftSnapshotRepository(
+      database,
+    ).getById('snapshot-1');
+    expect(
+      (unchanged! as SupportedSnapshot<CalculationSnapshot>).snapshot.title,
+      'Field depth',
+    );
+    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Delete saved calculation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('could not be deleted'), findsOneWidget);
+    expect(find.text('Field depth'), findsOneWidget);
+    expect(await repository.getById('snapshot-1'), isNotNull);
+    expect(tester.takeException(), isNull);
+    await _disposeSubject(tester);
+  });
+
   testWidgets('renders saved observation plans with an actionable checklist', (
     tester,
   ) async {
@@ -315,4 +363,18 @@ Future<void> _openSection(WidgetTester tester, String title) async {
   await tester.pumpAndSettle();
   await tester.tap(tile);
   await tester.pumpAndSettle();
+}
+
+final class _FailingSnapshotRepository extends DriftSnapshotRepository {
+  _FailingSnapshotRepository(super.database);
+
+  @override
+  Future<void> updateMetadata(
+    String id, {
+    required String title,
+    String? notes,
+  }) async => throw StateError('write failed');
+
+  @override
+  Future<void> delete(String id) async => throw StateError('write failed');
 }

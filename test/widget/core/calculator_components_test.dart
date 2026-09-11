@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/core/data/database/app_database.dart'
+    hide CalculationSnapshot;
+import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
+import 'package:photography_assistant/core/domain/calculation_snapshot.dart';
+import 'package:photography_assistant/core/presentation/calculator/calculation_result_view.dart';
 import 'package:photography_assistant/core/presentation/calculator/calculator_components.dart';
 
 void main() {
@@ -132,4 +139,62 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Circle of confusion (mm)'), findsOneWidget);
   });
+
+  testWidgets('a failed result save is reported without a partial record', (
+    tester,
+  ) async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          snapshotRepositoryProvider.overrideWithValue(
+            _FailingSaveSnapshotRepository(database),
+          ),
+        ],
+        child: const MaterialApp(home: Scaffold(body: _SaveHarness())),
+      ),
+    );
+
+    await tester.tap(find.text('Save test result'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Result could not be saved. Try again.'), findsOneWidget);
+    expect(await DriftSnapshotRepository(database).listNewestFirst(), isEmpty);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+}
+
+class _SaveHarness extends ConsumerWidget {
+  const _SaveHarness();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => FilledButton(
+    onPressed: () => saveCalculationSnapshot(
+      context,
+      ref,
+      CalculationSnapshot(
+        id: 'failed-save',
+        calculatorId: 'depth_of_field',
+        formulaVersion: 1,
+        createdAt: DateTime.utc(2026),
+        title: 'Failed save',
+        canonicalInputs: const <String, Object?>{'focalLengthMm': 50.0},
+        canonicalOutputs: const <String, Object?>{'nearLimitMm': 4500.0},
+        displayContext: const <String, Object?>{},
+      ),
+    ),
+    child: const Text('Save test result'),
+  );
+}
+
+final class _FailingSaveSnapshotRepository extends DriftSnapshotRepository {
+  _FailingSaveSnapshotRepository(super.database);
+
+  @override
+  Future<void> save(CalculationSnapshot snapshot) async =>
+      throw StateError('write failed');
 }

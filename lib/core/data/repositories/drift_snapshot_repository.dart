@@ -9,7 +9,8 @@ import '../../domain/calculation_snapshot.dart';
 import '../../domain/repositories/snapshot_repository.dart';
 import '../database/app_database.dart' as db;
 
-final class DriftSnapshotRepository
+/// Extensible so presentation tests can substitute failed local writes.
+class DriftSnapshotRepository
     implements SnapshotRepository<CalculationSnapshot> {
   const DriftSnapshotRepository(this._database);
 

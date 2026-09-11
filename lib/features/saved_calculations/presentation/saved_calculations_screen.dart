@@ -512,7 +512,9 @@ class _SavedCalculationDetailScreenState
     final title = TextEditingController(text: _snapshot.title);
     final notes = TextEditingController(text: _snapshot.notes);
     final titleError = <String?>[null];
-    final save = await showDialog<bool>(
+    var saveError = '';
+    var saving = false;
+    await showDialog<void>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
@@ -531,54 +533,68 @@ class _SavedCalculationDetailScreenState
                 controller: notes,
                 decoration: const InputDecoration(labelText: 'Notes'),
               ),
+              if (saveError.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 12),
+                Text(
+                  saveError,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
             ],
           ),
           actions: <Widget>[
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: saving ? null : () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () {
-                if (title.text.trim().isEmpty) {
-                  setDialogState(() => titleError[0] = 'Enter a title.');
-                  return;
-                }
-                Navigator.pop(context, true);
-              },
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (title.text.trim().isEmpty) {
+                        setDialogState(() => titleError[0] = 'Enter a title.');
+                        return;
+                      }
+                      setDialogState(() {
+                        saving = true;
+                        saveError = '';
+                        titleError[0] = null;
+                      });
+                      final newNotes = notes.text.trim().isEmpty
+                          ? null
+                          : notes.text;
+                      try {
+                        await ref
+                            .read(snapshotRepositoryProvider)
+                            .updateMetadata(
+                              _snapshot.id,
+                              title: title.text,
+                              notes: newNotes,
+                            );
+                      } on Object {
+                        if (!context.mounted) return;
+                        setDialogState(() {
+                          saving = false;
+                          saveError =
+                              'The title and notes could not be saved. Your changes are still here; try again.';
+                        });
+                        return;
+                      }
+                      if (!mounted || !context.mounted) return;
+                      setState(
+                        () => _snapshot = _snapshot.withMetadata(
+                          title: title.text,
+                          notes: newNotes,
+                        ),
+                      );
+                      Navigator.pop(context);
+                    },
               child: const Text('Save changes'),
             ),
           ],
         ),
       ),
     );
-    if (save != true) return;
-    final newNotes = notes.text.trim().isEmpty ? null : notes.text;
-    try {
-      await ref
-          .read(snapshotRepositoryProvider)
-          .updateMetadata(_snapshot.id, title: title.text, notes: newNotes);
-      if (mounted) {
-        setState(
-          () => _snapshot = _snapshot.withMetadata(
-            title: title.text,
-            notes: newNotes,
-          ),
-        );
-      }
-    } on Object {
-      // The stored payload is untouched, so say that plainly rather than
-      // letting the failure disappear (FR-021).
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'The title and notes could not be saved. The stored result is unchanged; try again.',
-            ),
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _delete() async {
