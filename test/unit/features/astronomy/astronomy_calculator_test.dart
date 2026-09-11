@@ -164,6 +164,64 @@ void main() {
     expect(mars.$1, closeTo(horizonsMarsGeocentric.ra, 0.02));
   });
 
+  test('Jupiter events agree with the JPL Horizons RTS fixture', () {
+    // The app resolves a geometric horizon, while Horizons reports a refracted
+    // one, so the published rise and set instants are compared by the altitude
+    // the app reports there rather than by the clock. Only the transit, which
+    // refraction does not shift, is compared as a time.
+    final instant = DateTime.utc(2026, 1, 15);
+    AstronomyOutput at(DateTime when) => const AstronomyCalculator()
+        .calculate(
+          AstronomyInput(
+            observerLatitudeDegrees: 51.4779,
+            observerLongitudeDegrees: 0,
+            instantUtc: when,
+            target: CelestialTarget.jupiter,
+            focalLengthMm: 200,
+            cropFactor: 1,
+            aperture: 4,
+            pixelPitchMicrometres: 5,
+            desiredTrailDegrees: 10,
+          ),
+        )
+        .output!;
+
+    for (final marker in [
+      horizonsGreenwichJupiterEvents.set,
+      horizonsGreenwichJupiterEvents.rise,
+    ]) {
+      final parts = marker.split(':');
+      final when = DateTime.utc(
+        2026,
+        1,
+        15,
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+      );
+      // 0.25 degrees covers the marker quantisation (a one-minute search step
+      // at Jupiter's roughly 0.1 degree per minute setting rate) plus the
+      // apparent-versus-geometric position difference.
+      expect(
+        at(when).altitudeDegrees,
+        closeTo(horizonsGreenwichJupiterEvents.refractionDegrees, 0.25),
+        reason: 'apparent horizon offset at the Horizons $marker marker',
+      );
+    }
+
+    final transit = at(instant).events
+        .firstWhere((event) => event.type == CelestialEventType.transit)
+        .instantUtc;
+    final transitMinutes =
+        transit.hour * 60 + transit.minute + transit.second / 60;
+    final parts = horizonsGreenwichJupiterEvents.transit.split(':');
+    final expectedMinutes = int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    expect(
+      (transitMinutes - expectedMinutes).abs(),
+      lessThan(4),
+      reason: 'transit within the Horizons RTS marker accuracy',
+    );
+  });
+
   test('moving-planet events are solved against the live ephemeris', () {
     final input = AstronomyInput(
       observerLatitudeDegrees: 51.4779,

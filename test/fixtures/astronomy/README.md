@@ -89,6 +89,16 @@ points within/outside the exclusion radius, a full day's axis wrapping, the date
 for other celestial targets. Display rounds to one decimal place; snapshots retain full precision,
 the angle convention, model limitations, formula version, and null when unavailable.
 
+## Moving-body events
+
+`test/unit/features/astronomy/astronomy_calculator_test.dart` asserts Jupiter's Greenwich events against a
+Horizons rise/transit/set table for 2026-01-15 (one-minute search step): the app's altitude at the published
+rise and set markers matches Horizons' refraction offset within 0.25 degrees, and the transit instant
+matches within the marker's own accuracy. The comparison is deliberately framed that way because the app
+resolves a geometric horizon while Horizons reports a refracted one, so the published rise and set *times*
+differ by several minutes even though the underlying geometry agrees. Sun and Moon events are asserted
+against USNO one-day tables in `solar_lunar_fixture_test.dart`.
+
 ## Bundled fixed-target catalog
 
 The twelve fixed targets ship ICRS/J2000 positions that are attributed to SIMBAD/CDS. Their values are

@@ -84,3 +84,19 @@ const horizonsMercuryGeocentric = (ra: 268.131083, dec: -23.994889);
 /// 2026-01-01 00:00 UTC (`COMMAND=299`, same settings): RA 18 38 39.71,
 /// Dec -23 38 40.9.
 const horizonsVenusGeocentric = (ra: 279.665458, dec: -23.644694);
+
+/// NASA JPL Horizons rise/transit/set markers for Jupiter at Greenwich
+/// (51.4779 N, 0 E), 2026-01-15, airless, elevation cut-off 0, one-minute
+/// search step (`COMMAND=599`, `CENTER=coord@399`, `SITE_COORD=0,51.4779,0`,
+/// `QUANTITIES=4`, `R_T_S_ONLY=TVH`). Horizons reports the step at or after the
+/// event and documents RTS accuracy as up to twice the search step, so these are
+/// markers rather than exact instants: set 07:54 (apparent elevation -0.587),
+/// rise 15:35 (-0.572), transit 23:43. The non-zero elevations at rise and set
+/// are the refraction offset Horizons applies; the app reports a geometric
+/// horizon, which is why the times differ by a few minutes.
+const horizonsGreenwichJupiterEvents = (
+  set: '07:54',
+  rise: '15:35',
+  transit: '23:43',
+  refractionDegrees: -0.58,
+);
