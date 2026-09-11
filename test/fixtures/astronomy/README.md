@@ -6,10 +6,11 @@ ICRS/J2000 coordinates come from SIMBAD/CDS; observer azimuth/elevation semantic
 NASA JPL Horizons observer tables. Tests allow 0.25° for fixed-target positions and two minutes for events,
 which is planning-grade rather than observatory-grade accuracy.
 
-The moving-planet fixture uses the JPL Horizons geocentric astrometric ICRF table for Jupiter at
+The moving-planet fixtures use the JPL Horizons geocentric astrometric ICRF table. Jupiter at
 2026-01-01 00:00 UTC (`COMMAND=599`, `CENTER=500@399`, quantity 1): RA 112.72933°, Dec 22.03458°.
 Runtime planetary coordinates use JPL's published 1800-2050 approximate Keplerian elements and are
-accepted within a conservative 0.25° planning tolerance.
+accepted within a conservative 0.25° planning tolerance. Jupiter, Mars, and Saturn are pinned to
+Horizons values; Mercury and Venus are still model-derived and are covered only by that tolerance claim.
 
 Runtime code and the small coordinate catalog are original project code/data and do not copy SOFA or JPL
 software. External services are used only to create and audit test fixtures, never while the app runs.
@@ -26,6 +27,8 @@ software. External services are used only to create and audit test fixtures, nev
 | `horizonsSunTopocentric` | JPL Horizons observer table, Greenwich `SITE_COORD=0,51.4779,0`, 2026-03-20 12:00 UTC, `QUANTITIES=4`, `APPARENT=AIRLESS` | az 177.626176859°, alt 38.450718735° | 0.25° |
 | `horizonsMoonTopocentric` | JPL Horizons observer table, Greenwich, 2026-06-01 00:00 UTC | az 174.247568346°, alt 9.763824493° | 2.0° |
 | `simbadSiriusIcrs` | SIMBAD TAP, `* alf CMa` ICRS J2000 | RA 101.28715533°, Dec −16.71611586° | 0.01° |
+| `horizonsMarsGeocentric` | JPL Horizons geocentric astrometric ICRF Mars, 2026-01-01 00:00 UTC, `COMMAND=499`, `CENTER=500@399`, `QUANTITIES=1` | RA 283.489041°, Dec −23.751667° | 0.25° (measured 0.001°) |
+| `horizonsSaturnGeocentric` | JPL Horizons geocentric astrometric ICRF Saturn, 2026-01-01 00:00 UTC, `COMMAND=699` | RA 357.047125°, Dec −3.740667° | 0.25° (measured 0.07°) |
 | `usnoGreenwichSun` | USNO Astronomical Applications one-day table, Greenwich, 2026-03-20, `tz=0` | rise 06:03, transit 12:07, set 18:13 UTC | 2 min (transit) |
 | `usnoGreenwichMoon` | USNO one-day table, Greenwich, 2026-03-20, `tz=0` | rise 06:16, transit 13:15, set 20:35 UTC | 10 min (transit), 20 min (rise/set) |
 

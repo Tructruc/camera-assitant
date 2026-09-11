@@ -121,6 +121,23 @@ void main() {
     expect(coordinates.$2, closeTo(22.03458, 0.25));
   });
 
+  test('Mars and Saturn agree with their JPL Horizons fixtures', () {
+    // Two more planets, one inner and one outer, so the bundled Keplerian model
+    // is externally checked beyond the single Jupiter fixture. Fetched
+    // 2026-09-11 from the JPL Horizons API; see the fixture doc comments.
+    final instant = DateTime.utc(2026, 1, 1);
+    final mars = CelestialTarget.mars.equatorialAt(instant);
+    final saturn = CelestialTarget.saturn.equatorialAt(instant);
+    expect(mars.$1, closeTo(horizonsMarsGeocentric.ra, 0.25));
+    expect(mars.$2, closeTo(horizonsMarsGeocentric.dec, 0.25));
+    expect(saturn.$1, closeTo(horizonsSaturnGeocentric.ra, 0.25));
+    expect(saturn.$2, closeTo(horizonsSaturnGeocentric.dec, 0.25));
+    // Measured deviations at that instant are far tighter than the claim: Mars
+    // about 0.001 degrees and Saturn about 0.07 degrees.
+    expect(mars.$1, closeTo(horizonsMarsGeocentric.ra, 0.01));
+    expect(saturn.$1, closeTo(horizonsSaturnGeocentric.ra, 0.1));
+  });
+
   test('moving-planet events are solved against the live ephemeris', () {
     final input = AstronomyInput(
       observerLatitudeDegrees: 51.4779,

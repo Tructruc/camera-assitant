@@ -59,3 +59,13 @@ const usnoGreenwichSun = (rise: '06:03', transit: '12:07', set: '18:13');
 /// rise/set use the USNO lunar horizon convention, not a geometric zero
 /// altitude.
 const usnoGreenwichMoon = (rise: '06:16', transit: '13:15', set: '20:35');
+
+/// NASA JPL Horizons geocentric astrometric ICRF position of Mars for
+/// 2026-01-01 00:00 UTC (`COMMAND=499`, `CENTER=500@399`, `QUANTITIES=1`,
+/// `CSV_FORMAT=YES`): RA 18 53 57.37, Dec -23 45 06.0.
+const horizonsMarsGeocentric = (ra: 283.489041, dec: -23.751667);
+
+/// NASA JPL Horizons geocentric astrometric ICRF position of Saturn for
+/// 2026-01-01 00:00 UTC (`COMMAND=699`, same settings): RA 23 48 11.31,
+/// Dec -03 44 26.4.
+const horizonsSaturnGeocentric = (ra: 357.047125, dec: -3.740667);
