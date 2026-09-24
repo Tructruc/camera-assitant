@@ -17,18 +17,18 @@ jobs:
     name: Android release bundle
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.x
+          flutter-version: 3.47.x
           cache: true
       - run: flutter pub get
       - name: Build Android app bundle
         run: flutter build appbundle --release --build-number "$GITHUB_RUN_NUMBER"
       - name: Name Android artifact
         run: mv build/app/outputs/bundle/release/app-release.aab photography-assistant-android.aab
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: nightly-android
           path: photography-assistant-android.aab
@@ -39,18 +39,18 @@ jobs:
     name: Unsigned iOS release app
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.x
+          flutter-version: 3.47.x
           cache: true
       - run: flutter pub get
       - name: Build unsigned iOS app
         run: flutter build ios --release --no-codesign --build-number "$GITHUB_RUN_NUMBER"
       - name: Package unsigned iOS app
         run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app photography-assistant-ios-unsigned.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: nightly-ios-unsigned
           path: photography-assistant-ios-unsigned.zip
@@ -62,7 +62,7 @@ jobs:
     needs: [android, ios]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: nightly-*
           path: artifacts

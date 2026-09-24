@@ -18,13 +18,13 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.x
+          flutter-version: 3.47.x
           cache: true
       - name: Install Linux desktop dependencies
         run: |
@@ -45,7 +45,7 @@ jobs:
             -C build/linux/x64/release/bundle .
       - name: Upload Linux artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-release
           path: camera-assistant-linux-x64.tar.gz
@@ -55,13 +55,13 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.x
+          flutter-version: 3.47.x
           cache: true
       - run: flutter pub get
       - name: Build Windows release
@@ -79,7 +79,7 @@ jobs:
             -DestinationPath camera-assistant-windows-x64.zip
       - name: Upload Windows artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release
           path: camera-assistant-windows-x64.zip
@@ -89,13 +89,13 @@ jobs:
   macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.44.x
+          flutter-version: 3.47.x
           cache: true
       - run: flutter pub get
       - name: Build macOS release
@@ -112,7 +112,7 @@ jobs:
             camera-assistant-macos.zip
       - name: Upload macOS artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-release
           path: camera-assistant-macos.zip
@@ -126,15 +126,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: linux-release
           path: release-assets
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: windows-release
           path: release-assets
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: macos-release
           path: release-assets
