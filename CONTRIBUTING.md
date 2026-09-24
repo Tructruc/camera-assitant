@@ -2,7 +2,7 @@
 
 ## Local verification
 
-Use the Flutter version declared in `pubspec.yaml`, then run the same checks as CI:
+Use Flutter 3.47.x — the version CI pins in all four workflows — then run the same checks as CI:
 
 ```sh
 flutter pub get
@@ -11,19 +11,29 @@ flutter analyze --fatal-infos
 flutter test
 ```
 
+`pubspec.yaml` declares a `>=3.41.0` range so an older stable can still resolve dependencies, but only
+3.47.x is verified: the committed goldens are rendered by that toolchain, so a different one reports pixel
+differences that are the SDK's, not the change's. In an environment where the SDK checkout is read-only,
+run the same arguments through the local wrapper instead — `./.tooling/flutterw --no-version-check <args>`.
+
 Changes to persistence must also retain every frozen fixture under `test/fixtures/database/`. Add a
 fixture for each new schema version and verify that older equipment, preferences, calculations, and
 reference links remain readable.
 
-### Flutter SDK outside the writable tree
+### When the SDK checkout is read-only
 
-The Flutter launcher rewrites `bin/cache/engine.stamp` on every invocation, so a read-only SDK checkout
-fails with `Read-only file system` before any command runs. Point `FLUTTER_ROOT` at a small writable mirror
-of the SDK (real files for `bin/` scripts and the small cache stamps, symlinks for `.git`, `packages/`,
-`artifacts`, `dart-sdk`, and the other large cache directories) and set
-`FLUTTER_PREBUILT_ENGINE_VERSION` to the existing `bin/cache/engine.stamp` value so no git lookup or
-artifact download is attempted. `HOME` and `PUB_CACHE` must also resolve inside the writable tree. Treat
-that mirror as local tooling: keep it out of version control.
+`flutter` rewrites `bin/cache/engine.stamp` on every invocation, so pointing `FLUTTER_ROOT` at a read-only
+checkout fails with `Read-only file system` before any command runs. Keep a writable SDK copy inside the
+workspace and call it through a wrapper, which is what this repository does:
+
+```sh
+./.tooling/flutterw --no-version-check test --no-pub --concurrency=1
+```
+
+`.tooling/` holds that copy along with `HOME` and `PUB_CACHE`, and is gitignored. An older workaround —
+mirroring a read-only SDK with real files for `bin/` and symlinks for the large cache directories, then
+pinning `FLUTTER_PREBUILT_ENGINE_VERSION` to the existing stamp so no artifact download is attempted — is
+kept only as history: a self-contained SDK copy needs none of it.
 
 ## Branch and pull-request workflow
 
@@ -37,24 +47,28 @@ a topic branch and pull request for review:
 4. Review changes to formulas, schema versions, signing, permissions, and release workflows explicitly.
 5. Merge without rewriting published release commits unless repository maintainers agree otherwise.
 
-For enforced protection, configure `v2` to require a pull request and the `quality`, `android`, `ios`,
-`android-integration`, and `ios-integration` status checks, require the branch to be up to date, dismiss
-stale approvals, and prevent force pushes and deletions. Do not enable those rules until the repository
-owner decides whether direct pushes should remain part of the current development workflow.
+For enforced protection, configure `v2` to require a pull request and the `quality`, `android`, and `ios`
+status checks, require the branch to be up to date, dismiss stale approvals, and prevent force pushes and
+deletions. Do not require `android-integration` or `ios-integration`: both jobs are gated to the nightly
+schedule and `workflow_dispatch` (`mobile-builds.yml`) and marked `continue-on-error`, so they are signal
+rather than gates and a required-check rule on them would leave every pull request waiting for a check that
+never reports. Do not enable these rules until the repository owner decides whether direct pushes should
+remain part of the current development workflow.
 
 ## CI and release artifacts
 
 `CI` runs formatting, strict analysis, and the complete device-independent test suite on pushes to `v2`
 or `main` and on every pull request. `Mobile builds` validates Android and iOS on every push and pull
-request. Android and iOS simulators additionally run the complete offline equipment, calculator,
-restart, snapshot-mutation, and recovery journeys. Pull requests use unsigned/debug validation
-artifacts and cannot publish a release.
+request. The emulator journeys are not part of that gate: they boot the app eight times per platform and
+run on the nightly schedule and on demand (`workflow_dispatch`) instead of holding every push for about
+half an hour. Pull requests use unsigned/debug validation artifacts and cannot publish a release.
 
 Pushes to `v2` publish the rolling `continuous-v2` prerelease after both platforms build successfully.
 The same build runs nightly at 02:17 UTC, explicitly checking out `v2`, and refreshes that prerelease.
 Mobile runs are queued rather than cancelled when another commit arrives, so every pushed commit retains
-its platform evidence. Only the publish job receives contents-write permission; build and integration
-jobs remain read-only.
+its platform evidence. In `Desktop builds` and `Mobile builds` only the publish job receives
+contents-write permission and the build jobs stay read-only; `Nightly release` is contents-write
+workflow-wide, because it creates its tag and release from the build jobs themselves.
 The Android APK uses the persistent repository signing key so it can update an earlier installed build.
 The Android App Bundle is retained as a workflow artifact. The iOS ZIP is an unsigned simulator build;
 physical iPhone installation requires a separately configured Apple signing identity and provisioning

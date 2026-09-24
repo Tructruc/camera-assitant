@@ -14,6 +14,9 @@ dart format --output=none --set-exit-if-changed .
 flutter analyze
 ```
 
+If the Flutter SDK checkout is not writable (this sandbox is not), run the same arguments through
+`./.tooling/flutterw --no-version-check <args>` from the repository root.
+
 Expected: dependencies resolve from the lockfile, formatting reports no changes, and analysis has no
 errors or warnings permitted by project policy.
 
@@ -38,7 +41,7 @@ software rendering on this workstation. A fresh Pixel 2 AVD using host graphics
 and Vulkan disabled boots successfully. Create the isolated test AVD once:
 
 ```sh
-export ANDROID_AVD_HOME=/tmp/camera-assistant-avd
+export ANDROID_AVD_HOME="$PWD/.tooling/avd"
 mkdir -p "$ANDROID_AVD_HOME"
 "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
   --name camera_test --package 'system-images;android-36.1;google_apis_playstore;x86_64' \
@@ -48,7 +51,10 @@ mkdir -p "$ANDROID_AVD_HOME"
 ```
 
 Set `ANDROID_HOME` to the Android SDK directory if it is not already configured.
-The AVD is temporary and may need recreating after a host restart. In another
+Keep the AVD inside the workspace (`.tooling/` is gitignored): `/tmp` is a fresh
+tmpfs per command in this sandbox, so an AVD created there does not survive to
+the next command. The AVD is otherwise temporary and may need recreating after a
+host restart. In another
 terminal, use `adb devices` to obtain its ID and wait until
 `adb -s <device-id> shell getprop sys.boot_completed` returns `1`, then run the
 integration-test command above. Flutter needs writable SDK/build caches, and the
