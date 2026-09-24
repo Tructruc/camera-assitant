@@ -11,13 +11,46 @@ import '../domain/equipment.dart';
 import 'equipment_controller.dart';
 import 'equipment_editor_screen.dart';
 
-class EquipmentListScreen extends ConsumerWidget {
+class EquipmentListScreen extends ConsumerStatefulWidget {
   const EquipmentListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<EquipmentListScreen> createState() =>
+      _EquipmentListScreenState();
+}
+
+class _EquipmentListScreenState extends ConsumerState<EquipmentListScreen> {
+  /// What a fixed inset used to reserve, kept as the value for the first frame.
+  static const double _fallbackReservedBottom = 96;
+
+  final GlobalKey _addButtonKey = GlobalKey();
+
+  /// Space the list must leave clear at its end so the floating add button
+  /// never sits on the last row.
+  ///
+  /// The button is overlaid on the list rather than laid out beside it, and its
+  /// height follows the system text scale: at 200% text on a gesture-bar phone
+  /// it is 80px tall inside 16px of padding above a 34px safe area, which the
+  /// fixed 96px this used to reserve does not cover - the last row's subtitle
+  /// ended up 18px behind the button. It is measured per layout instead of
+  /// guessed, and written only when the value really moves, so it settles after
+  /// one frame.
+  double _reservedBottom = _fallbackReservedBottom;
+
+  void _measureAddButton() {
+    final button = _addButtonKey.currentContext?.findRenderObject();
+    if (button is! RenderBox || !button.hasSize) return;
+    final reserved =
+        button.size.height + MediaQuery.paddingOf(context).bottom + 32;
+    if ((reserved - _reservedBottom).abs() < 0.5) return;
+    setState(() => _reservedBottom = reserved);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(equipmentControllerProvider);
     final controller = ref.read(equipmentControllerProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _measureAddButton());
     return Material(
       color: Colors.transparent,
       child: Stack(
@@ -66,6 +99,7 @@ class EquipmentListScreen extends ConsumerWidget {
                   button: true,
                   label: 'Add equipment',
                   child: FilledButton.icon(
+                    key: _addButtonKey,
                     onPressed: () => _chooseKind(context),
                     icon: const Icon(Icons.add),
                     label: const Text('Add equipment'),
@@ -111,7 +145,9 @@ class EquipmentListScreen extends ConsumerWidget {
             'Add a camera, lens, filter, tube, or converter for faster calculations.',
       ),
       EquipmentLoadStatus.ready => ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+        // The floating add button covers the tail of this list, so its measured
+        // height plus the safe area is reserved here (see _reservedBottom).
+        padding: EdgeInsets.fromLTRB(16, 8, 16, _reservedBottom),
         itemCount: state.items.length,
         itemBuilder: (context, index) => _EquipmentCard(
           entry: state.items[index],
