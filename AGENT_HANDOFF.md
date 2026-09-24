@@ -46,7 +46,7 @@ round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix
 `git log --oneline -1` and `git status --short` rather than trusting this line). The last full
 verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **346 passed** on Flutter 3.47.5
+- `flutter test --no-pub --concurrency=1` → **369 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
@@ -141,6 +141,11 @@ participants are available. In a sandbox-only session the remaining useful harde
 Then keep the two habits that have caught every real defect here: render the screens and look at them
 (`.tooling/ui_capture`), and measure any suspected spacing or overlap defect instead of judging it from a
 downscaled PNG.
+
+**Known trap for anything laid over a scrolling list:** a fixed bottom inset cannot stay correct once the
+system text scale changes, because the overlay's height is scaled too. `equipment_list_screen` measures its
+floating add button (`_reservedBottom`) for exactly that reason - at 200% text on a gesture-bar phone the
+button is 80px tall above a 34px safe area, and the old constant 96px left the last row 34px behind it.
 
 ## What is done
 
