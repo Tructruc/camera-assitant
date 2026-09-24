@@ -2,12 +2,12 @@
 
 ## Flutter and Dart baseline
 
-**Decision**: Build on Flutter 3.44.x stable and Dart 3.10+, pinning the exact SDK in project and CI
-configuration.
+**Decision**: Build on Flutter 3.47.x stable and its bundled Dart 3.13, pinning the exact SDK in project
+and CI configuration.
 
 **Rationale**: The first release needs Android and iOS from one codebase, while later desktop/web support
 must remain viable. Flutter officially supports the needed platform model and its current documentation is
-based on 3.44.7. Dart provides deterministic, testable calculation code independent of widgets.
+based on 3.47.5. Dart provides deterministic, testable calculation code independent of widgets.
 
 **Alternatives considered**: Kotlin Multiplatform with separate native UIs increases first-release UI and
 test work; React Native adds a second runtime boundary for numerical domain code; two native applications

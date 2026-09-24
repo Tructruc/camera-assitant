@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Flutter 3.44.x stable with its bundled Dart SDK
+- Flutter 3.47.x stable with its bundled Dart SDK
 - Android SDK and an Android emulator/device
 - macOS with Xcode and an iOS simulator/device for iOS validation
 

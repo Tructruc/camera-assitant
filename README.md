@@ -21,7 +21,9 @@ limitations; saved results and plans are immutable.
 
 ## Development
 
-The supported baseline is Flutter 3.44.x stable with Dart 3.10 or newer.
+The supported baseline is Flutter 3.47.x stable with its bundled Dart 3.13. CI verifies that baseline;
+`pubspec.yaml` keeps a lower floor (`>=3.41.0`) so an older stable can still resolve, but only 3.47.x is
+tested.
 
 ```sh
 flutter pub get

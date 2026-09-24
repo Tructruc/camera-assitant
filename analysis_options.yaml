@@ -10,6 +10,12 @@ analyzer:
     missing_return: error
   exclude:
     - '**/*.g.dart'
+    - build/**
+    - android/**
+    - ios/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   rules:
