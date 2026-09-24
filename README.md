@@ -32,6 +32,9 @@ flutter analyze
 flutter test
 ```
 
+If the Flutter SDK checkout is read-only, run the same arguments through the wrapper instead:
+`./.tooling/flutterw --no-version-check <args>` (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+
 See [the feature quickstart](specs/001-photography-assistant/quickstart.md) for full validation.
 
 ## Privacy
