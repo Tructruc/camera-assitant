@@ -180,6 +180,15 @@ downscaled PNG.
   `No tests were found.` for a file that is perfectly healthy (seen on `preferences_flow_test.dart` while a
   second `flutter test` was running in the same checkout). Re-run the file alone before believing a
   "no tests" result.
+- **Dispose the tree in widget tests that watch a drift stream.** `StreamQueryStore.markAsClosed` schedules a
+  zero-duration timer when the last subscription is cancelled, so a test that ends with the screen mounted
+  reports "Pending timers" and then *hangs* instead of failing. End such a test with
+  `await tester.pumpWidget(const SizedBox.shrink()); await tester.pump(const Duration(milliseconds: 1));`
+  (the pattern every existing screen test uses).
+- **`find.byType(Scrollable).first` may be a filter strip, not the list.** The equipment screen puts a
+  horizontal kind filter above a vertical list; scrolling `.first` drags the chips and never reveals the
+  row. Target the axis explicitly, e.g.
+  `find.byWidgetPredicate((w) => w is Scrollable && w.axisDirection == AxisDirection.down)`.
 - **Integration journeys must pin their viewport.** `flutter test integration_test/<file>` creates a host
   window whose logical size varies between runs (observed ~481x419 up to ~1000x1600). At the small size,
   controls below the fold are never built and taps fail for reasons unrelated to the product. Use
