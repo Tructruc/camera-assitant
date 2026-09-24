@@ -18,7 +18,7 @@ jobs:
   android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
@@ -75,7 +75,7 @@ jobs:
           fi
       - name: Keep the built APK when verification fails
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-apk-unverified
           path: camera-assistant-v2.apk
@@ -83,7 +83,7 @@ jobs:
           retention-days: 7
       - name: Upload installable Android APK artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-apk
           path: camera-assistant-v2.apk
@@ -91,7 +91,7 @@ jobs:
           retention-days: 14
       - name: Upload Android App Bundle artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-app-bundle
           path: build/app/outputs/bundle/release/app-release.aab
@@ -100,7 +100,7 @@ jobs:
   ios:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
@@ -115,7 +115,7 @@ jobs:
         run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app camera-assistant-v2-ios-simulator.zip
       - name: Upload iOS simulator artifact
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-simulator-application
           path: camera-assistant-v2-ios-simulator.zip
@@ -134,7 +134,7 @@ jobs:
     timeout-minutes: 45
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
@@ -173,7 +173,7 @@ jobs:
     timeout-minutes: 20
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'schedule' && 'v2' || github.ref }}
       - uses: subosito/flutter-action@v2
@@ -205,11 +205,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: android-release-apk
           path: release-assets
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: ios-simulator-application
           path: release-assets
