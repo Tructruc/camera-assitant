@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide SavedLocation;
 import 'package:photography_assistant/features/planning/data/device_planning_service.dart';
@@ -41,7 +42,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -93,7 +97,10 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -134,7 +141,10 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -174,7 +184,10 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -203,7 +216,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -252,7 +268,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -339,7 +358,10 @@ void main() {
             _FailingListSavedLocationRepository(database),
           ),
         ],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -383,7 +405,10 @@ void main() {
             _FailingSaveSavedLocationRepository(database),
           ),
         ],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -433,7 +458,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [appDatabaseProvider.overrideWithValue(database)],
-        child: const MaterialApp(home: Scaffold(body: SavedLocationsScreen())),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(body: SavedLocationsScreen()),
+        ),
       ),
     );
     await tester.pumpAndSettle();

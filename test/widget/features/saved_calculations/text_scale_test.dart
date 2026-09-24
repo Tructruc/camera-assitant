@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CalculationSnapshot;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
@@ -28,6 +29,7 @@ void main() {
       snapshotRepositoryProvider.overrideWithValue(repository),
     ],
     child: MaterialApp(
+      theme: AppTheme.light,
       home: MediaQuery(
         data: const MediaQueryData(textScaler: TextScaler.linear(2)),
         child: Scaffold(body: screen),
@@ -98,6 +100,79 @@ void main() {
     displayContext: const <String, Object?>{
       'timeZone': 'Europe/London',
       'northReference': 'trueNorth',
+    },
+  );
+
+  /// The editor puts no length limit on the title, so this is a title a
+  /// photographer can really have: whatever they type, the row has to hold it.
+  CalculationSnapshot longTitledPlan() => CalculationSnapshot(
+    id: 'plan-3',
+    calculatorId: 'astronomy',
+    formulaVersion: 1,
+    createdAt: DateTime.utc(2026, 8, 23),
+    title:
+        'Jupiter rise over the eastern pier with the 200 mm lens and the x2 '
+        'converter, second attempt after the dew shut the session down',
+    canonicalInputs: const <String, Object?>{
+      'latitudeDegrees': 48.8,
+      'longitudeDegrees': 2.3,
+      'instantUtc': '2026-08-21T20:00:00.000Z',
+    },
+    canonicalOutputs: const <String, Object?>{
+      'altitudeDegrees': 30.0,
+      'aboveHorizon': true,
+    },
+    displayContext: const <String, Object?>{'timeZone': 'UTC+02:00'},
+  );
+
+  testWidgets(
+    'an untruncated title stays readable in the list at 200 percent',
+    (tester) async {
+      phone(tester);
+      await repository.save(longTitledPlan());
+
+      await tester.pumpWidget(scaled(const SavedCalculationsScreen()));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      final row = find.textContaining('Jupiter rise over the eastern pier');
+      await tester.scrollUntilVisible(
+        row,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(row, findsOneWidget, reason: 'the long-titled row is unreachable');
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'an untruncated title stays readable once opened at 200 percent',
+    (tester) async {
+      phone(tester);
+
+      await tester.pumpWidget(
+        scaled(SavedCalculationDetailScreen(snapshot: longTitledPlan())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.textContaining('Jupiter rise over the eastern pier'),
+        findsWidgets,
+      );
+      for (var step = 0; step < 8; step++) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
     },
   );
 
