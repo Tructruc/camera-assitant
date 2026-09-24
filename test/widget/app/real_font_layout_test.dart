@@ -5,10 +5,20 @@ import 'package:photography_assistant/app/providers.dart';
 import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CameraBody, SavedLocation;
+import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
 import 'package:photography_assistant/features/astronomy/presentation/astronomy_screen.dart';
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/presentation/equipment_list_screen.dart';
+import 'package:photography_assistant/features/exposure_comparison/presentation/exposure_comparison_screen.dart';
+import 'package:photography_assistant/features/flash_exposure/presentation/flash_exposure_screen.dart';
+import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
+import 'package:photography_assistant/features/macro/presentation/macro_screen.dart';
+import 'package:photography_assistant/features/optics/presentation/optics_screens.dart';
+import 'package:photography_assistant/features/panorama/presentation/panorama_screen.dart';
+import 'package:photography_assistant/features/planning/presentation/saved_locations_screen.dart';
+import 'package:photography_assistant/features/saved_calculations/presentation/saved_calculations_screen.dart';
 import 'package:photography_assistant/features/settings/presentation/settings_screen.dart';
+import 'package:photography_assistant/features/timelapse/presentation/timelapse_screen.dart';
 
 import '../../support/real_font.dart';
 
@@ -47,14 +57,24 @@ void main() {
     );
   });
 
-  Widget app(Widget screen) => ProviderScope(
+  Widget app(
+    Widget screen, {
+    bool bold = false,
+    double scale = 2,
+  }) => ProviderScope(
     overrides: [appDatabaseProvider.overrideWithValue(database)],
     child: MaterialApp(
       theme: AppTheme.light.copyWith(
         textTheme: AppTheme.light.textTheme.apply(fontFamily: 'Roboto'),
       ),
       home: MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        data: MediaQueryData(
+          textScaler: TextScaler.linear(scale),
+          // Android's "bold text" accessibility setting. With real Roboto this
+          // asks for the bold face and widens copy by about two percent, which
+          // the stand-in font could never show - it has one weight.
+          boldText: bold,
+        ),
         child: Scaffold(body: screen),
       ),
     ),
@@ -87,80 +107,115 @@ void main() {
     );
   });
 
+  // Every screen the shell can reach, at the largest text scale FR-019 names,
+  // on the narrowest phone the app supports and with Roboto's metrics. The
+  // stand-in font is wider, so these cases mostly re-confirm the gates that
+  // already run - except where a long unbreakable token (,`1/8000`, `ISO
+  // 102400`, a lens name) breaks lines differently in a real font.
   const cases = <(String, Widget, String, Key?)>[
+    ('depth of field', DepthOfFieldScreen(), 'Calculate', Key('dof-focal')),
     (
-      'depth of field result',
-      DepthOfFieldScreen(),
-      'Calculate',
-      Key('dof-focal'),
+      'exposure comparison',
+      ExposureComparisonScreen(),
+      'Compare exposures',
+      null,
     ),
-    ('night-sky plan', AstronomyScreen(), 'Plan night sky', null),
+    ('long exposure / ND', LongExposureScreen(), 'Calculate exposure', null),
+    ('field of view', FieldOfViewScreen(), 'Calculate', null),
+    ('diffraction guidance', DiffractionScreen(), 'Calculate', null),
+    ('focus stack planner', FocusStackScreen(), 'Calculate', null),
+    ('flash exposure', FlashExposureScreen(), 'Calculate flash exposure', null),
+    ('timelapse planner', TimelapseScreen(), 'Plan timelapse', null),
+    ('macro planner', MacroScreen(), 'Calculate macro setup', null),
+    ('panorama planner', PanoramaScreen(), 'Plan panorama', null),
+    ('night-sky planner', AstronomyScreen(), 'Plan night sky', null),
+    ('Sun & Moon alignment', AlignmentScreen(), 'Search alignments', null),
+    ('saved locations', SavedLocationsScreen(), 'Add location', null),
+    ('saved results', SavedCalculationsScreen(), '', null),
     ('settings', SettingsScreen(), '', null),
     ('equipment list', EquipmentListScreen(), '', null),
   ];
 
   // The screen with a horizontal kind filter would otherwise be scrolled along
-  // its chips, which proves nothing about the rows.
+  // its chips, which proves nothing about the rows. A screen with an empty
+  // state has no scrollable at all, and `.first` on none of them throws rather
+  // than matching nothing, so the empty case returns the plain finder.
   Finder listScrollable() {
     final vertical = find.byWidgetPredicate(
       (widget) =>
           widget is Scrollable && widget.axisDirection == AxisDirection.down,
     );
-    return vertical.evaluate().isEmpty
-        ? find.byType(Scrollable).first
-        : vertical.first;
+    if (vertical.evaluate().isNotEmpty) return vertical.first;
+    final any = find.byType(Scrollable);
+    return any.evaluate().isEmpty ? any : any.first;
   }
 
-  for (final (name, screen, action, prefillKey) in cases) {
-    testWidgets('$name fits at 200 percent text with real font metrics', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  // The app rotates freely - nothing calls `setPreferredOrientations` - so a
+  // phone in landscape is a supported frame. 200% text is a portrait claim
+  // (FR-019), and 200% text in 320 logical pixels of height is not a claim
+  // anyone made, so landscape runs at the normal scale.
+  const frames = <(String, Size, double, bool)>[
+    ('a 320x568 phone at 200% text', Size(320, 568), 2, false),
+    ('a 320x568 phone at 200% text and bold', Size(320, 568), 2, true),
+    ('a 568x320 phone in landscape', Size(568, 320), 1, false),
+  ];
 
-      await tester.pumpWidget(app(screen));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: '$name overflowed');
+  for (final (frame, size, scale, bold) in frames) {
+    for (final (name, screen, action, prefillKey) in cases) {
+      testWidgets('$name fits on $frame with real font metrics', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      if (prefillKey != null) {
-        await tester.enterText(find.byKey(prefillKey), '50');
+        await tester.pumpWidget(app(screen, bold: bold, scale: scale));
         await tester.pumpAndSettle();
-      }
-      if (action.isNotEmpty) {
-        final primary = find.text(action);
-        await tester.scrollUntilVisible(
-          primary,
-          300,
-          scrollable: listScrollable(),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(primary);
-        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '$name overflowed');
+
+        if (prefillKey != null) {
+          await tester.enterText(find.byKey(prefillKey), '50');
+          await tester.pumpAndSettle();
+        }
+        if (action.isNotEmpty) {
+          final primary = find.text(action);
+          await tester.scrollUntilVisible(
+            primary,
+            300,
+            scrollable: listScrollable(),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(primary);
+          await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '$name overflowed once it produced a result',
+          );
+        }
+
+        // Walk the whole surface: a row that only overflows below the fold would
+        // otherwise never be laid out. A screen with an empty state has nothing
+        // to scroll, which is not a failure.
+        final scrollable = listScrollable();
+        if (scrollable.evaluate().isNotEmpty) {
+          for (var step = 0; step < 10; step++) {
+            await tester.drag(scrollable, const Offset(0, -200));
+            await tester.pumpAndSettle();
+          }
+        }
         expect(
           tester.takeException(),
           isNull,
-          reason: '$name overflowed once it produced a result',
+          reason: '$name overflowed while scrolling with real font metrics',
         );
-      }
 
-      // Walk the whole surface: a row that only overflows below the fold would
-      // otherwise never be laid out.
-      for (var step = 0; step < 10; step++) {
-        await tester.drag(listScrollable(), const Offset(0, -200));
-        await tester.pumpAndSettle();
-      }
-      expect(
-        tester.takeException(),
-        isNull,
-        reason: '$name overflowed while scrolling with real font metrics',
-      );
-
-      // A drift-backed screen left mounted keeps a zero-duration query-stream
-      // timer pending, which hangs the test instead of failing it.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(milliseconds: 1));
-    });
+        // A drift-backed screen left mounted keeps a zero-duration query-stream
+        // timer pending, which hangs the test instead of failing it.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 1));
+      });
+    }
   }
 }
