@@ -176,6 +176,10 @@ downscaled PNG.
 
 ## Gotchas worth knowing before changing tests
 
+- **Never run two Flutter test commands at once.** They share `build/`, and the loser of the race can report
+  `No tests were found.` for a file that is perfectly healthy (seen on `preferences_flow_test.dart` while a
+  second `flutter test` was running in the same checkout). Re-run the file alone before believing a
+  "no tests" result.
 - **Integration journeys must pin their viewport.** `flutter test integration_test/<file>` creates a host
   window whose logical size varies between runs (observed ~481x419 up to ~1000x1600). At the small size,
   controls below the fold are never built and taps fail for reasons unrelated to the product. Use
