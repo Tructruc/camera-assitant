@@ -5869,7 +5869,16 @@ class $$CameraBodiesTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$CameraBodiesTable, CameraBody>(table),
+                  BaseReferences<_$AppDatabase, $CameraBodiesTable, CameraBody>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -6262,7 +6271,16 @@ class $$LensesTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$LensesTable, Lense>(table),
+                  BaseReferences<_$AppDatabase, $LensesTable, Lense>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -6603,7 +6621,16 @@ class $$NdFiltersTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$NdFiltersTable, NdFilter>(table),
+                  BaseReferences<_$AppDatabase, $NdFiltersTable, NdFilter>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -6931,7 +6958,18 @@ class $$OpticalAccessoriesTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$OpticalAccessoriesTable, OpticalAccessory>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $OpticalAccessoriesTable,
+                    OpticalAccessory
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -7409,7 +7447,9 @@ class $$CalculationSnapshotsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$CalculationSnapshotsTable, CalculationSnapshot>(
+                    table,
+                  ),
                   $$CalculationSnapshotsTableReferences(db, table, e),
                 ),
               )
@@ -7732,7 +7772,10 @@ class $$SnapshotEquipmentReferencesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<
+                    $SnapshotEquipmentReferencesTable,
+                    SnapshotEquipmentReference
+                  >(table),
                   $$SnapshotEquipmentReferencesTableReferences(db, table, e),
                 ),
               )
@@ -8074,7 +8117,16 @@ class $$UserPreferencesTableTableManager
                     defaultAlignmentToleranceDegrees,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$UserPreferencesTable, UserPreference>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $UserPreferencesTable,
+                    UserPreference
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -8402,7 +8454,16 @@ class $$SavedLocationsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$SavedLocationsTable, SavedLocation>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $SavedLocationsTable,
+                    SavedLocation
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
