@@ -34,14 +34,15 @@ T059, T061, and T062 are therefore blocked here; everything else can be verified
 
 ## Current state
 
-The tree is clean and `origin/v2` contains the completed post-redesign convergence fixes through
-`d6fa5e7` (check `git log --oneline -1` and `git status --short` rather than trusting this line). The last
-full verification:
+The tree is clean and `origin/v2` carries the post-redesign convergence fixes plus the release-hardening
+round through `e2f6acd` (check `git log --oneline -1` and `git status --short` rather than trusting this
+line). The last full verification:
 
-- `flutter test --no-pub --concurrency=1` → **337 passed**
+- `flutter test --no-pub --concurrency=1` → **339 passed**
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
+- `flutter build linux --release` → built after the `timezone` 0.11.1 bump (release-compilation gate)
 
 ## Result-first UI redesign (complete)
 
@@ -80,7 +81,14 @@ Material icon fonts loaded:
 ```sh
 ./.tooling/flutterw --no-version-check test --no-pub --update-goldens .tooling/ui_capture/capture_test.dart
 # PNGs land in .tooling/ui_capture/ui/ and can be opened with an image reader
+./.tooling/flutterw --no-version-check test --no-pub --update-goldens \
+  .tooling/ui_capture/scale_capture_test.dart
+# the same screens at 200% text scale in a 390x2600 viewport, into ui_capture/scale/
 ```
+
+`label_gap_probe_test.dart` measures widget rectangles instead of eyeballing PNGs — use it before
+reporting a spacing or overlap defect, because an 8 px clearance at 1x still looks like a collision in a
+downscaled screenshot.
 
 ### UI notes worth keeping
 
@@ -90,12 +98,35 @@ Material icon fonts loaded:
   the remaining tests report "did not complete". Re-run the file (or the single test by name) before
   believing a failure.
 
+## CI toolchain, actions, and goldens
+
+The workflow action majors are current (`actions/checkout@v7`, `actions/upload-artifact@v7`,
+`actions/download-artifact@v8`; see the PR that refreshed them). The Flutter pin is deliberately
+**3.44.x**, not the newest stable: a 3.47.x run on CI passed 335 of 337 tests and failed only the two
+committed goldens, by 0.02% and 0.01% of pixels — the toolchain's own font/antialiasing rasterization.
+Moving the pin therefore requires regenerating `test/golden/goldens/*.png` with that exact SDK, and the
+sandbox mirror is 3.41.6, so it cannot be done here. Do not bump `flutter-version` without carrying that
+regeneration in the same change.
+
 ## Next action when work resumes
 
-All repository-verifiable requirements and the queued convergence audit are complete. Continue with the
-open device and usability work below when the required hardware and participants are available. In a
-sandbox-only session, useful release hardening includes keeping dependencies and CI configuration current,
-running the Linux release-compilation gate after production changes, and fixing only concrete findings.
+All repository-verifiable requirements and the queued convergence audit are complete, and the
+release-hardening round (dependency refresh, current CI action majors, the planning-card duplication fix)
+is in `v2`. Continue with the open device and usability work below when the required hardware and
+participants are available. In a sandbox-only session the remaining useful hardening is:
+
+1. A Flutter-pin move, which must carry a golden regeneration with the same SDK (see above).
+2. The nightly emulator jobs run the journeys but are `continue-on-error`, and no push gates on them. A
+   host-engine journey job (`xvfb-run -a flutter test integration_test/<file>`) would catch journey
+   regressions per push, but the repository deliberately traded that gate away for push latency, so add it
+   only if the owner asks.
+3. The packaging names still differ between workflows: `mobile-builds` publishes `camera-assistant-*`
+   assets for the `continuous-v2` prerelease while `nightly-release` uses `photography-assistant-*`
+   (the product name the app chrome uses). Cosmetic, but it is a rename of published assets.
+
+Then keep the two habits that have caught every real defect here: render the screens and look at them
+(`.tooling/ui_capture`), and measure any suspected spacing or overlap defect instead of judging it from a
+downscaled PNG.
 
 ## What is done
 
@@ -117,6 +148,9 @@ running the Linux release-compilation gate after production changes, and fixing 
   snapshot writes keep drafts recoverable; failed settings and favorite writes are reported; integration
   taps target complete controls; concurrent preference changes are serialized without lost updates; and
   live AR releases and recreates its camera across app lifecycle interruptions.
+- **Release hardening (2026-09-24)**: `timezone` 0.11.1 with the DST fixtures re-verified, the workflow
+  action majors moved to Node 24 (`checkout@v7`, `upload-artifact@v7`, `download-artifact@v8`), and the
+  night-sky planning card no longer prints the same instant on two lines.
 
 ## Open work
 

@@ -555,3 +555,31 @@ user stories, and the edge-case list. Automated coverage is complete for the rep
 T058, T059, T061, and T062 remain device- or participant-bound. Verification at `d6fa5e7`: 337 local
 tests, clean analyzer and formatter, and all eight host integration journeys green when run in isolated
 processes.
+
+## Phase 23: Release hardening
+
+Dependency, CI and presentation maintenance on top of the completed feature set; no requirement changed.
+
+- `timezone` 0.10.1 → 0.11.1. The 0.11 line makes `Location.offset` a `Duration` and moves the library's
+  default location to `Etc/UTC`. The planner never relies on that default — it resolves `UTC`, fixed UTC
+  offsets and named IANA zones explicitly — so the bump needed re-verification rather than a code change:
+  `planning_time_context_test.dart` (both DST transitions, leap day, antimeridian, inclusive local-date
+  ranges, unsupported identifiers) stays green, and the Linux release build still compiles.
+- Workflow action majors refreshed to the Node 24 lines (`actions/checkout@v7`,
+  `actions/upload-artifact@v7`, `actions/download-artifact@v8`); the input surface these workflows use is
+  unchanged, and the merge exercised the publish jobs that only run on `v2` — both rolling prereleases
+  were rebuilt afterwards.
+- A Flutter 3.47.x trial on CI passed 335 of 337 tests and failed only the two committed goldens (0.02%
+  and 0.01% pixel differences, i.e. toolchain font and antialiasing rasterization). The pin therefore
+  stays at 3.44.x, and a future move must regenerate the goldens with the new SDK in the same change.
+- The night-sky planning card printed its instant twice: once on the value line and again, verbatim, in
+  front of the time-zone confidence note. That collapse is the default state, because `_timeZoneId`
+  starts at `UTC` and a saved location with a zero or unresolvable offset renders `UTC` as well. The
+  canonical instant is now printed only when the zone makes it different information, the confidence note
+  is kept in every case (FR-013), and the result's input summary names a requested identifier only when it
+  could not be resolved offline.
+
+Verification: 339 local tests (three added: the duplication case, which fails against the previous card,
+the night-sky plan's twelve FR-013 context rows, which nothing asserted before, and the alignment
+planner's zone and confidence), clean analyzer and formatter, all eight host integration journeys green,
+and a Linux release build.
