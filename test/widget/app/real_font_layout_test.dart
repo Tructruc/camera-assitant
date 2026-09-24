@@ -57,14 +57,20 @@ void main() {
     );
   });
 
-  Widget app(Widget screen) => ProviderScope(
+  Widget app(Widget screen, {bool bold = false}) => ProviderScope(
     overrides: [appDatabaseProvider.overrideWithValue(database)],
     child: MaterialApp(
       theme: AppTheme.light.copyWith(
         textTheme: AppTheme.light.textTheme.apply(fontFamily: 'Roboto'),
       ),
       home: MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        data: MediaQueryData(
+          textScaler: const TextScaler.linear(2),
+          // Android's "bold text" accessibility setting. With real Roboto this
+          // asks for the bold face and widens copy by about two percent, which
+          // the stand-in font could never show - it has one weight.
+          boldText: bold,
+        ),
         child: Scaffold(body: screen),
       ),
     ),
@@ -140,60 +146,61 @@ void main() {
     return any.evaluate().isEmpty ? any : any.first;
   }
 
-  for (final (name, screen, action, prefillKey) in cases) {
-    testWidgets('$name fits at 200 percent text with real font metrics', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  for (final bold in <bool>[false, true]) {
+    for (final (name, screen, action, prefillKey) in cases) {
+      testWidgets('$name fits at 200 percent text with real font metrics'
+          '${bold ? ' and bold text' : ''}', (tester) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(app(screen));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull, reason: '$name overflowed');
+        await tester.pumpWidget(app(screen, bold: bold));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '$name overflowed');
 
-      if (prefillKey != null) {
-        await tester.enterText(find.byKey(prefillKey), '50');
-        await tester.pumpAndSettle();
-      }
-      if (action.isNotEmpty) {
-        final primary = find.text(action);
-        await tester.scrollUntilVisible(
-          primary,
-          300,
-          scrollable: listScrollable(),
-        );
-        await tester.pumpAndSettle();
-        await tester.tap(primary);
-        await tester.pumpAndSettle();
+        if (prefillKey != null) {
+          await tester.enterText(find.byKey(prefillKey), '50');
+          await tester.pumpAndSettle();
+        }
+        if (action.isNotEmpty) {
+          final primary = find.text(action);
+          await tester.scrollUntilVisible(
+            primary,
+            300,
+            scrollable: listScrollable(),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(primary);
+          await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '$name overflowed once it produced a result',
+          );
+        }
+
+        // Walk the whole surface: a row that only overflows below the fold would
+        // otherwise never be laid out. A screen with an empty state has nothing
+        // to scroll, which is not a failure.
+        final scrollable = listScrollable();
+        if (scrollable.evaluate().isNotEmpty) {
+          for (var step = 0; step < 10; step++) {
+            await tester.drag(scrollable, const Offset(0, -200));
+            await tester.pumpAndSettle();
+          }
+        }
         expect(
           tester.takeException(),
           isNull,
-          reason: '$name overflowed once it produced a result',
+          reason: '$name overflowed while scrolling with real font metrics',
         );
-      }
 
-      // Walk the whole surface: a row that only overflows below the fold would
-      // otherwise never be laid out. A screen with an empty state has nothing
-      // to scroll, which is not a failure.
-      final scrollable = listScrollable();
-      if (scrollable.evaluate().isNotEmpty) {
-        for (var step = 0; step < 10; step++) {
-          await tester.drag(scrollable, const Offset(0, -200));
-          await tester.pumpAndSettle();
-        }
-      }
-      expect(
-        tester.takeException(),
-        isNull,
-        reason: '$name overflowed while scrolling with real font metrics',
-      );
-
-      // A drift-backed screen left mounted keeps a zero-duration query-stream
-      // timer pending, which hangs the test instead of failing it.
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(milliseconds: 1));
-    });
+        // A drift-backed screen left mounted keeps a zero-duration query-stream
+        // timer pending, which hangs the test instead of failing it.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 1));
+      });
+    }
   }
 }
