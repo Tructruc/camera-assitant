@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CalculationSnapshot;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
@@ -20,12 +21,18 @@ void main() {
   });
   tearDown(() => database.close());
 
-  Widget subject() => ProviderScope(
+  Widget subject({double textScale = 1}) => ProviderScope(
     overrides: <Override>[
       appDatabaseProvider.overrideWithValue(database),
       snapshotRepositoryProvider.overrideWithValue(repository),
     ],
-    child: const MaterialApp(home: Scaffold(body: SavedCalculationsScreen())),
+    child: MaterialApp(
+      theme: AppTheme.light,
+      home: MediaQuery(
+        data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+        child: const Scaffold(body: SavedCalculationsScreen()),
+      ),
+    ),
   );
 
   testWidgets('shows an actionable empty state', (tester) async {
@@ -390,6 +397,44 @@ void main() {
       find.textContaining('original stored data was preserved'),
       findsOneWidget,
     );
+    await _disposeSubject(tester);
+  });
+
+  testWidgets('the recovery card stays readable at 200 percent text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await database.customStatement('''
+      INSERT INTO calculation_snapshots (
+        id, calculator_id, formula_version, created_at, title,
+        payload_version, input_payload, output_payload, display_context,
+        assumptions, warnings, equipment_snapshot
+      ) VALUES (
+        'broken-2', 'depth_of_field', 1, 1, 'Broken result',
+        1, '{broken', '{}', '{}', '[]', '[]', '[]'
+      )
+    ''');
+    await tester.pumpWidget(subject(textScale: 2));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    final card = find.text('Saved calculation needs recovery');
+    expect(card, findsOneWidget);
+    // The recovery copy is the only thing telling a photographer their data is
+    // still there, so it has to be reachable at the largest text scale.
+    final preserved = find.textContaining('original stored data was preserved');
+    await tester.scrollUntilVisible(
+      preserved,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(preserved, findsOneWidget);
+    expect(tester.takeException(), isNull);
     await _disposeSubject(tester);
   });
 
