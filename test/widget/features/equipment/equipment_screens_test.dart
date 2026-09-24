@@ -90,17 +90,86 @@ void main() {
   testWidgets('list remains scrollable at 200 percent text scale', (
     WidgetTester tester,
   ) async {
-    tester.view.physicalSize = const Size(800, 1200);
-    tester.view.devicePixelRatio = 2;
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+
+    // A populated shelf, not an empty one: the rows are the part that has to
+    // survive the larger type.
+    for (var index = 0; index < 4; index++) {
+      await repository.createCamera(
+        domain.CameraBody(
+          id: 'camera-scale-$index',
+          name: 'Field camera with a long name $index',
+          sensorWidthMm: 36,
+          sensorHeightMm: 24,
+          provenance: domain.EquipmentProvenance(
+            source: domain.EquipmentSource.userOverride,
+            note: 'Measured against a calibration target, note $index',
+          ),
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        ),
+      );
+    }
 
     await tester.pumpWidget(listApp(textScale: 2));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
     expect(find.byType(Scrollable), findsWidgets);
+
+    // Every saved row stays reachable at 2x text, not just the first. The
+    // screen also carries a horizontal kind filter, so target the vertical
+    // list explicitly: scrolling the chips would prove nothing.
+    final last = find.text('Field camera with a long name 3');
+    await tester.scrollUntilVisible(
+      last,
+      300,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(last, findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
+
+  for (final kind in EquipmentKind.values) {
+    testWidgets('${kind.name} editor stays intact at 200 percent text scale', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: EquipmentEditorScreen(kind: kind, onSave: (_) async {}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // The form's own action is still reachable when the type is twice as
+      // large: a field that cannot be reached cannot be corrected.
+      final save = find.textContaining('Save ');
+      await tester.scrollUntilVisible(
+        save,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(save, findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('camera editor labels units and gives inline recovery guidance', (
     WidgetTester tester,

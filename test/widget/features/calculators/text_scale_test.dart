@@ -96,4 +96,56 @@ void main() {
       semantics.dispose();
     });
   }
+
+  // The forms are gated above; these are the computed results, which carry the
+  // densest layouts in the app (hero values, tile grids, ordered capture
+  // tables). A screen can compute cleanly at 100% and still overflow at 200%,
+  // and the result is the part a photographer actually reads in the field.
+  for (final (name, screen, action) in <(String, Widget, String)>[
+    ('timelapse plan', const TimelapseScreen(), 'Plan timelapse'),
+    ('macro setup', const MacroScreen(), 'Calculate macro setup'),
+    ('panorama grid', const PanoramaScreen(), 'Plan panorama'),
+  ]) {
+    testWidgets('$name result stays intact at 200 percent text scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(app(screen));
+      await tester.pumpAndSettle();
+
+      final compute = find.text(action);
+      await tester.scrollUntilVisible(
+        compute,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(compute);
+      await tester.pumpAndSettle();
+
+      // The answer leads at 2x text too, and every stored section below it is
+      // reachable rather than clipped away.
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Save result'),
+        findsOneWidget,
+        reason: 'the $name result did not render at 200 percent text',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Reset'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Reset'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+  }
 }
