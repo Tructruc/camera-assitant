@@ -7,13 +7,14 @@ representative photographers.
 
 It was first recorded at `c816578` (265 tests) and most recently reverified after the release-hardening
 round, the Flutter 3.47.5 toolchain move, the saved-plan time-formatting fix, and the 200%-text-scale pass
-over the retained screens and the equipment inventory (340 → 369 tests). Rows 21 and 28 are the only ones
-with device-only parts, and the sections after the table list the rest.
+over the retained screens and the equipment inventory, plus a small-phone and landscape sweep
+(340 → 373 tests). Rows 21 and 28 are the only ones with device-only parts, and the sections after the
+table list the rest.
 
 Commands and results:
 
 ```sh
-./.tooling/flutterw --no-version-check test --no-pub --concurrency=1   # 369 passed
+./.tooling/flutterw --no-version-check test --no-pub --concurrency=1   # 373 passed
 ./.tooling/flutterw --no-version-check analyze --fatal-infos           # no issues
 dart format --output=none --set-exit-if-changed lib test integration_test   # clean
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/calculator_flows_test.dart  # 3 passed

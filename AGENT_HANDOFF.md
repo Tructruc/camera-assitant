@@ -46,11 +46,20 @@ round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix
 `git log --oneline -1` and `git status --short` rather than trusting this line). The last full
 verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **369 passed** on Flutter 3.47.5
+- `flutter test --no-pub --concurrency=1` → **373 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
 - `flutter build linux --release` → built after the `timezone` 0.11.1 bump (release-compilation gate)
+
+Layout sweeps beyond the committed gates (scratch probes in `.tooling/ui_capture`, not part of the suite):
+all fifteen screens paint and scroll clean at **200% text on 320x568** (the narrowest supported phone) and
+on **800x400** (landscape); the only excluded screen, saved calculations, has nothing to scroll in its empty
+state. Every `IconButton` and `PopupMenuButton` in `lib` carries an accessible name (verified by script; the
+one hit was the theme's `IconButtonThemeData`, not a widget). The **release bundle itself has never been run
+on a display from here**: this sandbox has no Xvfb, and GTK3's broadway backend (which would have let the
+app render into a browser without touching the user's desktop) is not installed, so `build linux --release`
+remains a compilation gate only.
 
 ## Result-first UI redesign (complete)
 
