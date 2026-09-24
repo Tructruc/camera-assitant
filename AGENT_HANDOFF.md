@@ -127,14 +127,16 @@ release-hardening round (dependency refresh, current CI action majors, the plann
 is in `v2`. Continue with the open device and usability work below when the required hardware and
 participants are available. In a sandbox-only session the remaining useful hardening is:
 
-1. A Flutter-pin move, which must carry a golden regeneration with the same SDK (see above).
-2. The nightly emulator jobs run the journeys but are `continue-on-error`, and no push gates on them. A
-   host-engine journey job (`xvfb-run -a flutter test integration_test/<file>`) would catch journey
-   regressions per push, but the repository deliberately traded that gate away for push latency, so add it
-   only if the owner asks.
-3. The packaging names still differ between workflows: `mobile-builds` publishes `camera-assistant-*`
-   assets for the `continuous-v2` prerelease while `nightly-release` uses `photography-assistant-*`
-   (the product name the app chrome uses). Cosmetic, but it is a rename of published assets.
+1. Flutter-pin moves must carry a golden regeneration with the same SDK (see above). The pin now sits at
+   3.47.x, so the next move repeats that recipe with a newer SDK.
+2. The nightly emulator jobs run the journeys but are `continue-on-error`, and nothing gates a push on
+   them. A host-engine journey job (`xvfb-run -a flutter test integration_test/<file>`) would catch
+   journey regressions per push, but the repository deliberately traded that gate away for push latency,
+   so add it only if the owner asks.
+3. The published assets now all use the product's own `photography-assistant-*` prefix; the remaining
+   `camera-assistant` strings in `mobile-builds` are the runner temp file `camera-assistant.jks` and the
+   Android signing alias `camera_assistant`, which must stay as it is because it names a key inside the
+   stored keystore.
 
 Then keep the two habits that have caught every real defect here: render the screens and look at them
 (`.tooling/ui_capture`), and measure any suspected spacing or overlap defect instead of judging it from a

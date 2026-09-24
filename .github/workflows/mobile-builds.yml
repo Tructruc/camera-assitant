@@ -49,13 +49,13 @@ jobs:
           flutter build appbundle --debug
       - name: Stage directly downloadable APK
         if: github.event_name != 'pull_request'
-        run: cp build/app/outputs/flutter-apk/app-release.apk camera-assistant-v2.apk
+        run: cp build/app/outputs/flutter-apk/app-release.apk photography-assistant-v2.apk
       - name: Verify the merged release manifest
         if: github.event_name != 'pull_request'
         run: |
           set -euo pipefail
           aapt2="$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f | sort -V | tail -1)"
-          "$aapt2" dump xmltree --file AndroidManifest.xml camera-assistant-v2.apk > "$RUNNER_TEMP/manifest.xml"
+          "$aapt2" dump xmltree --file AndroidManifest.xml photography-assistant-v2.apk > "$RUNNER_TEMP/manifest.xml"
           for permission in RECORD_AUDIO WRITE_EXTERNAL_STORAGE; do
             if grep -q "android.permission.$permission" "$RUNNER_TEMP/manifest.xml"; then
               echo "::error::$permission must not appear in the release manifest (FR-017)"
@@ -66,7 +66,7 @@ jobs:
           # or `uses-feature-not-required: name='name'` depending on the
           # build-tools version, so normalise the spacing instead of betting on
           # one format (the previous pattern only matched the older aapt).
-          "$aapt2" dump badging camera-assistant-v2.apk | tr -d ' ' > "$RUNNER_TEMP/badging.txt"
+          "$aapt2" dump badging photography-assistant-v2.apk | tr -d ' ' > "$RUNNER_TEMP/badging.txt"
           echo 'Camera features in the merged release manifest:'
           grep -i 'camera' "$RUNNER_TEMP/badging.txt" || true
           if ! grep -Eq "uses-feature-not-required:(name=)?'android\.hardware\.camera\.any'" "$RUNNER_TEMP/badging.txt"; then
@@ -78,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-release-apk-unverified
-          path: camera-assistant-v2.apk
+          path: photography-assistant-v2.apk
           if-no-files-found: ignore
           retention-days: 7
       - name: Upload installable Android APK artifact
@@ -86,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: android-release-apk
-          path: camera-assistant-v2.apk
+          path: photography-assistant-v2.apk
           if-no-files-found: error
           retention-days: 14
       - name: Upload Android App Bundle artifact
@@ -112,13 +112,13 @@ jobs:
       - run: flutter build ios --simulator --no-codesign
       - name: Package iOS simulator application
         if: github.event_name != 'pull_request'
-        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app camera-assistant-v2-ios-simulator.zip
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/iphonesimulator/Runner.app photography-assistant-v2-ios-simulator.zip
       - name: Upload iOS simulator artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: ios-simulator-application
-          path: camera-assistant-v2-ios-simulator.zip
+          path: photography-assistant-v2-ios-simulator.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -225,4 +225,4 @@ jobs:
             gh release create continuous-v2 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Latest v2 test build" --notes "$notes"
           fi
           gh release edit continuous-v2 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "Latest v2 test build" --notes "$notes"
-          gh release upload continuous-v2 release-assets/camera-assistant-v2.apk release-assets/camera-assistant-v2-ios-simulator.zip --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload continuous-v2 release-assets/photography-assistant-v2.apk release-assets/photography-assistant-v2-ios-simulator.zip --repo "$GITHUB_REPOSITORY" --clobber
