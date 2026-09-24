@@ -104,6 +104,108 @@ void main() {
     },
   );
 
+  testWidgets(
+    'the night-sky planner states its instant once per zone context',
+    (tester) async {
+      await tester.pumpWidget(app(const AstronomyScreen()));
+      await tester.pumpAndSettle();
+
+      final label = find.textContaining('Planning time (UTC)');
+      await reveal(tester, label);
+      expect(label, findsOneWidget);
+
+      final card = find.ancestor(
+        of: label,
+        matching: find.byType(InputDecorator),
+      );
+      final texts = tester
+          .widgetList<Text>(
+            find.descendant(of: card, matching: find.byType(Text)),
+          )
+          .map((text) => text.data)
+          .whereType<String>()
+          .toList();
+
+      // FR-013: the zone confidence stays disclosed.
+      expect(
+        texts.where((text) => text.contains('Exact fixed offset')),
+        hasLength(1),
+      );
+      // The default planning zone is UTC, so the value line already carries the
+      // canonical instant; printing it again in front of the confidence note is
+      // duplication, not disclosure.
+      final instant = texts
+          .where(
+            (text) =>
+                RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC$').hasMatch(text),
+          )
+          .toList();
+      expect(
+        instant,
+        hasLength(1),
+        reason: 'a UTC planning zone must not print its instant twice',
+      );
+      expect(
+        texts.where((text) => text.startsWith(instant.single)),
+        hasLength(1),
+        reason: 'no line may repeat the value line verbatim',
+      );
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('the night-sky plan discloses its full planning context', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const AstronomyScreen()));
+    await tester.pumpAndSettle();
+
+    final calculate = find.widgetWithText(FilledButton, 'Plan night sky');
+    await reveal(tester, calculate);
+    await tester.tap(calculate);
+    await tester.pumpAndSettle();
+
+    final heading = find.text('Planning context');
+    await reveal(tester, heading);
+    expect(heading, findsOneWidget);
+
+    // FR-013: a plan states where and when it applies, how confident the time
+    // zone conversion is, which reference frames and horizon policy were used,
+    // the expected accuracy, and how fresh the catalog data is.
+    for (final label in <String>[
+      'Location',
+      'Coordinates',
+      'Location data',
+      'Elevation',
+      'Local time',
+      'Canonical UTC',
+      'Timezone',
+      'North',
+      'Horizon',
+      'Accuracy',
+      'Catalog',
+      'Freshness',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: '$label is missing');
+    }
+    expect(find.textContaining('UTC · Exact fixed offset'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets(
+    'the alignment planner states its date-range zone and confidence',
+    (tester) async {
+      await tester.pumpWidget(app(const AlignmentScreen()));
+      await tester.pumpAndSettle();
+
+      final label = find.textContaining('Inclusive date range (UTC');
+      await reveal(tester, label);
+      expect(label, findsOneWidget);
+      expect(find.textContaining('Exact fixed offset'), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
   testWidgets('the AR view respects detected device capabilities', (
     tester,
   ) async {
