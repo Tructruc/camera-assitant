@@ -205,6 +205,19 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Choose a calculator'), findsOneWidget);
+
+    // A lazily built catalog only lays out what is on screen, so the group
+    // headers further down - the longest labels in the app - stay unexercised
+    // until the list is walked to its end.
+    final lastGroup = find.text('Macro');
+    await tester.scrollUntilVisible(
+      lastGroup,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(lastGroup, findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('error view explains recovery without exposing internals', (

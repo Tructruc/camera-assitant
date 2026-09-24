@@ -46,7 +46,7 @@ round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix
 `git log --oneline -1` and `git status --short` rather than trusting this line). The last full
 verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **342 passed** on Flutter 3.47.5
+- `flutter test --no-pub --concurrency=1` → **346 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
@@ -176,6 +176,10 @@ downscaled PNG.
 
 ## Gotchas worth knowing before changing tests
 
+- **Never run two Flutter test commands at once.** They share `build/`, and the loser of the race can report
+  `No tests were found.` for a file that is perfectly healthy (seen on `preferences_flow_test.dart` while a
+  second `flutter test` was running in the same checkout). Re-run the file alone before believing a
+  "no tests" result.
 - **Integration journeys must pin their viewport.** `flutter test integration_test/<file>` creates a host
   window whose logical size varies between runs (observed ~481x419 up to ~1000x1600). At the small size,
   controls below the fold are never built and taps fail for reasons unrelated to the product. Use

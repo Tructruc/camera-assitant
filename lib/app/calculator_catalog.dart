@@ -237,11 +237,15 @@ class _CalculatorCatalogScreenState
                     ).onContainer,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    purpose.label,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      letterSpacing: 0.6,
+                  // Expanded, so a long group label wraps rather than
+                  // overflowing the row at large system text scales.
+                  Expanded(
+                    child: Text(
+                      purpose.label,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        letterSpacing: 0.6,
+                      ),
                     ),
                   ),
                 ],

@@ -587,9 +587,17 @@ Dependency, CI and presentation maintenance on top of the completed feature set;
   with the zone named once - while the canonical UTC values stay in "Values used". The same formatter also
   stopped labelling a UTC clock with an unresolvable zone name, so a plan whose identifier cannot be
   resolved offline now says `UTC` and the row below still reports what was asked for.
+- FR-019 was only asserted for the calculator forms, so the screens holding work already done had no
+  200% coverage. Adding it found two real overflows: the settings section label `Planner defaults` broke
+  its row by 114 px and the catalog's `Location & sky planning` group label by 82 px, both because an
+  icon sat next to a `Text` with no flex. Both labels now wrap inside an `Expanded`, and the gates that
+  found them stay: the saved list, a reopened plan and the alignment hero at 200%, every setting at 200%,
+  and the catalog walked to its last group at 200% (a lazily built list hides the rows below the fold,
+  which is why the existing shell test never reached them).
 
-Verification: 342 local tests (five added: the duplication case, which fails against the previous card,
+Verification: 346 local tests (nine added: the duplication case, which fails against the previous card,
 the night-sky plan's twelve FR-013 context rows, which nothing asserted before, the alignment planner's
-zone and confidence, the observation-plan header, which fails against the raw-ISO rendering, and the
-unresolvable-zone case, which fails against the old zone label), clean analyzer and formatter, all eight
-host integration journeys green, and a Linux release build.
+zone and confidence, the observation-plan header, which fails against the raw-ISO rendering, the
+unresolvable-zone case, which fails against the old zone label, and the four 200% gates, two of which
+fail against the unwrapped section labels), clean analyzer and formatter, all eight host integration
+journeys green, and a Linux release build.
