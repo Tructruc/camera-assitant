@@ -428,10 +428,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                 'Observer',
                 '${_latitude.text.trim()}°, ${_longitude.text.trim()}° · ${_elevation.text.trim()} m',
               ),
-              (
-                'Planning time',
-                '${PlanningTimeContext.parse(_timeZoneId).format(_instantUtc)} ($_timeZoneId)',
-              ),
+              ('Planning time', _planningTimeSummary()),
               (
                 'Optics',
                 '${_focalLength.text.trim()} mm · ${_cropFactor.text.trim()}× crop · f/${_aperture.text.trim()} · ${_pixelPitch.text.trim()} µm pixels',
@@ -549,6 +546,30 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     _result = null;
   });
 
+  /// The instant with its zone for the result's input summary. The formatted
+  /// value already ends in the zone it was rendered in, so the requested
+  /// identifier is only named when it could not be resolved to one.
+  String _planningTimeSummary() {
+    final time = PlanningTimeContext.parse(_timeZoneId);
+    final formatted = time.format(_instantUtc);
+    return time.canConvertOffline
+        ? formatted
+        : '$formatted (requested $_timeZoneId)';
+  }
+
+  /// The canonical UTC instant with the time-zone confidence note, omitting the
+  /// instant when the value line above already prints it: a planning zone of
+  /// UTC (the default) renders the same string, so repeating it adds noise
+  /// without adding information (FR-013).
+  String _planningTimeProvenance(PlanningTimeContext time) {
+    final canonicalUtc = DateFormat(
+      "yyyy-MM-dd HH:mm 'UTC'",
+    ).format(_instantUtc);
+    return time.format(_instantUtc) == canonicalUtc
+        ? time.confidenceLabel
+        : '$canonicalUtc · ${time.confidenceLabel}';
+  }
+
   Widget _planningTimeControl() {
     final time = PlanningTimeContext.parse(_timeZoneId);
     return InputDecorator(
@@ -563,10 +584,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          Text(
-            '${DateFormat("yyyy-MM-dd HH:mm 'UTC'").format(_instantUtc)} · ${time.confidenceLabel}',
-            textAlign: TextAlign.center,
-          ),
+          Text(_planningTimeProvenance(time), textAlign: TextAlign.center),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: _pickLocalDateTime,
