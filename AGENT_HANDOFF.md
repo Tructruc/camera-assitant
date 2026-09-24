@@ -46,7 +46,7 @@ round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix
 `git log --oneline -1` and `git status --short` rather than trusting this line). The last full
 verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **389 passed** on Flutter 3.47.5
+- `flutter test --no-pub --concurrency=1` → **434 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
@@ -54,18 +54,22 @@ verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
 The layout gates render `theme: AppTheme.light`, because the app's `displaySmall` (40) and `headlineMedium` (32)
 are larger than Material's defaults (36 / 28) and those are the hero and heading styles - a gate on the default
-theme measures a smaller app than the one that ships. `test/widget/app/real_font_layout_test.dart` additionally
-re-checks the densest screens with the **real Roboto** from the SDK cache, which the stand-in test font can only
-approximate; it derives the font path from the running dart and skips rather than fails when the fonts are absent.
+theme measures a smaller app than the one that ships.
 
-Layout sweeps beyond the committed gates (scratch probes in `.tooling/ui_capture`, not part of the suite):
-all fifteen screens paint and scroll clean at **200% text on 320x568** (the narrowest supported phone) and
-on **800x400** (landscape); the only excluded screen, saved calculations, has nothing to scroll in its empty
-state. Every `IconButton` and `PopupMenuButton` in `lib` carries an accessible name (verified by script; the
-one hit was the theme's `IconButtonThemeData`, not a widget). The **release bundle itself has never been run
-on a display from here**: this sandbox has no Xvfb, and GTK3's broadway backend (which would have let the
-app render into a browser without touching the user's desktop) is not installed, so `build linux --release`
-remains a compilation gate only.
+`test/widget/app/real_font_layout_test.dart` measures **every screen the shell can reach** - the thirteen
+calculators, the saved results list, saved locations, settings and the equipment list - at 200% text on a
+320x568 phone, with the **real Roboto** from the SDK cache, and again with Android's **bold text** accessibility
+setting on. The stand-in test font is roughly twice as wide per glyph, so it errs pessimistically, but it has a
+single weight and breaks lines where Roboto would not: bold text used to measure exactly like regular text, and
+a long unbreakable token (`1/8000`, `ISO 102400`, `150-600mm`) is where the two fonts disagree. The shared helper
+(`test/support/real_font.dart`) derives the font path from the running dart, skips with a reason when the fonts are
+absent, and the first case asserts the font really measures differently so a silent fallback cannot make the rest
+vacuous. A screen with nothing to scroll (an empty state) is not a failure.
+
+Every `IconButton` and `PopupMenuButton` in `lib` carries an accessible name (verified by script; the one hit was
+the theme's `IconButtonThemeData`, not a widget). The **release bundle itself has never been run on a display from
+here**: this sandbox has no Xvfb, and GTK3's broadway backend (which would have let the app render into a browser
+without touching the user's desktop) is not installed, so `build linux --release` remains a compilation gate only.
 
 ## Result-first UI redesign (complete)
 
@@ -248,8 +252,25 @@ Intentional UI changes must regenerate the committed goldens:
 `./.tooling/flutterw --no-version-check test --no-pub --update-goldens test/golden`
 (then re-run without `--update-goldens` to prove they match).
 
-Two CI traps already fixed once, do not reintroduce them:
+Three CI traps already fixed once, do not reintroduce them:
 
+- **A scheduled workflow only runs from the repository's default branch.** The
+  default branch here was `master` — 182 commits behind `v2`, with no workflows
+  in it — so `nightly-release.yml` had never run and `gh run list
+  --workflow=nightly-release.yml` answered `HTTP 404: workflow … not found on
+  the default branch`. Nothing was wrong with the file. `v2` is the default
+  branch now; if that ever moves back, every nightly silently stops and
+  `workflow_dispatch` goes with it.
+
+  This was not only the release: `mobile-builds.yml` and `desktop-builds.yml`
+  also carry a `schedule: '17 2 * * *'`, and the eight Android-emulator and iOS
+  simulator journeys are *defined* as nightly rather than per-push work
+  (`if: github.event_name == 'schedule' || workflow_dispatch`,
+  `continue-on-error: true` — a cross-platform signal, not a gate). **Not one
+  scheduled run had ever happened**: of the last 200 runs, every one was a
+  `push`, a `pull_request` or a manual dispatch, so the journeys had never run
+  in CI at all. Check the revived path with `gh run list --json event` after any
+  default-branch change, not just by reading the workflow file.
 - `aapt2 dump badging` prints `uses-feature-not-required: name='…'` on current
   build-tools and `uses-feature-not-required:'…'` on older ones; the manifest
   check normalises spaces and accepts both.
