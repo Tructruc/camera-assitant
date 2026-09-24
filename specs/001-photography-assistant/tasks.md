@@ -595,7 +595,7 @@ Dependency, CI and presentation maintenance on top of the completed feature set;
   and the catalog walked to its last group at 200% (a lazily built list hides the rows below the fold,
   which is why the existing shell test never reached them).
 
-Verification: 373 local tests (this pass added the gates that closed the remaining 200% gaps - every
+Verification: 389 local tests (this pass added the gates that closed the remaining 200% gaps - every
 computed result from all twelve calculators, the four equipment editors, a populated saved-location list,
 the planning widgets that live inside other screens, and the floating add button's clearance over the last
 inventory row, which fails by 34px against the old fixed inset - on top of the earlier gates: the
