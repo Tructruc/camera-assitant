@@ -46,11 +46,17 @@ round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix
 `git log --oneline -1` and `git status --short` rather than trusting this line). The last full
 verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **373 passed** on Flutter 3.47.5
+- `flutter test --no-pub --concurrency=1` → **389 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
 - `flutter build linux --release` → built after the `timezone` 0.11.1 bump (release-compilation gate)
+
+The layout gates render `theme: AppTheme.light`, because the app's `displaySmall` (40) and `headlineMedium` (32)
+are larger than Material's defaults (36 / 28) and those are the hero and heading styles - a gate on the default
+theme measures a smaller app than the one that ships. `test/widget/app/real_font_layout_test.dart` additionally
+re-checks the densest screens with the **real Roboto** from the SDK cache, which the stand-in test font can only
+approximate; it derives the font path from the running dart and skips rather than fails when the fonts are absent.
 
 Layout sweeps beyond the committed gates (scratch probes in `.tooling/ui_capture`, not part of the suite):
 all fifteen screens paint and scroll clean at **200% text on 320x568** (the narrowest supported phone) and
