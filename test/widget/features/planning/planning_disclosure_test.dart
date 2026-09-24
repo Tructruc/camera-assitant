@@ -154,6 +154,44 @@ void main() {
     },
   );
 
+  testWidgets('the night-sky plan discloses its full planning context', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const AstronomyScreen()));
+    await tester.pumpAndSettle();
+
+    final calculate = find.widgetWithText(FilledButton, 'Plan night sky');
+    await reveal(tester, calculate);
+    await tester.tap(calculate);
+    await tester.pumpAndSettle();
+
+    final heading = find.text('Planning context');
+    await reveal(tester, heading);
+    expect(heading, findsOneWidget);
+
+    // FR-013: a plan states where and when it applies, how confident the time
+    // zone conversion is, which reference frames and horizon policy were used,
+    // the expected accuracy, and how fresh the catalog data is.
+    for (final label in <String>[
+      'Location',
+      'Coordinates',
+      'Location data',
+      'Elevation',
+      'Local time',
+      'Canonical UTC',
+      'Timezone',
+      'North',
+      'Horizon',
+      'Accuracy',
+      'Catalog',
+      'Freshness',
+    ]) {
+      expect(find.text(label), findsOneWidget, reason: '$label is missing');
+    }
+    expect(find.textContaining('UTC · Exact fixed offset'), findsOneWidget);
+    await unmount(tester);
+  });
+
   testWidgets(
     'the alignment planner states its date-range zone and confidence',
     (tester) async {
