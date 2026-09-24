@@ -57,7 +57,11 @@ void main() {
     );
   });
 
-  Widget app(Widget screen, {bool bold = false}) => ProviderScope(
+  Widget app(
+    Widget screen, {
+    bool bold = false,
+    double scale = 2,
+  }) => ProviderScope(
     overrides: [appDatabaseProvider.overrideWithValue(database)],
     child: MaterialApp(
       theme: AppTheme.light.copyWith(
@@ -65,7 +69,7 @@ void main() {
       ),
       home: MediaQuery(
         data: MediaQueryData(
-          textScaler: const TextScaler.linear(2),
+          textScaler: TextScaler.linear(scale),
           // Android's "bold text" accessibility setting. With real Roboto this
           // asks for the bold face and widens copy by about two percent, which
           // the stand-in font could never show - it has one weight.
@@ -146,16 +150,27 @@ void main() {
     return any.evaluate().isEmpty ? any : any.first;
   }
 
-  for (final bold in <bool>[false, true]) {
+  // The app rotates freely - nothing calls `setPreferredOrientations` - so a
+  // phone in landscape is a supported frame. 200% text is a portrait claim
+  // (FR-019), and 200% text in 320 logical pixels of height is not a claim
+  // anyone made, so landscape runs at the normal scale.
+  const frames = <(String, Size, double, bool)>[
+    ('a 320x568 phone at 200% text', Size(320, 568), 2, false),
+    ('a 320x568 phone at 200% text and bold', Size(320, 568), 2, true),
+    ('a 568x320 phone in landscape', Size(568, 320), 1, false),
+  ];
+
+  for (final (frame, size, scale, bold) in frames) {
     for (final (name, screen, action, prefillKey) in cases) {
-      testWidgets('$name fits at 200 percent text with real font metrics'
-          '${bold ? ' and bold text' : ''}', (tester) async {
-        tester.view.physicalSize = const Size(320, 568);
+      testWidgets('$name fits on $frame with real font metrics', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
-        await tester.pumpWidget(app(screen, bold: bold));
+        await tester.pumpWidget(app(screen, bold: bold, scale: scale));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: '$name overflowed');
 
