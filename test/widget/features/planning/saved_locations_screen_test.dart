@@ -499,6 +499,74 @@ void main() {
       await database.close();
     }
   });
+
+  testWidgets('a populated location list stays usable at 200 percent text', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = SavedLocationRepository(database);
+    final now = DateTime.utc(2026, 9, 24);
+    for (var index = 0; index < 4; index++) {
+      await repository.save(
+        SavedLocation(
+          id: 'location-scale-$index',
+          name: 'Dark sky reserve with a long name $index',
+          latitudeDegrees: 45.0 + index,
+          longitudeDegrees: 5,
+          timeZoneId: 'Europe/London',
+          elevationMetres: 1200,
+          source: LocationSource.manual,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: Scaffold(body: SavedLocationsScreen()),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // The create action stays reachable at 2x text while the list is at rest.
+    expect(find.text('Add location'), findsWidgets);
+
+    // Every stored site stays reachable at 2x text: a location the photographer
+    // cannot scroll to is one they cannot plan from, and the row that proves it
+    // is the last one, not the first.
+    final last = find.text('Dark sky reserve with a long name 3');
+    await tester.scrollUntilVisible(
+      last,
+      300,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(last, findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // drift's query streams schedule a zero-duration timer when the last
+    // subscription is cancelled, so the tree has to be disposed and that timer
+    // given a frame before the test ends.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 }
 
 /// Fails deletes, standing in for a locked or full database.

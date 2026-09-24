@@ -96,4 +96,102 @@ void main() {
       semantics.dispose();
     });
   }
+
+  // The forms are gated above; these are the computed results, which carry the
+  // densest layouts in the app (hero values, tile grids, ordered capture
+  // tables, long provenance lines). A screen can compute cleanly at 100% and
+  // still overflow at 200%, and the result is the part a photographer actually
+  // reads in the field. Every result view offers the same pair of trailing
+  // actions, so they double as the proof that an answer rendered at all.
+  for (final (name, screen, action, prefill)
+      in <(String, Widget, String, Future<void> Function(WidgetTester)?)>[
+        ('timelapse plan', const TimelapseScreen(), 'Plan timelapse', null),
+        ('macro setup', const MacroScreen(), 'Calculate macro setup', null),
+        ('panorama grid', const PanoramaScreen(), 'Plan panorama', null),
+        (
+          'exposure comparison',
+          const ExposureComparisonScreen(),
+          'Compare exposures',
+          null,
+        ),
+        ('field of view', const FieldOfViewScreen(), 'Calculate', null),
+        ('diffraction guidance', const DiffractionScreen(), 'Calculate', null),
+        ('focus stack plan', const FocusStackScreen(), 'Calculate', null),
+        (
+          'flash exposure',
+          const FlashExposureScreen(),
+          'Calculate flash exposure',
+          null,
+        ),
+        ('night-sky plan', const AstronomyScreen(), 'Plan night sky', null),
+        (
+          'alignment search',
+          const AlignmentScreen(),
+          'Search alignments',
+          null,
+        ),
+        (
+          'depth of field',
+          const DepthOfFieldScreen(),
+          'Calculate',
+          (tester) async {
+            await tester.enterText(find.byKey(const Key('dof-focal')), '50');
+          },
+        ),
+        (
+          'long exposure stack',
+          const LongExposureScreen(),
+          'Calculate exposure',
+          (tester) async {
+            await tester.enterText(find.byKey(const Key('long-base')), '1/30');
+          },
+        ),
+      ]) {
+    testWidgets('$name result stays intact at 200 percent text scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(app(screen));
+      await tester.pumpAndSettle();
+
+      if (prefill != null) {
+        await prefill(tester);
+        await tester.pumpAndSettle();
+      }
+
+      final compute = find.text(action);
+      await tester.scrollUntilVisible(
+        compute,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(compute);
+      await tester.pumpAndSettle();
+
+      // The answer leads at 2x text too, and every stored section below it is
+      // reachable rather than clipped away.
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Save result'),
+        findsOneWidget,
+        reason: 'the $name result did not render at 200 percent text',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Reset'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Reset'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+  }
 }
