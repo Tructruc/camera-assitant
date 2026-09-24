@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CameraBody, SavedLocation;
 import 'package:photography_assistant/features/alignment/presentation/alignment_screen.dart';
@@ -26,6 +27,7 @@ void main() {
   Widget app(Widget screen) => ProviderScope(
     overrides: [appDatabaseProvider.overrideWithValue(database)],
     child: MaterialApp(
+      theme: AppTheme.light,
       home: MediaQuery(
         data: const MediaQueryData(textScaler: TextScaler.linear(2)),
         child: Scaffold(body: screen),

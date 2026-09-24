@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/repositories/preferences_repository.dart';
 import 'package:photography_assistant/features/equipment/presentation/equipment_picker.dart';
 import 'package:photography_assistant/features/planning/presentation/field_checklist.dart';
@@ -77,6 +78,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: AppTheme.light,
           home: MediaQuery(
             data: const MediaQueryData(textScaler: TextScaler.linear(2)),
             child: Scaffold(body: SingleChildScrollView(child: widget)),

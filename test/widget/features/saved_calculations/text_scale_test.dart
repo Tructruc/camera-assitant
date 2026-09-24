@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CalculationSnapshot;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
@@ -28,6 +29,7 @@ void main() {
       snapshotRepositoryProvider.overrideWithValue(repository),
     ],
     child: MaterialApp(
+      theme: AppTheme.light,
       home: MediaQuery(
         data: const MediaQueryData(textScaler: TextScaler.linear(2)),
         child: Scaffold(body: screen),
