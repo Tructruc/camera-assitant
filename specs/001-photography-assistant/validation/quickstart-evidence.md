@@ -6,13 +6,13 @@ acceptance journey and states exactly which parts still need a physical device, 
 representative photographers.
 
 It was first recorded at `c816578` (265 tests) and most recently reverified after the release-hardening
-round and the Flutter 3.47.5 toolchain move. Rows 21 and 28 are the only ones with device-only parts, and
+round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix (340 → 342 tests). Rows 21 and 28 are the only ones with device-only parts, and
 the sections after the table list the rest.
 
 Commands and results:
 
 ```sh
-./.tooling/flutterw --no-version-check test --no-pub --concurrency=1   # 340 passed
+./.tooling/flutterw --no-version-check test --no-pub --concurrency=1   # 342 passed
 ./.tooling/flutterw --no-version-check analyze --fatal-infos           # no issues
 dart format --output=none --set-exit-if-changed lib test integration_test   # clean
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/calculator_flows_test.dart  # 3 passed

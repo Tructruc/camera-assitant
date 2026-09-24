@@ -176,6 +176,17 @@ void main() {
     expect(find.text('30° above the horizon'), findsOneWidget);
     expect(find.text('Offline observation plan'), findsOneWidget);
     expect(find.text('Field checklist'), findsOneWidget);
+    // The plan header prints the stored instant the way the planner that saved
+    // it did - local time in the plan's own zone - rather than the canonical
+    // ISO string, which stays in "Values used".
+    expect(
+      find.text(
+        'Location 48.8, 2.3\n'
+        'Time 2026-08-21 22:00 UTC+02:00\n'
+        'UTC+02:00 · true north',
+      ),
+      findsOneWidget,
+    );
     final checklistItem = find.widgetWithText(
       CheckboxListTile,
       'Focus on a bright star',
@@ -189,6 +200,87 @@ void main() {
     await _openSection(tester, 'Exact values');
     expect(find.text('altitudeDegrees: 30.0'), findsOneWidget);
     expect(find.textContaining('fieldChecklist'), findsNothing);
+    await _disposeSubject(tester);
+  });
+
+  testWidgets('a stored observation window prints as a readable range', (
+    tester,
+  ) async {
+    await repository.save(
+      CalculationSnapshot(
+        id: 'plan-window-1',
+        calculatorId: 'sun_moon_alignment',
+        formulaVersion: 2,
+        createdAt: DateTime.utc(2026, 3, 28),
+        title: 'Pier alignment window',
+        canonicalInputs: const {
+          'observerLatitudeDegrees': 51.4779,
+          'observerLongitudeDegrees': 0.0,
+          // A window that spans the 2026-03-29 London transition: the local
+          // wall clock stays 23:00 while the offset moves from UTC to UTC+01:00.
+          'startUtc': '2026-03-28T23:00:00.000Z',
+          'endUtc': '2026-03-29T22:00:00.000Z',
+        },
+        canonicalOutputs: const {
+          'desiredAltitudeDegrees': 12.0,
+          'candidates': <Object?>[],
+        },
+        displayContext: const {'timeZone': 'Europe/London'},
+      ),
+    );
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pier alignment window'));
+    await tester.pumpAndSettle();
+
+    // Both ends are shown - a search window is not a single instant - and the
+    // zone is named once, at the end, using the bundled IANA rules.
+    expect(
+      find.text(
+        'Location 51.4779, 0.0\n'
+        'Time 2026-03-28 23:00 to 2026-03-29 23:00 Europe/London\n'
+        'Europe/London · true north',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('2026-03-28T23:00:00.000Z'), findsNothing);
+    await _disposeSubject(tester);
+  });
+
+  testWidgets('an unresolvable zone prints the clock it actually used', (
+    tester,
+  ) async {
+    await repository.save(
+      CalculationSnapshot(
+        id: 'plan-unknown-zone-1',
+        calculatorId: 'astronomy',
+        formulaVersion: 1,
+        createdAt: DateTime.utc(2026, 8, 20),
+        title: 'Unknown zone plan',
+        canonicalInputs: const {
+          'latitudeDegrees': 48.8,
+          'longitudeDegrees': 2.3,
+          'instantUtc': '2026-08-21T20:00:00.000Z',
+        },
+        canonicalOutputs: const {'altitudeDegrees': 30.0},
+        displayContext: const {'timeZone': 'Mars/Olympus'},
+      ),
+    );
+    await tester.pumpWidget(subject());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unknown zone plan'));
+    await tester.pumpAndSettle();
+
+    // The clock is UTC and says so; the row below still reports what the plan
+    // asked for, so the mismatch is disclosed rather than hidden.
+    expect(
+      find.text(
+        'Location 48.8, 2.3\n'
+        'Time 2026-08-21 20:00 UTC\n'
+        'Mars/Olympus · true north',
+      ),
+      findsOneWidget,
+    );
     await _disposeSubject(tester);
   });
 

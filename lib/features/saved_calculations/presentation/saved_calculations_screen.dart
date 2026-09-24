@@ -297,7 +297,6 @@ class _SavedCalculationDetailScreenState
         inputs['observerLatitudeDegrees'] ?? inputs['latitudeDegrees'];
     final longitude =
         inputs['observerLongitudeDegrees'] ?? inputs['longitudeDegrees'];
-    final time = inputs['startUtc'] ?? inputs['instantUtc'];
     final elevation = inputs['observerElevationMetres'];
     return Card(
       child: ListTile(
@@ -308,13 +307,38 @@ class _SavedCalculationDetailScreenState
             'Location $latitude, $longitude'
                 '${elevation == null ? '' : ' · elevation $elevation m'}',
             // Legacy payloads can omit the instant; never print "Time null".
-            if (time != null) 'Time $time',
+            if (_plannedTimeLabel(inputs) case final time?) 'Time $time',
             '${_snapshot.displayContext['timeZone'] ?? 'UTC'} · '
                 '${_snapshot.displayContext['northReference'] ?? _snapshot.displayContext['azimuthReference'] ?? 'true north'}',
           ].join('\n'),
         ),
       ),
     );
+  }
+
+  /// Prints the stored instants the way the planner that saved them did: local
+  /// time in the plan's own zone, and the whole window when the snapshot
+  /// carries one, so a multi-day search does not read as a single moment. The
+  /// canonical UTC values stay in "Values used" for provenance.
+  String? _plannedTimeLabel(Map<String, Object?> inputs) {
+    final stored = inputs['startUtc'] ?? inputs['instantUtc'];
+    if (stored is! String) return null;
+    final start = _formatInstant(_snapshot, stored);
+    // An unparseable payload is still shown, rather than hidden.
+    if (start == null) return stored;
+    final endRaw = inputs['endUtc'];
+    final end = endRaw is String ? _formatInstant(_snapshot, endRaw) : null;
+    if (end == null) return start;
+    // A window names its zone once: both ends are formatted from this plan, so
+    // the trailing zone label is the same on each.
+    final zone = _trailingZone(start);
+    return '${start.substring(0, start.length - zone.length)} to $end';
+  }
+
+  /// The trailing `' Zone'` token [PlanningTimeContext.format] appends, or `''`.
+  static String _trailingZone(String formatted) {
+    final boundary = formatted.lastIndexOf(' ');
+    return boundary <= 0 ? '' : formatted.substring(boundary);
   }
 
   Widget _actionableChecklist(BuildContext context) => Card(
@@ -685,11 +709,12 @@ String? _formatInstant(CalculationSnapshot snapshot, String iso) {
   final instant = DateTime.tryParse(iso);
   if (instant == null) return null;
   final zone = snapshot.displayContext['timeZone'];
-  if (zone is String && zone.isNotEmpty) {
-    return PlanningTimeContext.parse(zone).format(instant.toUtc());
-  }
-  final utc = instant.toUtc().toIso8601String();
-  return '${utc.substring(0, 10)} ${utc.substring(11, 16)} UTC';
+  // PlanningTimeContext labels the printed time honestly: the recorded zone
+  // when it resolves offline, and `UTC` when it does not, so a plan never shows
+  // a UTC clock under the name of a zone that was not applied.
+  return PlanningTimeContext.parse(
+    zone is String && zone.trim().isNotEmpty ? zone : 'UTC',
+  ).format(instant.toUtc());
 }
 
 /// A duration a photographer reads at a glance, e.g. `4 min 16 s`.

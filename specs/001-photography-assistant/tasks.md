@@ -579,8 +579,17 @@ Dependency, CI and presentation maintenance on top of the completed feature set;
   canonical instant is now printed only when the zone makes it different information, the confidence note
   is kept in every case (FR-013), and the result's input summary names a requested identifier only when it
   could not be resolved offline.
+- A reopened observation plan printed its stored instant as the raw canonical string - `Time
+  2026-08-21T20:00:00.000Z` - so a saved plan contradicted the planner that produced it, which shows the
+  same moment as `2026-08-21 22:00 UTC+02:00`. Alignment windows made it worse: only the start of a
+  multi-day search was shown, so the window read as a single moment. The plan header now prints the
+  instants through `PlanningTimeContext` - local wall clock in the plan's own zone, both ends of a window
+  with the zone named once - while the canonical UTC values stay in "Values used". The same formatter also
+  stopped labelling a UTC clock with an unresolvable zone name, so a plan whose identifier cannot be
+  resolved offline now says `UTC` and the row below still reports what was asked for.
 
-Verification: 340 local tests (three added: the duplication case, which fails against the previous card,
-the night-sky plan's twelve FR-013 context rows, which nothing asserted before, and the alignment
-planner's zone and confidence), clean analyzer and formatter, all eight host integration journeys green,
-and a Linux release build.
+Verification: 342 local tests (five added: the duplication case, which fails against the previous card,
+the night-sky plan's twelve FR-013 context rows, which nothing asserted before, the alignment planner's
+zone and confidence, the observation-plan header, which fails against the raw-ISO rendering, and the
+unresolvable-zone case, which fails against the old zone label), clean analyzer and formatter, all eight
+host integration journeys green, and a Linux release build.

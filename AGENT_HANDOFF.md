@@ -42,10 +42,11 @@ T059, T061, and T062 are therefore blocked here; everything else can be verified
 ## Current state
 
 The tree is clean and `origin/v2` carries the post-redesign convergence fixes, the release-hardening
-round, and the Flutter 3.47.5 toolchain move (check `git log --oneline -1` and `git status --short`
-rather than trusting this line). The last full verification, on `.tooling/flutterw` (Flutter 3.47.5):
+round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix (check
+`git log --oneline -1` and `git status --short` rather than trusting this line). The last full
+verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **340 passed** on Flutter 3.47.5
+- `flutter test --no-pub --concurrency=1` → **342 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
