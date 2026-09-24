@@ -24,7 +24,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.47.x
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - name: Restore persistent Android signing key
@@ -106,7 +106,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.47.x
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - run: flutter build ios --simulator --no-codesign
@@ -140,7 +140,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.47.x
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - name: Enable Android emulator acceleration
@@ -179,7 +179,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.47.x
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - name: Select and boot an available iOS simulator

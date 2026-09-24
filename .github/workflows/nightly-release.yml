@@ -21,7 +21,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.47.x
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - name: Build Android app bundle
@@ -43,7 +43,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.47.x
+          flutter-version: 3.44.x
           cache: true
       - run: flutter pub get
       - name: Build unsigned iOS app
