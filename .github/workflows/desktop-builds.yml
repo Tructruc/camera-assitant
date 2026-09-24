@@ -41,14 +41,14 @@ jobs:
       - name: Package Linux build
         if: github.event_name != 'pull_request'
         run: |
-          tar -czf camera-assistant-linux-x64.tar.gz \
+          tar -czf photography-assistant-linux-x64.tar.gz \
             -C build/linux/x64/release/bundle .
       - name: Upload Linux artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: linux-release
-          path: camera-assistant-linux-x64.tar.gz
+          path: photography-assistant-linux-x64.tar.gz
           if-no-files-found: error
           retention-days: 14
 
@@ -76,13 +76,13 @@ jobs:
         run: |
           Compress-Archive `
             -Path "build\windows\x64\runner\Release\*" `
-            -DestinationPath camera-assistant-windows-x64.zip
+            -DestinationPath photography-assistant-windows-x64.zip
       - name: Upload Windows artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: windows-release
-          path: camera-assistant-windows-x64.zip
+          path: photography-assistant-windows-x64.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -109,13 +109,13 @@ jobs:
         run: |
           ditto -c -k --sequesterRsrc --keepParent \
             build/macos/Build/Products/Release/photography_assistant.app \
-            camera-assistant-macos.zip
+            photography-assistant-macos.zip
       - name: Upload macOS artifact
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: macos-release
-          path: camera-assistant-macos.zip
+          path: photography-assistant-macos.zip
           if-no-files-found: error
           retention-days: 14
 
@@ -163,7 +163,7 @@ jobs:
             --title "Latest v2 desktop test build" \
             --notes "$notes"
           gh release upload "$tag" \
-            release-assets/camera-assistant-linux-x64.tar.gz \
-            release-assets/camera-assistant-windows-x64.zip \
-            release-assets/camera-assistant-macos.zip \
+            release-assets/photography-assistant-linux-x64.tar.gz \
+            release-assets/photography-assistant-windows-x64.zip \
+            release-assets/photography-assistant-macos.zip \
             --repo "$GITHUB_REPOSITORY" --clobber
