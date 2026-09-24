@@ -340,8 +340,7 @@ double _number(String text) => double.tryParse(text.trim()) ?? double.nan;
 String _message(String code) => switch (code) {
   'not_beyond_focal_length' =>
     'Focus distance must be greater than focal length.',
-  'result_out_of_range' =>
-    'These values are outside the range the geometric model can represent. Increase the aperture or circle of confusion.',
+  'result_out_of_range' => 'Increase the aperture or circle of confusion.',
   _ => 'Enter a positive finite value.',
 };
 String _distanceText(double millimetres, LengthDisplay display) {

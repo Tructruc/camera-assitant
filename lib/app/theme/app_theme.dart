@@ -417,6 +417,12 @@ abstract final class AppTheme {
         floatingLabelStyle: text.labelLarge?.copyWith(color: scheme.primary),
         helperStyle: text.bodySmall,
         errorStyle: text.bodySmall?.copyWith(color: scheme.error),
+        // A field's message is laid out on one line by default, which silently
+        // cuts the longest ones to a fraction of what they say - the advice is
+        // the part that gets lost. Four lines covers the longest message in the
+        // app at the largest text scale a narrow phone supports.
+        helperMaxLines: 3,
+        errorMaxLines: 4,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.control),
           borderSide: BorderSide(color: outline),

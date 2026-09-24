@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
@@ -16,6 +17,8 @@ import 'package:photography_assistant/features/optics/presentation/optics_screen
 import 'package:photography_assistant/features/panorama/presentation/panorama_screen.dart';
 import 'package:photography_assistant/features/planning/presentation/saved_locations_screen.dart';
 import 'package:photography_assistant/features/timelapse/presentation/timelapse_screen.dart';
+
+import '../../../support/real_font.dart';
 
 /// FR-019: every calculator and planner must stay reachable and unclipped at
 /// 200% system text scale on a small phone viewport.
@@ -257,6 +260,140 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Reset'), findsOneWidget);
       expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+  }
+
+  /// Renders one screen at a given text scale on the narrowest phone the app
+  /// supports, so a message that only fits a wide viewport fails here.
+  Widget appAt(Widget screen, double scale) => ProviderScope(
+    overrides: [appDatabaseProvider.overrideWithValue(database)],
+    child: MaterialApp(
+      theme: AppTheme.light.copyWith(
+        textTheme: AppTheme.light.textTheme.apply(fontFamily: 'RobotoMeasured'),
+      ),
+      home: MediaQuery(
+        data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+        child: Scaffold(body: screen),
+      ),
+    ),
+  );
+
+  Finder fieldLabelled(String label) => find.byWidgetPredicate(
+    (widget) => widget is TextField && widget.decoration?.labelText == label,
+  );
+
+  Future<void> calculate(WidgetTester tester) async {
+    final button = find.text('Calculate');
+    await tester.scrollUntilVisible(
+      button,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    // scrollUntilVisible stops as soon as any part of the button is inside the
+    // viewport, which on a short screen can still leave its centre outside it.
+    await tester.ensureVisible(button);
+    await tester.pumpAndSettle();
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  }
+
+  /// Fails when the laid-out message is cut short, which is invisible to a test
+  /// that only looks for the widget's text. The message may be below the fold,
+  /// so it is scrolled to first: a field that is not built cannot be measured.
+  Future<void> expectFullyLaidOut(WidgetTester tester, String message) async {
+    final finder = find.text(message);
+    final scrollable = find.byType(Scrollable);
+    if (finder.evaluate().isEmpty && scrollable.evaluate().isNotEmpty) {
+      await tester.scrollUntilVisible(
+        finder,
+        200,
+        scrollable: scrollable.first,
+      );
+      await tester.pumpAndSettle();
+    }
+    expect(
+      finder,
+      findsOneWidget,
+      reason: 'the message "$message" is not on screen at all',
+    );
+    final render = finder.evaluate().single.findRenderObject()!;
+    final paragraph = render is RenderParagraph
+        ? render
+        : render.parent! as RenderParagraph;
+    expect(
+      paragraph.didExceedMaxLines,
+      isFalse,
+      reason:
+          '"$message" is cut off: it needs '
+          '${paragraph.getMaxIntrinsicWidth(double.infinity).toStringAsFixed(0)}px '
+          'in a ${paragraph.size.width.toStringAsFixed(0)}px line',
+    );
+  }
+
+  // A field's message is the app telling the user what to change, and the
+  // input decorator lays it out on a single line unless it is told otherwise:
+  // the longest message in the app used to render as a fifth of its sentence,
+  // at 100% text as well as 200%. These cases measure the paragraph that was
+  // actually laid out, on the narrowest supported viewport, rather than the
+  // string the widget holds.
+  // The field messages are measured against the app's real font: this group
+  // claims a message *fits*, and `flutter_test`'s stand-in font is about twice
+  // as wide per glyph, which would fail copy a photographer reads fine. Loading
+  // Roboto under the family the app's text theme already asks for means the
+  // styles inside the decoration theme resolve to it as well.
+  var hasRealFont = false;
+  setUpAll(() async {
+    hasRealFont = await loadRoboto();
+  });
+
+  for (final scale in <double>[1, 1.3, 2]) {
+    testWidgets('field messages are readable at ${scale}x text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      expect(
+        hasRealFont,
+        isTrue,
+        reason:
+            'Roboto did not load, so this gate would measure the '
+            'stand-in font instead of the one the app ships',
+      );
+
+      await tester.pumpWidget(appAt(const DepthOfFieldScreen(), scale));
+      await tester.pumpAndSettle();
+
+      // The shortest of the two messages: a focus inside the focal length.
+      await tester.enterText(find.byKey(const Key('dof-focal')), '20000');
+      await calculate(tester);
+      await expectFullyLaidOut(
+        tester,
+        'Focus distance must be greater than focal length.',
+      );
+
+      // The longest one, which needs the advanced section open and a focus
+      // still beyond the focal length so validation passes first.
+      final advanced = find.text('More settings');
+      await tester.scrollUntilVisible(
+        advanced,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(advanced);
+      await tester.pumpAndSettle();
+      await tester.enterText(fieldLabelled('Focal length (mm)'), '1e200');
+      await tester.enterText(fieldLabelled('Focus distance (mm)'), '1e201');
+      await calculate(tester);
+      await expectFullyLaidOut(
+        tester,
+        'Increase the aperture or circle of confusion.',
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

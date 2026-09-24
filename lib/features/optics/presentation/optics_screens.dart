@@ -402,8 +402,7 @@ class _OpticsScreenState extends ConsumerState<_OpticsScreen> {
       'Enter a distance greater than the focal length.',
     'range' => 'Enter overlap from 0 up to, but not including, 100%.',
     'result_out_of_range' =>
-      'These values produce a result outside the representable range. '
-          'Reduce the extreme value and try again.',
+      'Reduce the extreme value: the result is outside the representable range.',
     _ => 'Enter a positive finite value.',
   };
 
