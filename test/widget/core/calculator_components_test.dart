@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
+import 'package:photography_assistant/app/theme/app_theme.dart';
 import 'package:photography_assistant/core/data/database/app_database.dart'
     hide CalculationSnapshot;
 import 'package:photography_assistant/core/data/repositories/drift_snapshot_repository.dart';
@@ -20,6 +21,7 @@ void main() {
     String? caption,
     String? guidance,
   }) => MaterialApp(
+    theme: AppTheme.light,
     home: Scaffold(
       body: SingleChildScrollView(
         child: CalculationResultView(
@@ -166,6 +168,75 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  // Every calculator renders its answer through this one view, so a tile that
+  // cannot hold a long value or a long label would be a defect in all twelve of
+  // them at once. These are the strings the calculators can really produce: a
+  // millimetre figure with thousands separators, a metric length with a unit,
+  // and the longest label in the catalogue.
+  const longValue = '123,456,789.012 mm';
+  const longLabel = 'Hyperfocal distance at the working aperture';
+  const longCaption =
+      'Sharp from 5.11 m to 223.21 m at the selected aperture; near and far '
+      'limits are estimates and not guaranteed sharpness.';
+
+  for (final (name, tiles, details)
+      in <(String, List<(String, String)>, List<(String, String)>)>[
+        (
+          'long values in every tile',
+          [(longLabel, longValue), (longLabel, longValue)],
+          [(longLabel, longValue)],
+        ),
+        (
+          'long labels with short values',
+          [(longLabel, '5.11 m'), (longLabel, '223.21 m')],
+          [(longLabel, '12.4 m')],
+        ),
+        (
+          'four tiles',
+          [
+            ('Near limit', '5.11 m'),
+            ('Far limit', '223.21 m'),
+            ('Total depth of field', '218.10 m'),
+            (longLabel, longValue),
+          ],
+          [(longLabel, longValue)],
+        ),
+      ]) {
+    for (final scale in <double>[1, 1.3, 2]) {
+      testWidgets('$name stay inside the tiles at ${scale}x text', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: host(
+              highlight: (longLabel, longValue),
+              caption: longCaption,
+              tiles: tiles,
+              details: details,
+              inputs: const [('Focal length', '5000 mm')],
+              assumptions: [longCaption],
+              warnings: [longCaption],
+              guidance: longCaption,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'the result view overflowed with $name at ${scale}x text',
+        );
+      });
+    }
+  }
 }
 
 class _SaveHarness extends ConsumerWidget {
