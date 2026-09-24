@@ -29,7 +29,7 @@ void main() {
 
   tearDown(() => database.close());
 
-  Widget listApp({double textScale = 1}) {
+  Widget listApp({double textScale = 1, double bottomInset = 0}) {
     return ProviderScope(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(database),
@@ -37,7 +37,11 @@ void main() {
       ],
       child: MaterialApp(
         home: MediaQuery(
-          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+          data: MediaQueryData(
+            textScaler: TextScaler.linear(textScale),
+            padding: EdgeInsets.only(bottom: bottomInset),
+            viewPadding: EdgeInsets.only(bottom: bottomInset),
+          ),
           child: const EquipmentListScreen(),
         ),
       ),
@@ -136,6 +140,62 @@ void main() {
     expect(last, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'the floating add button leaves the last row clear at 200 percent text',
+    (WidgetTester tester) async {
+      // The button is overlaid on the list, and at 200% text on a gesture-bar
+      // phone it is 80px tall above a 34px safe area: more than the fixed 96px
+      // of bottom padding the list used to reserve, which left the last row's
+      // footer behind the button. The screen now measures the button.
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      for (var index = 0; index < 4; index++) {
+        await repository.createCamera(
+          domain.CameraBody(
+            id: 'camera-overlap-$index',
+            name: 'Travel Zoom $index with a long catalogue name',
+            sensorWidthMm: 36,
+            sensorHeightMm: 24,
+            provenance: domain.EquipmentProvenance(
+              source: domain.EquipmentSource.userOverride,
+              note: 'Measured on a bench',
+            ),
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
+      }
+
+      await tester.pumpWidget(listApp(textScale: 2, bottomInset: 34));
+      await tester.pumpAndSettle();
+
+      // Scroll to the end, which is where the button sits over the content.
+      final vertical = find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      );
+      for (var step = 0; step < 12; step++) {
+        await tester.drag(vertical, const Offset(0, -200));
+        await tester.pumpAndSettle();
+      }
+
+      final lastRow = tester.getRect(find.byType(Card).last);
+      final addButton = tester.getRect(find.byType(FilledButton));
+      expect(
+        lastRow.bottom,
+        lessThanOrEqualTo(addButton.top),
+        reason:
+            'the last inventory row ends '
+            '${(lastRow.bottom - addButton.top).round()}px behind the floating '
+            'add button',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final kind in EquipmentKind.values) {
     testWidgets('${kind.name} editor stays intact at 200 percent text scale', (

@@ -595,9 +595,12 @@ Dependency, CI and presentation maintenance on top of the completed feature set;
   and the catalog walked to its last group at 200% (a lazily built list hides the rows below the fold,
   which is why the existing shell test never reached them).
 
-Verification: 346 local tests (nine added: the duplication case, which fails against the previous card,
-the night-sky plan's twelve FR-013 context rows, which nothing asserted before, the alignment planner's
-zone and confidence, the observation-plan header, which fails against the raw-ISO rendering, the
-unresolvable-zone case, which fails against the old zone label, and the four 200% gates, two of which
-fail against the unwrapped section labels), clean analyzer and formatter, all eight host integration
-journeys green, and a Linux release build.
+Verification: 369 local tests (this pass added the gates that closed the remaining 200% gaps - every
+computed result from all twelve calculators, the four equipment editors, a populated saved-location list,
+the planning widgets that live inside other screens, and the floating add button's clearance over the last
+inventory row, which fails by 34px against the old fixed inset - on top of the earlier gates: the
+duplication case, which fails against the previous card, the night-sky plan's twelve FR-013 context rows,
+the alignment planner's zone and confidence, the observation-plan header, which fails against the raw-ISO
+rendering, the unresolvable-zone case, and the four 200% gates that fail against the unwrapped section
+labels), clean analyzer and formatter, all eight host integration journeys green, and a Linux release
+build.
