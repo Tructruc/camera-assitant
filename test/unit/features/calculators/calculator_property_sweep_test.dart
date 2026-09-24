@@ -31,6 +31,7 @@ void main() {
 
   test('depth of field stays finite and ordered for any accepted input', () {
     final violations = <String>[];
+    var rejected = 0;
     for (var i = 0; i < samples; i++) {
       final focal = logUniform(4, 2000);
       final aperture = logUniform(0.7, 64);
@@ -47,6 +48,7 @@ void main() {
       final result = const DepthOfFieldCalculator().calculate(input);
       if (!result.isUsable) {
         violations.add('rejected $context');
+        rejected++;
         continue;
       }
 
@@ -95,10 +97,20 @@ void main() {
       isEmpty,
       reason: '${violations.length} violations',
     );
+    // A sweep that mostly refuses its inputs would prove nothing about the
+    // arithmetic, so most of the samples have to get through the validators.
+    expect(
+      rejected,
+      lessThan(samples ~/ 2),
+      reason: '$rejected of $samples inputs were refused',
+    );
   });
 
   test('optics stay finite and ordered for any accepted input', () {
     final violations = <String>[];
+    // Three calculators per sample, so the refusals are counted per leg and
+    // compared against the legs rather than the samples.
+    var refused = 0;
     for (var i = 0; i < samples; i++) {
       final focal = logUniform(4, 3000);
       final sensorWidth = logUniform(3.6, 100);
@@ -113,6 +125,7 @@ void main() {
         ),
       );
       if (!fov.isUsable) {
+        refused++;
         violations.add('field of view rejected');
       } else {
         final output = fov.output!;
@@ -137,6 +150,7 @@ void main() {
         ),
       );
       if (!diffraction.isUsable) {
+        refused++;
         violations.add('diffraction rejected');
       } else {
         final output = diffraction.output!;
@@ -162,6 +176,7 @@ void main() {
         ),
       );
       if (!stack.isUsable) {
+        refused++;
         violations.add('focus stack rejected near=$near far=$far focal=$focal');
       } else {
         final distances = stack.output!.focusDistancesMm;
@@ -179,10 +194,18 @@ void main() {
       isEmpty,
       reason: '${violations.length} violations',
     );
+    // A sweep that mostly refuses its inputs would prove nothing about the
+    // arithmetic, so most of the samples have to get through the validators.
+    expect(
+      refused,
+      lessThan(samples * 3 ~/ 2),
+      reason: '$refused of ${samples * 3} optics calculations were refused',
+    );
   });
 
   test('panorama plans cover their bounds and stay internally consistent', () {
     final violations = <String>[];
+    var rejected = 0;
     for (var i = 0; i < samples; i++) {
       final horizontal = logUniform(1, 360);
       final vertical = logUniform(1, 180);
@@ -207,6 +230,7 @@ void main() {
         if (!codes.every((code) => code == 'plan_too_large')) {
           violations.add('rejected with $codes');
         }
+        rejected++;
         continue;
       }
 
@@ -251,12 +275,20 @@ void main() {
       isEmpty,
       reason: '${violations.length} violations',
     );
+    // A sweep that mostly refuses its inputs would prove nothing about the
+    // arithmetic, so most of the samples have to get through the validators.
+    expect(
+      rejected,
+      lessThan(samples ~/ 2),
+      reason: '$rejected of $samples inputs were refused',
+    );
   });
 
   test(
     'timelapse plans stay finite and warn when the exposure outruns the interval',
     () {
       final violations = <String>[];
+      var rejected = 0;
       for (var i = 0; i < samples; i++) {
         final interval = logUniform(0.1, 3600);
         final duration = logUniform(interval, 86400 * 30);
@@ -277,6 +309,7 @@ void main() {
           if (!codes.every((code) => code == 'result_out_of_range')) {
             violations.add('rejected with $codes');
           }
+          rejected++;
           continue;
         }
 
@@ -318,6 +351,13 @@ void main() {
         violations.take(5),
         isEmpty,
         reason: '${violations.length} violations',
+      );
+      // A sweep that mostly refuses its inputs would prove nothing about the
+      // arithmetic, so most of the samples have to get through the validators.
+      expect(
+        rejected,
+        lessThan(samples ~/ 2),
+        reason: '$rejected of $samples inputs were refused',
       );
     },
   );
