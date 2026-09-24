@@ -117,6 +117,62 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets('every setting stays reachable at 200 percent text scale', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final semantics = tester.ensureSemantics();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          preferencesRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: Scaffold(body: SettingsScreen()),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.bySemanticsLabel(RegExp('.+')), findsAtLeastNWidgets(2));
+
+    // The last choice and the privacy statement are still reachable when the
+    // type is twice as large: nothing is dropped to make the list fit.
+    final lastChoice = find.text('Low-light red');
+    await tester.scrollUntilVisible(
+      lastChoice,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(lastChoice, findsOneWidget);
+
+    final privacy = find.textContaining(
+      'no account, advertising, or telemetry',
+    );
+    await tester.scrollUntilVisible(
+      privacy,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(privacy, findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+    semantics.dispose();
+  });
 }
 
 final class _FailingPreferencesRepository extends PreferencesRepository {

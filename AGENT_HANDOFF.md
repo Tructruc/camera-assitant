@@ -46,7 +46,7 @@ round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix
 `git log --oneline -1` and `git status --short` rather than trusting this line). The last full
 verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **342 passed** on Flutter 3.47.5
+- `flutter test --no-pub --concurrency=1` → **346 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
