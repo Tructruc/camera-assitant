@@ -679,7 +679,10 @@ void main() {
     await tester.tap(find.text('Plan panorama'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('more than 2000 frames'), findsOneWidget);
+    expect(
+      find.textContaining('Too many frames: reduce the coverage'),
+      findsOneWidget,
+    );
     expect(find.byType(CalculationResultView), findsNothing);
   });
 

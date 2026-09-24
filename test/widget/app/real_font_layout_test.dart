@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photography_assistant/app/providers.dart';
@@ -12,6 +9,8 @@ import 'package:photography_assistant/features/astronomy/presentation/astronomy_
 import 'package:photography_assistant/features/depth_of_field/presentation/depth_of_field_screen.dart';
 import 'package:photography_assistant/features/equipment/presentation/equipment_list_screen.dart';
 import 'package:photography_assistant/features/settings/presentation/settings_screen.dart';
+
+import '../../support/real_font.dart';
 
 /// FR-019 measured with the font the app really ships.
 ///
@@ -31,31 +30,21 @@ void main() {
   setUp(() => database = AppDatabase.inMemory());
   tearDown(() => database.close());
 
-  final fontDir = _materialFontsDirectory();
-  final roboto = <String>[
-    'Roboto-Regular.ttf',
-    'Roboto-Medium.ttf',
-    'Roboto-Bold.ttf',
-    'Roboto-Italic.ttf',
-  ].where((name) => File('${fontDir.path}/$name').existsSync()).toList();
-
-  if (roboto.isEmpty) {
-    test('real-font layout gate', () {}, skip: 'no Roboto in $fontDir');
+  if (robotoFontPaths().isEmpty) {
+    test(
+      'real-font layout gate',
+      () {},
+      skip: 'no Roboto in ${materialFontsDirectory()}',
+    );
     return;
   }
 
   setUpAll(() async {
-    final loader = FontLoader('Roboto');
-    for (final name in roboto) {
-      loader.addFont(
-        Future<ByteData>.value(
-          ByteData.sublistView(
-            Uint8List.fromList(File('${fontDir.path}/$name').readAsBytesSync()),
-          ),
-        ),
-      );
-    }
-    await loader.load();
+    expect(
+      await loadRoboto(),
+      isTrue,
+      reason: 'the SDK listed Roboto faces but they did not load',
+    );
   });
 
   Widget app(Widget screen) => ProviderScope(
@@ -174,22 +163,4 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
     });
   }
-}
-
-/// `flutter test` runs on the dart inside the SDK cache, so the fonts sit
-/// `bin/cache/artifacts/material_fonts` under some ancestor of the executable.
-/// The ancestor is searched for rather than counted, so a different SDK layout
-/// cannot silently point the gate at an empty directory.
-Directory _materialFontsDirectory() {
-  var directory = File(Platform.resolvedExecutable).parent;
-  for (var depth = 0; depth < 8; depth++) {
-    final candidate = Directory(
-      '${directory.path}/bin/cache/artifacts/material_fonts',
-    );
-    if (candidate.existsSync()) return candidate;
-    final parent = directory.parent;
-    if (parent.path == directory.path) break;
-    directory = parent;
-  }
-  return Directory('bin/cache/artifacts/material_fonts');
 }
