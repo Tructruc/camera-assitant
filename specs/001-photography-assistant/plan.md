@@ -14,9 +14,10 @@ accessible result contracts, reference fixtures, and cross-platform CI.
 
 ## Technical Context
 
-**Language/Version**: Dart 3.10+ with Flutter 3.44.x stable
+**Language/Version**: Dart 3.13 with Flutter 3.47.x stable (verified baseline; `pubspec.yaml` keeps a
+`>=3.41.0` Flutter floor so an older stable can still resolve dependencies)
 
-**Primary Dependencies**: Flutter SDK and Material; Riverpod 3.x for explicit dependency/state wiring;
+**Primary Dependencies**: Flutter SDK and Material; Riverpod 2.x for explicit dependency/state wiring;
 Drift 2.x with drift_flutter for typed SQLite access and migrations; intl for unit-aware formatting;
 go_router only if navigation outgrows the initial shell
 
@@ -27,7 +28,7 @@ celestial data metadata, and observation plans; no account or default remote sto
 tests for a small stable visual set, Flutter integration_test for primary journeys, and Android/iOS
 real-device or simulator smoke tests
 
-**Target Platform**: First release: Android and iOS phones/tablets supported by Flutter 3.44 stable;
+**Target Platform**: First release: Android and iOS phones/tablets supported by Flutter 3.47 stable;
 portable domain/data contracts prepared for later web and desktop targets
 
 **Project Type**: Cross-platform mobile application with a reusable pure Dart domain core

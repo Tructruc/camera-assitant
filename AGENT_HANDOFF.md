@@ -8,9 +8,8 @@ Everything needed to resume this project from a fresh session. Read this first, 
 
 ## Environment: the sandbox is read-only outside this directory
 
-The Flutter SDK lives in `/home/tructruc00/git/flutter/flutter`, which is **read-only** here. The official
-`flutter` launcher rewrites `bin/cache/engine.stamp` on every run, so it fails with
-`Read-only file system`. A writable mirror is committed nowhere but is ignored by git:
+**Use `./.tooling/flutterw` for everything** — it is the toolchain CI pins (Flutter 3.47.5 / Dart 3.13.4),
+a writable copy of the SDK under `.tooling/sdk-3.47.5/`, with `HOME` and `PUB_CACHE` inside `.tooling/`:
 
 ```sh
 ./.tooling/flutterw --no-version-check test --no-pub --concurrency=1   # full suite
@@ -18,9 +17,17 @@ The Flutter SDK lives in `/home/tructruc00/git/flutter/flutter`, which is **read
 ./.tooling/flutterw --no-version-check test --no-pub integration_test/<file>_test.dart
 ```
 
-`.tooling/` holds real copies of the SDK's small files, symlinks for `.git`, `packages/`, `artifacts`,
-`dart-sdk`, and a fake `HOME` with `PUB_CACHE`. **It is gitignored.** If it is missing, rebuild it by
-mirroring the SDK (see CONTRIBUTING.md, "Flutter SDK outside the writable tree").
+`.tooling/` is **gitignored**. Two things live in it for historical reasons:
+
+- `.tooling/sdk-3.47.5/` is a full SDK download (1.5 GB tarball, extracted) — writable, so no mirror
+  tricks are needed. The 1.5 GB tarball can be deleted once extracted.
+- `.tooling/flutter` + `.tooling/home` are the older mirror of `/home/tructruc00/git/flutter/flutter`
+  (3.41.6, **read-only**): `flutter` rewrites `bin/cache/engine.stamp` on every run there, so that SDK
+  only works behind real copies of its small files, symlinks for `.git`, `packages/`, `artifacts`,
+  `dart-sdk`, and `FLUTTER_PREBUILT_ENGINE_VERSION` (see CONTRIBUTING.md, "Flutter SDK outside the
+  writable tree"). Nothing needs it now, but the `.tooling/ui_capture` harnesses still read the Material
+  fonts from its `bin/cache/artifacts/material_fonts`; point them at the 3.47.5 SDK if that mirror goes
+  away.
 
 Two traps found the hard way:
 
@@ -34,11 +41,11 @@ T059, T061, and T062 are therefore blocked here; everything else can be verified
 
 ## Current state
 
-The tree is clean and `origin/v2` carries the post-redesign convergence fixes plus the release-hardening
-round through `e2f6acd` (check `git log --oneline -1` and `git status --short` rather than trusting this
-line). The last full verification:
+The tree is clean and `origin/v2` carries the post-redesign convergence fixes, the release-hardening
+round, and the Flutter 3.47.5 toolchain move (check `git log --oneline -1` and `git status --short`
+rather than trusting this line). The last full verification, on `.tooling/flutterw` (Flutter 3.47.5):
 
-- `flutter test --no-pub --concurrency=1` → **339 passed**
+- `flutter test --no-pub --concurrency=1` → **340 passed** on Flutter 3.47.5
 - `flutter analyze --fatal-infos` → no issues; `dart format --set-exit-if-changed` → clean
 - All **8 integration journeys** green: `calculator_flows`, `optics_flows`, `equipment_flow`,
   `planning_flow`, `preferences_flow`, `ar_fallback_flow`, `accessibility_flow`, `astronomy_flow`
@@ -101,12 +108,16 @@ downscaled screenshot.
 ## CI toolchain, actions, and goldens
 
 The workflow action majors are current (`actions/checkout@v7`, `actions/upload-artifact@v7`,
-`actions/download-artifact@v8`; see the PR that refreshed them). The Flutter pin is deliberately
-**3.44.x**, not the newest stable: a 3.47.x run on CI passed 335 of 337 tests and failed only the two
-committed goldens, by 0.02% and 0.01% of pixels — the toolchain's own font/antialiasing rasterization.
-Moving the pin therefore requires regenerating `test/golden/goldens/*.png` with that exact SDK, and the
-sandbox mirror is 3.41.6, so it cannot be done here. Do not bump `flutter-version` without carrying that
-regeneration in the same change.
+`actions/download-artifact@v8`). The Flutter pin is **3.47.x**, matching `.tooling/flutterw`.
+
+**Goldens are toolchain-bound.** `test/golden/goldens/*.png` were regenerated with Flutter 3.47.5 when the
+pin moved; a 3.44.x run against them fails by ~0.02% of pixels, and the earlier 3.41/3.44-generated
+files failed the same way on 3.47. A pin move therefore always needs
+`flutter test --no-pub --update-goldens test/golden` with the new SDK **in the same change**, followed by
+a run without `--update-goldens` to prove they match, and a look at the regenerated PNGs (they render with
+the test font, so compare layout, not glyphs). Two other things move with the pin: `pubspec.lock` gains
+the SDK-pinned dev dependencies (matcher, meta, test_api, vector_math) and `flutter pub get` appends the
+generated-directory exclusions to `analysis_options.yaml`.
 
 ## Next action when work resumes
 
