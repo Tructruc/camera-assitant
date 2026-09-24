@@ -20,6 +20,7 @@ void main() {
   Widget buildApp({
     double textScale = 1,
     PreferencesRepository? preferencesRepository,
+    EdgeInsets deviceInsets = EdgeInsets.zero,
   }) {
     return ProviderScope(
       overrides: <Override>[
@@ -36,7 +37,11 @@ void main() {
         ),
       ],
       child: MediaQuery(
-        data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+        data: MediaQueryData(
+          textScaler: TextScaler.linear(textScale),
+          padding: deviceInsets,
+          viewPadding: deviceInsets,
+        ),
         child: const PhotographyAssistantApp(),
       ),
     );
@@ -219,6 +224,84 @@ void main() {
     expect(lastGroup, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  /// A status bar plus a gesture bar, i.e. a normal modern Android phone. The
+  /// shell reserves those insets and the navigation bar, so no destination may
+  /// put content underneath either - the failure this guards against is the
+  /// silent one, where a row is simply unreachable at the bottom of the screen.
+  for (final scale in <double>[1, 2]) {
+    testWidgets(
+      'every destination stays inside the device insets at ${scale}x text',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          buildApp(
+            textScale: scale,
+            deviceInsets: const EdgeInsets.only(top: 24, bottom: 34),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final navigationBar = find.byType(NavigationBar);
+        expect(navigationBar, findsOneWidget);
+        final barTop = tester.getRect(navigationBar).top;
+
+        for (final destination in <String>[
+          'Calculators',
+          'Equipment',
+          'Saved',
+          'Settings',
+        ]) {
+          await tester.tap(
+            find.descendant(
+              of: navigationBar,
+              matching: find.text(destination),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '$destination threw at ${scale}x text with device insets',
+          );
+
+          final vertical = find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          );
+          if (vertical.evaluate().isNotEmpty) {
+            final viewportBottom = tester.getRect(vertical.first).bottom;
+            expect(
+              viewportBottom,
+              lessThanOrEqualTo(barTop + 0.5),
+              reason:
+                  '$destination\'s scroll area ends at ${viewportBottom.toStringAsFixed(1)}, '
+                  'behind the navigation bar at $barTop',
+            );
+
+            for (var step = 0; step < 8; step++) {
+              await tester.drag(vertical.first, const Offset(0, -200));
+              await tester.pumpAndSettle();
+            }
+            expect(
+              tester.takeException(),
+              isNull,
+              reason: '$destination overflowed while scrolled at ${scale}x',
+            );
+          }
+        }
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      },
+    );
+  }
 
   testWidgets('error view explains recovery without exposing internals', (
     WidgetTester tester,
