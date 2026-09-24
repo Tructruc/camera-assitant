@@ -194,4 +194,70 @@ void main() {
       await tester.pumpAndSettle();
     });
   }
+
+  // 400x800 is a comfortable phone. A 320x568 device is the narrowest these
+  // screens are expected to survive, and the test font is wider than the real
+  // one, so this is the pessimistic end of supported hardware rather than a
+  // device anyone actually carries. The four results below are the widest
+  // content in the app: an ordered capture table, a long planner-context list,
+  // an event table with provenance, and the optics tiles.
+  for (final (name, screen, action, prefill)
+      in <(String, Widget, String, Future<void> Function(WidgetTester)?)>[
+        ('panorama grid', const PanoramaScreen(), 'Plan panorama', null),
+        ('night-sky plan', const AstronomyScreen(), 'Plan night sky', null),
+        ('timelapse plan', const TimelapseScreen(), 'Plan timelapse', null),
+        (
+          'depth of field',
+          const DepthOfFieldScreen(),
+          'Calculate',
+          (tester) async {
+            await tester.enterText(find.byKey(const Key('dof-focal')), '50');
+          },
+        ),
+      ]) {
+    testWidgets('$name result fits a 320 wide phone at 200 percent text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(app(screen));
+      await tester.pumpAndSettle();
+
+      if (prefill != null) {
+        await prefill(tester);
+        await tester.pumpAndSettle();
+      }
+
+      final compute = find.text(action);
+      await tester.scrollUntilVisible(
+        compute,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(compute);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Save result'),
+        findsOneWidget,
+        reason: 'the $name result did not render on a 320 wide phone',
+      );
+      await tester.scrollUntilVisible(
+        find.text('Reset'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Reset'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    });
+  }
 }
