@@ -319,6 +319,54 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('a filtered catalog row is tappable above a real bottom inset', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // The phone-shaped frame and the gesture bar are the emulator conditions
+    // the Android journey runs under; on the desktop host there is no bottom
+    // inset, which is what hid the failure until the first emulator run.
+    await tester.pumpWidget(
+      buildApp(textScale: 2, deviceInsets: const EdgeInsets.only(bottom: 34)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(SearchBar), 'Depth of field');
+    await tester.pumpAndSettle();
+
+    final row = find.widgetWithText(ListTile, 'Depth of field');
+    expect(row, findsOneWidget);
+    final barTop = tester.getRect(find.byType(NavigationBar)).top;
+
+    // A ListTile is about 200 logical pixels tall at this scale, so the row the
+    // search leaves at the end of the list is only partly inside the scrollable
+    // and its centre - the point a tap targets - can sit behind the navigation
+    // bar. The Android run tapped exactly that point and hit the bar instead:
+    // `derived an Offset (Offset(200.0, 641.0)) that would not hit test on the
+    // specified widget`. The row has to be revealable inside what is left.
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+
+    final centre = tester.getCenter(row);
+    expect(
+      centre.dy,
+      lessThan(barTop),
+      reason:
+          'the filtered row is still under the navigation bar '
+          '(centre ${centre.dy}, bar top $barTop)',
+    );
+    expect(row.hitTestable(), findsOneWidget);
+
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    // The row opened the calculator, not the navigation bar.
+    expect(find.text('Calculate'), findsWidgets);
+  });
 }
 
 final class _FailingPreferencesRepository extends PreferencesRepository {

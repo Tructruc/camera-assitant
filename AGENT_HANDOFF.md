@@ -256,4 +256,35 @@ Two CI traps already fixed once, do not reintroduce them:
 - `reactivecircus/android-emulator-runner` hands each *line* of `script` to
   `sh -c`, so a multi-line `for … done` loop fails immediately; keep it one line.
 
+## The nightly integration journeys (the first run was 2026-09-24)
+
+The eight journeys in `integration_test/` are **nightly work, not per-push work**:
+they boot the app eight times on an emulator or simulator, so
+`android-integration` and `ios-integration` in `mobile-builds.yml` carry
+`if: github.event_name == 'schedule' || workflow_dispatch` and
+`continue-on-error: true` — a cross-platform signal rather than a gate. They had
+never run before 2026-09-24, because the schedule had never fired (see the
+default-branch trap above). Run them by hand with
+`gh workflow run mobile-builds.yml --ref v2`; the journeys print one
+`::group::` per file and the job fails at the end if any failed.
+
+What that first run taught, so the next reader does not re-learn it:
+
+- **A tap targets the centre of a widget, and a row's centre can be off-view.**
+  A `ListTile` is ~200 logical pixels tall at 200% text, so a filtered row left
+  at the end of a list is only partly inside the scrollable: its centre sat
+  behind the navigation bar and `tap()` reported `derived an Offset (Offset(200.0,
+  641.0)) that would not hit test on the specified widget`. Reveal the row
+  (`tapVisible`, or `ensureVisible` then settle) before tapping it, even right
+  after a search narrowed the list to one row. The desktop host hides this - no
+  bottom inset, so the navigation bar is shorter and the row happened to fit.
+- Replay any such suspicion without an emulator: mount the app at 400x800 with
+  `tester.platformDispatcher.textScaleFactorTestValue = 2` and
+  `tester.view.padding = FakeViewPadding(bottom: 34)`; that reproduces an
+  Android gesture bar on this machine. `test/widget/app/app_shell_test.dart`
+  keeps the catalog case as a gate.
+- The iOS job was **cancelled at its 20-minute limit** on that first run
+  (8 journeys x a simulator boot); it has 45 minutes now. The Android emulator
+  job has 45 as well and finished its first file in ~6 minutes.
+
 Then commit (scoped message, no `--global` git config needed) and `git push origin v2`.

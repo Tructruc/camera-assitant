@@ -164,13 +164,15 @@ jobs:
           # died with `Syntax error: end of file unexpected (expecting "done")`
           # before running a single journey.
           script: |
-            for file in integration_test/*_test.dart; do echo "::group::$file"; flutter test "$file" -d emulator-5554 || exit 1; echo "::endgroup::"; done
+            failed=0; for file in integration_test/*_test.dart; do echo "::group::$file"; flutter test "$file" -d emulator-5554 || failed=1; echo "::endgroup::"; done; exit $failed
 
   ios-integration:
     # Nightly and on demand for the same reason as the Android emulator job.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: macos-latest
-    timeout-minutes: 20
+    # Eight journeys, each booting the app on a simulator, did not fit in 20
+    # minutes: the first run of this job was cancelled at the limit.
+    timeout-minutes: 45
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7

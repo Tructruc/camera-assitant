@@ -48,8 +48,14 @@ void main() {
     // several screens down and `scrollUntilVisible` could not reach it.
     await tester.enterText(find.byType(SearchBar), 'Depth of field');
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ListTile, 'Depth of field'));
-    await tester.pumpAndSettle();
+    // Reveal the row first. A `ListTile` is ~200 logical pixels tall at this
+    // scale, so the row the search leaves at the bottom of the list is only
+    // partly inside the scrollable: its centre - the point `tap` targets - can
+    // sit below the navigation bar, and the tap lands on the bar instead. This
+    // went unnoticed while the journey only ever ran on the desktop host, where
+    // the row happened to fit; the first emulator run failed on exactly this
+    // tap (Offset(200.0, 641.0) would not hit test on the specified widget).
+    await tapVisible(tester, find.widgetWithText(ListTile, 'Depth of field'));
     await tapVisible(tester, find.text('Calculate'), delta: 300);
     // 200% text must not overflow or clip any frame.
     expect(tester.takeException(), isNull);
