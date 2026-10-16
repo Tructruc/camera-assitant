@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/theme/design_tokens.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
 import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
+import '../../exposure_comparison/presentation/capture_field_controls.dart';
 import '../domain/timelapse_calculator.dart';
 
+/// Timelapse planner: how often the camera fires, for how long, and at what
+/// playback rate - the three answers a photographer decides in the field.
+///
+/// Per-frame size and the exposure ramp are assumptions about the camera and
+/// the light, not shot settings, so they stay one disclosure down with a
+/// subtitle that says so.
 class TimelapseScreen extends ConsumerStatefulWidget {
   const TimelapseScreen({super.key});
   @override
@@ -15,6 +23,21 @@ class TimelapseScreen extends ConsumerStatefulWidget {
 }
 
 class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
+  /// Cadences a timelapse is usually shot at, in seconds.
+  static const _intervals = <double>[1, 2, 5, 10, 15, 30, 60, 120];
+
+  /// Capture lengths photographers plan in, RAW seconds (shown as minutes).
+  static const _durations = <double>[300, 600, 1800, 3600, 7200, 14400];
+
+  /// Playback rates in common use.
+  static const _rates = <double>[12, 15, 24, 25, 30, 60];
+
+  /// Typical per-frame sizes for a still camera, in megabytes.
+  static const _frameSizes = <double>[20, 24, 30, 45, 60, 100];
+
+  /// Ramp endpoints in seconds, from a fast sunset exposure to a long one.
+  static const _exposures = <double>[0.25, 0.5, 1, 2, 4, 8, 15, 30];
+
   final _controllers = [
     TextEditingController(text: '10'),
     TextEditingController(text: '3600'),
@@ -25,17 +48,22 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
   ];
   static const _fields = [
     ('Interval (seconds)', 'intervalSeconds'),
-    ('Capture duration (seconds)', 'captureDurationSeconds'),
+    ('Capture duration', 'captureDurationSeconds'),
     ('Playback frame rate (fps)', 'playbackFps'),
     ('Estimated size per frame (MB)', 'megabytesPerFrame'),
     ('Starting exposure (seconds)', 'startExposureSeconds'),
     ('Ending exposure (seconds)', 'endExposureSeconds'),
   ];
 
-  /// How many of [_fields] define the capture plan itself.
-  static const primaryFieldCount = 3;
   CalculationResult<TimelapseOutput>? _result;
   Map<String, String> _errors = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed the answer for the default plan so the screen opens on a result.
+    _calculate();
+  }
 
   @override
   void dispose() {
@@ -55,39 +83,55 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
           _errors = const {};
         });
       }
+      _calculate();
     },
+    onCalculate: _calculate,
     children: [
       const CalculatorHeader(
         icon: Icons.movie_creation_outlined,
         description:
             'Plan capture cadence, playback length, storage, and an exposure ramp.',
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: AppGap.lg),
       // Cadence, duration, and playback rate define the plan; per-frame size
       // and the exposure ramp refine it.
-      for (var index = 0; index < primaryFieldCount; index++)
-        CalculatorNumberField(
-          label: _fields[index].$1,
-          controller: _controllers[index],
-          errorText: _errors[_fields[index].$2],
-          fieldKey: Key('timelapse-${_fields[index].$2}'),
-        ),
-      CalculatorAdvancedSection(
-        // Stable identity: applying equipment above must not collapse
-        // the section the user is working in.
-        key: const ValueKey('advanced'),
-        children: <Widget>[
-          for (var index = primaryFieldCount; index < _fields.length; index++)
-            CalculatorNumberField(
-              label: _fields[index].$1,
-              controller: _controllers[index],
-              errorText: _errors[_fields[index].$2],
-              fieldKey: Key('timelapse-${_fields[index].$2}'),
-            ),
-        ],
+      CalculatorNumberField(
+        label: _fields[0].$1,
+        controller: _controllers[0],
+        errorText: _errors[_fields[0].$2],
+        fieldKey: Key('timelapse-${_fields[0].$2}'),
+        presets: _intervals,
+        min: 0.1,
+        max: 3600,
+        logarithmic: true,
+        helperText: 'One frame every 1 s to 2 min covers most sequences',
       ),
-      FilledButton(onPressed: _calculate, child: const Text('Plan timelapse')),
-      const SizedBox(height: 16),
+      CalculatorNumberField(
+        label: _fields[1].$1,
+        controller: _controllers[1],
+        errorText: _errors[_fields[1].$2],
+        fieldKey: Key('timelapse-${_fields[1].$2}'),
+        presets: _durations,
+        // The controller is canonical seconds; the field, its presets and its
+        // steppers are all read and written in minutes.
+        displayDivisor: 60,
+        displayUnit: 'min',
+        min: 60,
+        max: 86400,
+        logarithmic: true,
+        helperText: 'Entered in minutes; recorded in seconds',
+      ),
+      CalculatorNumberField(
+        label: _fields[2].$1,
+        controller: _controllers[2],
+        errorText: _errors[_fields[2].$2],
+        fieldKey: Key('timelapse-${_fields[2].$2}'),
+        presets: _rates,
+        min: 1,
+        max: 120,
+        helperText: '24, 25 and 30 are the usual delivery rates',
+      ),
+      const CaptureLiveHint(),
       if (_result?.output case final output?)
         CalculationResultView(
           title: 'Timelapse plan',
@@ -128,7 +172,7 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
           ],
           inputs: [
             for (var index = 0; index < _fields.length; index++)
-              (_fields[index].$1, _controllers[index].text.trim()),
+              (_fields[index].$1, _indexLabel(index)),
           ],
           assumptions: const [
             'A frame is captured at both sequence endpoints',
@@ -145,10 +189,62 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
           onSave: () => _save(output),
           onReset: _reset,
         ),
+      CalculatorAdvancedSection(
+        // Stable identity: applying equipment above must not collapse
+        // the section the user is working in.
+        key: const ValueKey('advanced'),
+        subtitle: 'Assumed file size and the exposure ramp across the sequence',
+        children: <Widget>[
+          CalculatorNumberField(
+            label: _fields[3].$1,
+            controller: _controllers[3],
+            errorText: _errors[_fields[3].$2],
+            fieldKey: Key('timelapse-${_fields[3].$2}'),
+            presets: _frameSizes,
+            step: 1,
+            min: 0.1,
+            max: 512,
+            helperText: 'What one frame occupies on the card',
+          ),
+          CalculatorFieldPair(
+            first: CalculatorNumberField(
+              label: _fields[4].$1,
+              controller: _controllers[4],
+              errorText: _errors[_fields[4].$2],
+              fieldKey: Key('timelapse-${_fields[4].$2}'),
+              presets: _exposures,
+              min: 0.001,
+              max: 3600,
+              logarithmic: true,
+            ),
+            second: CalculatorNumberField(
+              label: _fields[5].$1,
+              controller: _controllers[5],
+              errorText: _errors[_fields[5].$2],
+              fieldKey: Key('timelapse-${_fields[5].$2}'),
+              presets: _exposures,
+              min: 0.001,
+              max: 3600,
+              logarithmic: true,
+            ),
+          ),
+        ],
+      ),
     ],
   );
+
   double _value(int index) =>
       double.tryParse(_controllers[index].text.trim()) ?? double.nan;
+
+  /// The echo of one input in the result's "Values used" list.
+  ///
+  /// The capture duration is entered and displayed in minutes while the
+  /// canonical value stays in seconds, so its echo names both rather than
+  /// printing a bare number the reader has to guess the unit of.
+  String _indexLabel(int index) => index == 1
+      ? '${_humanDuration(_value(index))} · ${_controllers[index].text.trim()} s'
+      : _controllers[index].text.trim();
+
   void _calculate() {
     final result = const TimelapseCalculator().calculate(
       TimelapseInput(
@@ -160,15 +256,21 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
         endExposureSeconds: _value(5),
       ),
     );
-    setState(() {
+    final errors = <String, String>{
+      for (final error in result.errors)
+        error.field: error.code == 'result_out_of_range'
+            ? 'This duration and interval need more frames than the model can represent. Increase the interval.'
+            : 'Enter a positive finite value.',
+    };
+    if (mounted) {
+      setState(() {
+        _result = result;
+        _errors = errors;
+      });
+    } else {
       _result = result;
-      _errors = {
-        for (final error in result.errors)
-          error.field: error.code == 'result_out_of_range'
-              ? 'This duration and interval need more frames than the model can represent. Increase the interval.'
-              : 'Enter a positive finite value.',
-      };
-    });
+      _errors = errors;
+    }
   }
 
   Future<void> _save(TimelapseOutput output) => saveCalculationSnapshot(
@@ -196,15 +298,15 @@ class _TimelapseScreenState extends ConsumerState<TimelapseScreen> {
       warnings: _result!.warnings,
     ),
   );
+
   void _reset() {
     const defaults = ['10', '3600', '30', '25', '1', '4'];
     for (var index = 0; index < defaults.length; index++) {
       _controllers[index].text = defaults[index];
     }
-    setState(() {
-      _result = null;
-      _errors = const {};
-    });
+    // Reset is an input change too: without this the shown plan would still
+    // describe the values the user just discarded.
+    _calculate();
   }
 
   String _storage(double megabytes) => megabytes >= 1024

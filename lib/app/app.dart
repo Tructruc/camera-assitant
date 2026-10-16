@@ -52,29 +52,118 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   var _selectedIndex = 0;
 
+  /// Destinations are built the first time they are opened and then kept alive,
+  /// so scrolling, a search query and a half-filled form all survive a trip to
+  /// another destination. Later destinations stay unbuilt until they are used.
+  late final List<bool> _visited = List<bool>.generate(
+    AppDestination.values.length,
+    (index) => index == 0,
+  );
+
+  void _selectDestination(int index) {
+    if (index == _selectedIndex) return;
+    setState(() {
+      _selectedIndex = index;
+      _visited[index] = true;
+    });
+  }
+
+  void _openSettings() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text(AppBarActions.settingsLabel)),
+          body: const SafeArea(child: AppContentFrame(child: SettingsScreen())),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final destination = AppDestination.values[_selectedIndex];
-    return Scaffold(
-      appBar: AppBar(title: Text(destination.label)),
-      body: SafeArea(child: AppContentFrame(child: _screen(destination))),
-      bottomNavigationBar: NavigationBar(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final useRail = constraints.maxWidth >= appRailBreakpoint;
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(destination.label),
+            actions: <Widget>[
+              IconButton(
+                tooltip: AppBarActions.settingsLabel,
+                icon: const Icon(AppBarActions.settingsIcon),
+                onPressed: _openSettings,
+              ),
+            ],
+          ),
+          body: useRail
+              ? Row(
+                  children: <Widget>[
+                    _rail(constraints.maxWidth),
+                    VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                    Expanded(child: _content()),
+                  ],
+                )
+              : _content(),
+          bottomNavigationBar: useRail
+              ? null
+              : NavigationBar(
+                  destinations: AppDestination.values
+                      .map((item) => item.toNavigationDestination())
+                      .toList(growable: false),
+                  onDestinationSelected: _selectDestination,
+                  selectedIndex: _selectedIndex,
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _rail(double width) {
+    final extended = width >= appExtendedRailBreakpoint;
+    return SafeArea(
+      // The app bar already consumed the status bar inset.
+      top: false,
+      child: NavigationRail(
         destinations: AppDestination.values
-            .map((item) => item.toNavigationDestination())
+            .map((item) => item.toNavigationRailDestination())
             .toList(growable: false),
-        onDestinationSelected: (index) {
-          setState(() => _selectedIndex = index);
-        },
+        extended: extended,
+        // An extended rail labels every destination beside its icon and rejects
+        // an explicit label type; the compact rail always shows its labels.
+        labelType: extended ? null : NavigationRailLabelType.all,
+        onDestinationSelected: _selectDestination,
         selectedIndex: _selectedIndex,
       ),
     );
   }
 
+  Widget _content() =>
+      SafeArea(child: AppContentFrame(child: _destinationStack()));
+
+  Widget _destinationStack() => IndexedStack(
+    index: _selectedIndex,
+    sizing: StackFit.expand,
+    children: <Widget>[
+      for (var index = 0; index < AppDestination.values.length; index++)
+        if (_visited[index])
+          _screen(AppDestination.values[index])
+        else
+          const SizedBox.shrink(),
+    ],
+  );
+
   Widget _screen(AppDestination destination) => switch (destination) {
-    AppDestination.calculators => const CalculatorCatalogScreen(),
-    AppDestination.equipment => const EquipmentListScreen(),
+    AppDestination.plan => PlanHubScreen(
+      onOpenTools: () => _selectDestination(AppDestination.tools.index),
+    ),
+    AppDestination.tools => const CalculatorCatalogScreen(),
+    AppDestination.kit => const EquipmentListScreen(),
     AppDestination.saved => const SavedCalculationsScreen(),
-    AppDestination.settings => const SettingsScreen(),
   };
 }
 

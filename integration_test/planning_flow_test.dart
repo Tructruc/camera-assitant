@@ -47,9 +47,11 @@ void main() {
 
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
-      await reveal('Night-sky planner');
-      await tester.tap(find.text('Night-sky planner'));
-      await tester.pumpAndSettle();
+      await tapVisibleFromTop(
+        tester,
+        find.text('Night-sky planner'),
+        delta: 300,
+      );
       await reveal('Plan night sky');
       await tester.tap(find.text('Plan night sky'));
       await tester.pumpAndSettle();

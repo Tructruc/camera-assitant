@@ -36,6 +36,7 @@ class _LiveArViewState extends State<LiveArView> with WidgetsBindingObserver {
   Object? _error;
   var _initializationGeneration = 0;
   var _isForeground = true;
+  var _showDiagnostics = false;
   Future<void> _pendingDisposal = Future<void>.value();
 
   @override
@@ -171,6 +172,31 @@ class _LiveArViewState extends State<LiveArView> with WidgetsBindingObserver {
                 stream: widget.service.cameraPitchStream(),
                 builder: (context, pitchSnapshot) {
                   final pitch = pitchSnapshot.data;
+                  final delta = declinationValid && heading != null
+                      ? NorthReferenceBearing.deviceHeadingDelta(
+                          trueTargetDegrees: widget.azimuthDegrees,
+                          magneticHeadingDegrees: heading,
+                          declinationDegrees: widget.magneticDeclinationDegrees,
+                        )
+                      : null;
+                  final headline = !declinationValid
+                      ? 'Declination invalid · reticle hidden'
+                      : heading == null
+                      ? 'Compass unavailable'
+                      : delta!.abs() < 0.5
+                      ? 'On target'
+                      : 'Turn ${delta.abs().toStringAsFixed(1)}° '
+                            '${delta < 0 ? 'left' : 'right'}';
+                  final reference =
+                      widget.northReference == NorthReference.magneticNorth
+                      ? 'magnetic'
+                      : 'true';
+                  final subline = displayedTarget == null
+                      ? 'Target ${widget.azimuthDegrees.toStringAsFixed(1)}° true '
+                            '· alt ${widget.altitudeDegrees.toStringAsFixed(1)}°'
+                      : 'Target ${displayedTarget.toStringAsFixed(1)}° '
+                            '$reference · alt '
+                            '${widget.altitudeDegrees.toStringAsFixed(1)}°';
                   return CustomPaint(
                     painter: _ArOverlayPainter(
                       targetAzimuth: magneticTarget ?? widget.azimuthDegrees,
@@ -180,16 +206,81 @@ class _LiveArViewState extends State<LiveArView> with WidgetsBindingObserver {
                     ),
                     child: Align(
                       alignment: Alignment.bottomCenter,
-                      child: Container(
+                      child: ColoredBox(
                         color: Colors.black87,
-                        padding: const EdgeInsets.all(8),
-                        child: Text(
-                          !declinationValid
-                              ? 'Declination is invalid. Enter a value from 90° west to 90° east; the reticle is hidden.'
-                              : heading == null
-                              ? 'Compass unavailable • target ${widget.azimuthDegrees.toStringAsFixed(1)}° true'
-                              : 'Heading ${heading.toStringAsFixed(1)}° magnetic • pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°\nTarget ${displayedTarget!.toStringAsFixed(1)}° ${widget.northReference == NorthReference.magneticNorth ? 'magnetic' : 'true'} / ${widget.altitudeDegrees.toStringAsFixed(1)}° altitude\n${_referenceLabel()}\n${_accuracyLabel(reading!)}\nOverlay assumes a ${arAssumedFieldOfViewDegrees.toStringAsFixed(0)}° field of view on both axes; confirm framing in the live view.',
-                          style: const TextStyle(color: Colors.white),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: <Widget>[
+                              Expanded(
+                                // Scrollable so a long diagnostics expansion can
+                                // never overflow the live view it annotates.
+                                child: SingleChildScrollView(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Semantics(
+                                        label: '$headline. $subline',
+                                        excludeSemantics: true,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            Text(
+                                              headline,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Text(
+                                              subline,
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (_showDiagnostics) ...<Widget>[
+                                        const SizedBox(height: 6),
+                                        for (final line in _diagnostics(
+                                          reading: reading,
+                                          heading: heading,
+                                          pitch: pitch,
+                                        ))
+                                          Text(
+                                            line,
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: _showDiagnostics
+                                    ? 'Hide AR diagnostics'
+                                    : 'Show AR diagnostics',
+                                onPressed: () => setState(
+                                  () => _showDiagnostics = !_showDiagnostics,
+                                ),
+                                icon: Icon(
+                                  _showDiagnostics
+                                      ? Icons.expand_more
+                                      : Icons.info_outline,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -234,6 +325,29 @@ class _LiveArViewState extends State<LiveArView> with WidgetsBindingObserver {
     }
     return 'Calibrated ±${accuracy.toStringAsFixed(0)}°';
   }
+
+  /// Readings, assumptions and fallbacks behind the one-line aiming readout.
+  ///
+  /// Kept behind an explicit toggle: the live picture is what the user aims
+  /// with, and a wall of text over it hides the composition it describes.
+  List<String> _diagnostics({
+    required DeviceHeadingReading? reading,
+    required double? heading,
+    required double? pitch,
+  }) => <String>[
+    if (!NorthReferenceBearing.validDeclination(
+      widget.magneticDeclinationDegrees,
+    ))
+      'Declination is invalid. Enter a value from 90° west to 90° east; the reticle is hidden.',
+    heading == null
+        ? 'Heading unavailable · pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°'
+        : 'Heading ${heading.toStringAsFixed(1)}° magnetic · pitch ${pitch?.toStringAsFixed(1) ?? 'unavailable'}°',
+    if (heading == null)
+      'Use the compass and numeric views; no heading is fabricated.',
+    _referenceLabel(),
+    reading == null ? 'Accuracy unavailable' : _accuracyLabel(reading),
+    'Overlay assumes a ${arAssumedFieldOfViewDegrees.toStringAsFixed(0)}° field of view on both axes; confirm framing in the live view.',
+  ];
 
   String _referenceLabel() =>
       widget.northReference == NorthReference.magneticNorth

@@ -14,6 +14,7 @@ import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
+import '../../equipment/presentation/equipment_specs.dart';
 import '../../planning/domain/planning_capabilities.dart';
 import '../../planning/domain/planning_time_context.dart';
 import '../../planning/domain/saved_location.dart';
@@ -22,7 +23,22 @@ import '../../planning/presentation/live_ar_view.dart';
 import '../../planning/presentation/live_compass_view.dart';
 import '../../planning/presentation/offline_planning_map.dart';
 import '../../planning/presentation/planning_context_card.dart';
+import '../../planning/presentation/planning_field_controls.dart';
 import '../domain/astronomy_calculator.dart';
+
+/// Targets that cover most real night-sky sessions. Everything else stays one
+/// searchable picker away, so nothing is hidden.
+const List<(CelestialTarget, String)> _commonTargets =
+    <(CelestialTarget, String)>[
+      (CelestialTarget.milkyWayCore, 'Milky Way core'),
+      (CelestialTarget.polaris, 'Polaris'),
+      (CelestialTarget.orionNebula, 'Orion Nebula'),
+      (CelestialTarget.andromedaGalaxy, 'Andromeda (M31)'),
+      (CelestialTarget.pleiades, 'Pleiades (M45)'),
+      (CelestialTarget.jupiter, 'Jupiter'),
+      (CelestialTarget.moon, 'Moon'),
+      (CelestialTarget.sun, 'Sun'),
+    ];
 
 class AstronomyScreen extends ConsumerStatefulWidget {
   const AstronomyScreen({this.capabilities, super.key});
@@ -60,6 +76,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
   SavedLocation? _selectedLocation;
   var _defaultsApplied = false;
 
+  /// True once an input changed after a plan, so the cleared result is
+  /// explained rather than silently missing.
+  var _stale = false;
+
   @override
   void initState() {
     super.initState();
@@ -92,7 +112,9 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       _sharpnessTolerance = _starSharpness(preferences.defaultStarSharpness);
       _defaultsApplied = true;
     }
-    final equipment = ref.watch(equipmentControllerProvider).items;
+    // activeItems, not items: the inventory's Kit kind filter must not hide the
+    // saved cameras and lenses from this calculator.
+    final equipment = ref.watch(equipmentControllerProvider).activeItems;
     final cameras = equipment
         .where((entry) => entry.kind == EquipmentKind.camera)
         .map((entry) => entry.item)
@@ -103,152 +125,221 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
         .map((entry) => entry.item)
         .whereType<Lens>()
         .toList();
-    return CalculatorPage(
-      inputControllers: [
-        _latitude,
-        _longitude,
-        _elevation,
-        _focalLength,
-        _cropFactor,
-        _aperture,
-        _pixelPitch,
-        _trailDegrees,
-        _magneticDeclination,
-      ],
-      onInputsChanged: () {
-        // A selected location without an elevation keeps a disclosure note
-        // visible, so the note must track manual edits too.
-        if (_selectedLocation != null ||
-            _result != null ||
-            _errors.isNotEmpty) {
-          setState(() {
-            _result = null;
-            _errors = const {};
-          });
-        }
-      },
-      children: [
-        const CalculatorHeader(
-          icon: Icons.nightlight_round,
-          description:
-              'Plan celestial targets entirely offline. Calculations use UTC and bearings use true north; saved locations can display local civil time.',
-        ),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<SavedLocation>(
-          isExpanded: true,
-          key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
-          decoration: const InputDecoration(
-            labelText: 'Saved location (optional)',
-          ),
-          items: [
-            for (final location
-                in ref.watch(savedLocationsProvider).valueOrNull ??
-                    const <SavedLocation>[])
-              DropdownMenuItem(value: location, child: Text(location.name)),
-          ],
-          initialValue: _selectedLocation,
-          onChanged: (location) {
-            if (location == null) return;
-            setState(() {
-              _latitude.text = location.latitudeDegrees.toString();
-              _longitude.text = location.longitudeDegrees.toString();
-              // Never invent an elevation: keep the field as entered and
-              // disclose the missing value below instead.
-              if (location.elevationMetres case final elevation?) {
-                _elevation.text = elevation.toString();
-              }
-              _timeZoneId = location.timeZoneId;
-              _selectedLocation = location;
-              _result = null;
-            });
-          },
-        ),
-        if (_selectedLocation case final location?
-            when location.elevationMetres == null)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text(
-              'This saved location has no elevation, so the observer elevation above is unchanged. '
-              'Verify it before relying on horizon, rise, or set times.',
-            ),
-          ),
-        const SizedBox(height: 12),
-        DropdownMenu<CelestialTarget>(
-          label: const Text('Search celestial targets'),
-          enableFilter: true,
-          enableSearch: true,
-          initialSelection: _target,
-          expandedInsets: EdgeInsets.zero,
-          dropdownMenuEntries: [
-            for (final target in CelestialTarget.values)
-              DropdownMenuEntry(
-                value: target,
-                label: '${target.label} · ${_category(target.category)}',
-              ),
-          ],
-          onSelected: (value) => setState(() {
-            _target = value ?? _target;
-            _result = null;
-          }),
-        ),
-        if (_target == CelestialTarget.sun) ...[
-          const SizedBox(height: 12),
-          const Card(
-            color: Color(0xffffe0b2),
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.warning_amber_rounded),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter. This plan is an estimate, not a safety guarantee.',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    final theme = Theme.of(context);
+    final savedLocations =
+        ref.watch(savedLocationsProvider).valueOrNull ??
+        const <SavedLocation>[];
+    return PlanningWorkbench(
+      // Pinned under the form rather than sitting at the end of it: the explicit
+      // action must never cost a scroll through every field first.
+      action: FilledButton.icon(
+        key: const Key('astronomy-search'),
+        onPressed: _calculate,
+        icon: const Icon(Icons.nightlight_outlined),
+        label: const Text('Plan night sky'),
+      ),
+      body: CalculatorPage(
+        inputControllers: [
+          _latitude,
+          _longitude,
+          _elevation,
+          _focalLength,
+          _cropFactor,
+          _aperture,
+          _pixelPitch,
+          _trailDegrees,
+          _magneticDeclination,
         ],
-        const SizedBox(height: 12),
-        CalculatorNumberField(
-          label: 'Observer latitude (degrees)',
-          controller: _latitude,
-          errorText: _errors['observerLatitudeDegrees'],
-        ),
-        CalculatorNumberField(
-          label: 'Observer longitude, east positive (degrees)',
-          controller: _longitude,
-          errorText: _errors['observerLongitudeDegrees'],
-        ),
-        _planningTimeControl(),
-        CalculatorAdvancedSection(
-          // Stable identity: applying equipment above must not collapse
-          // the section the user is working in.
-          key: const ValueKey('advanced'),
-          children: <Widget>[
-            Text('Observer', style: Theme.of(context).textTheme.titleSmall),
-            CalculatorNumberField(
-              label: 'Observer elevation (m)',
-              controller: _elevation,
-              errorText: _errors['observerElevationMetres'],
+        onInputsChanged: () {
+          // A changed input can no longer support the displayed plan. Clearing it
+          // is the only honest option: the result card must never describe values
+          // it was not produced from. The guard also keeps the first build's
+          // sharpness default from calling setState during a build.
+          if (_result == null && _errors.isEmpty && !_stale) return;
+          setState(_discardResult);
+        },
+        children: [
+          const CalculatorHeader(
+            icon: Icons.nightlight_round,
+            description:
+                'Plan celestial targets entirely offline. Calculations use UTC and bearings use true north; saved locations can display local civil time.',
+          ),
+          PlanningSectionHeader(
+            icon: Icons.place_outlined,
+            title: 'Site and horizon',
+            summary: PlanningLiveText(
+              controllers: [_latitude, _longitude, _elevation],
+              text: _siteSummary,
+              style: theme.textTheme.bodySmall,
             ),
-            CalculatorNumberField(
-              label: 'Magnetic declination, east positive (degrees)',
-              controller: _magneticDeclination,
+          ),
+          // The saved-site picker only exists when a site is saved: an empty
+          // dropdown would spend a whole row announcing that it has nothing to
+          // offer. Manual coordinates stay below it either way, and nothing is
+          // ever chosen for the user - no default site and no location request.
+          if (savedLocations.isNotEmpty)
+            DropdownButtonFormField<SavedLocation>(
+              isExpanded: true,
+              key: ValueKey(_selectedLocation?.id ?? 'manual-location'),
+              decoration: const InputDecoration(
+                labelText: 'Saved location (optional)',
+              ),
+              items: [
+                for (final location in savedLocations)
+                  DropdownMenuItem(value: location, child: Text(location.name)),
+              ],
+              initialValue: _selectedLocation,
+              onChanged: (location) {
+                if (location == null) return;
+                setState(() {
+                  _latitude.text = location.latitudeDegrees.toString();
+                  _longitude.text = location.longitudeDegrees.toString();
+                  // Never invent an elevation: keep the field as entered and
+                  // disclose the missing value below instead.
+                  if (location.elevationMetres case final elevation?) {
+                    _elevation.text = elevation.toString();
+                  }
+                  _timeZoneId = location.timeZoneId;
+                  _selectedLocation = location;
+                  _discardResult();
+                });
+              },
             ),
-            const SizedBox(height: 12),
-            Text('Optics', style: Theme.of(context).textTheme.titleSmall),
+          if (_selectedLocation case final location?
+              when location.elevationMetres == null)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'This saved location has no elevation, so the observer elevation in Site details is unchanged. '
+                'Verify it before relying on horizon, rise, or set times.',
+              ),
+            ),
+          // Coordinates stay full width with exact entry: a half-width column
+          // would wrap these long labels, and a slider would only make a precise
+          // latitude or longitude harder to read back. Their bounds are stated by
+          // the labels and by the error line, not by a standing paragraph over
+          // each field.
+          CalculatorNumberField(
+            label: 'Observer latitude (degrees)',
+            controller: _latitude,
+            errorText: _errors['observerLatitudeDegrees'],
+          ),
+          CalculatorNumberField(
+            label: 'Observer longitude, east positive (degrees)',
+            controller: _longitude,
+            errorText: _errors['observerLongitudeDegrees'],
+          ),
+          // Elevation is set once per trip, so it keeps the viewport cheap while
+          // its value - and any validation error - stays in the collapsed row.
+          PlanningSiteDetails(
+            errorText: _errors['observerElevationMetres'],
+            summary: PlanningLiveText(
+              controllers: [_elevation],
+              text: _elevationSummary,
+              style: theme.textTheme.bodySmall,
+            ),
+            children: <Widget>[
+              CalculatorNumberField(
+                label: 'Observer elevation (m)',
+                controller: _elevation,
+                errorText: _errors['observerElevationMetres'],
+                presets: const [0, 100, 500, 1000, 2000],
+                step: 10,
+                helperText: 'Metres above sea level; terrain is not modeled.',
+              ),
+            ],
+          ),
+          PlanningSectionHeader(
+            icon: Icons.event_outlined,
+            title: 'Date and time',
+          ),
+          _planningTimeControl(),
+          PlanningSectionHeader(
+            icon: Icons.filter_center_focus,
+            title: 'Target',
+          ),
+          PlanningChipRow(
+            chips: <Widget>[
+              for (final (target, label) in _commonTargets)
+                PlanningShortcutChip(
+                  label: label,
+                  selected: _target == target,
+                  tooltip: '${_category(target.category)} target',
+                  onPressed: () => _selectTarget(target),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppGap.md),
+          DropdownMenu<CelestialTarget>(
+            // The picker follows [initialSelection], so a target chosen from the
+            // chips above is what this field then shows.
+            label: const Text('Search celestial targets'),
+            enableFilter: true,
+            enableSearch: true,
+            initialSelection: _target,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              for (final target in CelestialTarget.values)
+                DropdownMenuEntry(
+                  value: target,
+                  label: '${target.label} · ${_category(target.category)}',
+                ),
+            ],
+            onSelected: (value) {
+              if (value == null) return;
+              _selectTarget(value);
+            },
+          ),
+          if (_target == CelestialTarget.sun) ...[
+            const SizedBox(height: AppGap.md),
+            const Card(
+              color: Color(0xffffe0b2),
+              child: Padding(
+                padding: EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.warning_amber_rounded),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Solar safety: never look at the Sun through a camera, lens, viewfinder, binoculars, or telescope without a certified solar filter. This plan is an estimate, not a safety guarantee.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          PlanningSectionHeader(
+            icon: Icons.camera_alt_outlined,
+            title: 'Camera and exposure',
+            summary: PlanningLiveText(
+              controllers: [
+                _focalLength,
+                _cropFactor,
+                _aperture,
+                _pixelPitch,
+                _trailDegrees,
+              ],
+              text: _cameraSummary,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+          // The camera supplies the crop factor and the lens the focal length the
+          // sharp-star rules use, so both pickers sit with the camera section
+          // instead of behind the advanced disclosure. Each hides itself when the
+          // kit holds none of that gear, and the raw numbers stay advanced.
+          if (cameras.isNotEmpty)
             EquipmentPicker<CameraBody>(
               label: 'Saved camera (optional)',
               items: cameras,
               itemLabel: (item) => item.name,
+              itemDetail: cameraSpecSummary,
               value: _camera,
               onSelected: (camera) => setState(() {
                 _camera = camera;
-                _result = null;
+                _discardResult();
                 if (camera != null) {
                   // The planner consumes a crop factor, so derive it from the
                   // saved sensor width instead of recording an unused dimension.
@@ -257,260 +348,353 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
                 }
               }),
             ),
-            if (_camera case final camera?)
-              AppliedEquipmentNotice(
-                equipmentName: camera.name,
-                sourceLabel: camera.provenance.source.label,
-                appliedValues: '${_cropFactor.text}× crop factor',
-              ),
+          if (_camera case final camera?)
+            AppliedEquipmentNotice(
+              equipmentName: camera.name,
+              sourceLabel: camera.provenance.source.label,
+              appliedValues: '${_cropFactor.text}× crop factor',
+            ),
+          if (lenses.isNotEmpty)
             EquipmentPicker<Lens>(
               label: 'Saved lens (optional)',
               items: lenses,
               itemLabel: (item) => item.name,
+              itemDetail: lensSpecSummary,
               value: _lens,
               onSelected: _applyLens,
             ),
-            if (_lens case final lens?)
-              AppliedEquipmentNotice(
-                equipmentName: lens.name,
-                sourceLabel: lens.provenance.source.label,
-                appliedValues: '${_focalLength.text} mm focal length',
+          if (_lens case final lens?)
+            AppliedEquipmentNotice(
+              equipmentName: lens.name,
+              sourceLabel: lens.provenance.source.label,
+              appliedValues: '${_focalLength.text} mm focal length',
+            ),
+          CalculatorAdvancedSection(
+            // Stable identity: applying equipment above must not collapse
+            // the section the user is working in.
+            key: const ValueKey('advanced'),
+            children: <Widget>[
+              Text('Optics', style: theme.textTheme.titleSmall),
+              CalculatorFieldPair(
+                first: CalculatorNumberField(
+                  label: 'Focal length (mm)',
+                  controller: _focalLength,
+                  errorText: _errors['focalLengthMm'],
+                  presets: const [14, 24, 35, 50, 85, 135, 200],
+                  min: 4,
+                  max: 1200,
+                  step: 1,
+                  helperText:
+                      'Any focal length is accepted; presets are common '
+                      'night lenses.',
+                ),
+                second: CalculatorNumberField(
+                  label: 'Crop factor',
+                  controller: _cropFactor,
+                  errorText: _errors['cropFactor'],
+                  presets: const [1, 1.5, 1.6, 2],
+                  min: 0.5,
+                  max: 4,
+                  step: 0.01,
+                  helperText: 'Full frame is 1×.',
+                ),
               ),
-            CalculatorNumberField(
-              label: 'Focal length (mm)',
-              controller: _focalLength,
-              errorText: _errors['focalLengthMm'],
-            ),
-            CalculatorNumberField(
-              label: 'Crop factor',
-              controller: _cropFactor,
-              errorText: _errors['cropFactor'],
-            ),
-            CalculatorNumberField(
-              label: 'Aperture (f-number)',
-              controller: _aperture,
-              errorText: _errors['aperture'],
-            ),
-            CalculatorNumberField(
-              label: 'Pixel pitch (µm)',
-              controller: _pixelPitch,
-              errorText: _errors['pixelPitchMicrometres'],
-            ),
-            Text('Star trails', style: Theme.of(context).textTheme.titleSmall),
-            CalculatorNumberField(
-              label: 'Desired star-trail arc (degrees)',
-              controller: _trailDegrees,
-              errorText: _errors['desiredTrailDegrees'],
-            ),
-            DropdownButtonFormField<StarShutterRule>(
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Sharp-star rule'),
-              initialValue: _shutterRule,
-              items: const [
-                DropdownMenuItem(
-                  value: StarShutterRule.npf,
-                  child: Text('NPF rule'),
+              CalculatorFieldPair(
+                first: CalculatorNumberField(
+                  label: 'Aperture (f-number)',
+                  controller: _aperture,
+                  errorText: _errors['aperture'],
+                  // The steppers walk the standard full stops; exact entry stays
+                  // available for off-series apertures.
+                  presets: const [1, 1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22, 32],
+                  helperText: 'Used by the NPF sharp-star rule.',
                 ),
-                DropdownMenuItem(
-                  value: StarShutterRule.rule500,
-                  child: Text('500 rule'),
+                second: CalculatorNumberField(
+                  label: 'Pixel pitch (µm)',
+                  controller: _pixelPitch,
+                  errorText: _errors['pixelPitchMicrometres'],
+                  presets: const [3.76, 4.3, 5, 6],
+                  min: 1,
+                  max: 20,
+                  step: 0.01,
+                  helperText: 'From the camera specification sheet.',
                 ),
+              ),
+              const SizedBox(height: AppGap.md),
+              Text('Sharp stars', style: theme.textTheme.titleSmall),
+              SegmentedButton<StarShutterRule>(
+                segments: const [
+                  ButtonSegment(value: StarShutterRule.npf, label: Text('NPF')),
+                  ButtonSegment(
+                    value: StarShutterRule.rule500,
+                    label: Text('500'),
+                  ),
+                ],
+                selected: {_shutterRule},
+                onSelectionChanged: (values) => setState(() {
+                  _shutterRule = values.first;
+                  _discardResult();
+                }),
+              ),
+              const SizedBox(height: AppGap.sm),
+              SegmentedButton<StarSharpnessTolerance>(
+                segments: const [
+                  ButtonSegment(
+                    value: StarSharpnessTolerance.strict,
+                    label: Text('Strict'),
+                  ),
+                  ButtonSegment(
+                    value: StarSharpnessTolerance.balanced,
+                    label: Text('Balanced'),
+                  ),
+                  ButtonSegment(
+                    value: StarSharpnessTolerance.relaxed,
+                    label: Text('Relaxed'),
+                  ),
+                ],
+                selected: {_sharpnessTolerance},
+                onSelectionChanged: (values) => setState(() {
+                  _sharpnessTolerance = values.first;
+                  _discardResult();
+                }),
+              ),
+              Text(
+                'Default: ${_starSharpness(preferences?.defaultStarSharpness ?? DefaultStarSharpness.balanced).name} from Settings',
+              ),
+              const SizedBox(height: AppGap.md),
+              Text('Star trails', style: theme.textTheme.titleSmall),
+              CalculatorNumberField(
+                label: 'Desired star-trail arc (degrees)',
+                controller: _trailDegrees,
+                errorText: _errors['desiredTrailDegrees'],
+                presets: const [15, 30, 60, 120],
+                min: 1,
+                max: 360,
+                step: 1,
+                helperText: 'Arc the stars should draw during the exposure.',
+              ),
+              const SizedBox(height: AppGap.md),
+              Text('Compass', style: theme.textTheme.titleSmall),
+              CalculatorNumberField(
+                label: 'Magnetic declination, east positive (degrees)',
+                controller: _magneticDeclination,
+                presets: const [-20, -10, 0, 10, 20],
+                min: -90,
+                max: 90,
+                step: 0.5,
+                helperText: 'Applied to the live compass and AR overlay only.',
+              ),
+            ],
+          ),
+          if (_stale && _result == null)
+            const PlanningNote(
+              message:
+                  'Inputs changed since the last plan. Plan night sky again to '
+                  'see the position and events for these values.',
+            ),
+          const SizedBox(height: AppGap.lg),
+          if (_result?.output case final output?) ...[
+            CalculationResultView(
+              title: '${_target.label} plan',
+              highlight: (
+                'Target altitude',
+                '${output.altitudeDegrees.toStringAsFixed(0)}° '
+                    '${output.isAboveHorizon ? 'above the horizon' : 'below the horizon'}',
+              ),
+              highlightCaption:
+                  'Azimuth ${output.azimuthDegrees.toStringAsFixed(0)}° true · '
+                  '${output.isAboveHorizon ? 'up now' : 'not visible now'}',
+              tiles: <(String, String)>[
+                (
+                  'Recommended',
+                  '${output.recommendedShutterSeconds.toStringAsFixed(1)} s',
+                ),
+                ('500 rule', '${output.rule500Seconds.toStringAsFixed(1)} s'),
+                ('NPF rule', '${output.npfSeconds.toStringAsFixed(1)} s'),
+                if (_target == CelestialTarget.milkyWayCore)
+                  (
+                    'Milky Way',
+                    output.milkyWayOrientationDegrees != null
+                        ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(0)}° to horizon'
+                        : 'Unavailable near zenith',
+                  ),
               ],
-              onChanged: (value) => setState(() {
-                _shutterRule = value ?? _shutterRule;
-                _result = null;
-              }),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<StarSharpnessTolerance>(
-              segments: const [
-                ButtonSegment(
-                  value: StarSharpnessTolerance.strict,
-                  label: Text('Strict'),
+              details: <(String, String)>[
+                (
+                  'Right ascension',
+                  '${output.rightAscensionDegrees.toStringAsFixed(2)}°',
                 ),
-                ButtonSegment(
-                  value: StarSharpnessTolerance.balanced,
-                  label: Text('Balanced'),
+                (
+                  'Declination',
+                  '${output.declinationDegrees.toStringAsFixed(2)}°',
                 ),
-                ButtonSegment(
-                  value: StarSharpnessTolerance.relaxed,
-                  label: Text('Relaxed'),
+                (
+                  'Altitude (exact)',
+                  '${output.altitudeDegrees.toStringAsFixed(1)}°',
                 ),
+                (
+                  'Azimuth (exact)',
+                  '${output.azimuthDegrees.toStringAsFixed(1)}° true',
+                ),
+                if (_target == CelestialTarget.milkyWayCore)
+                  (
+                    'Milky Way orientation',
+                    output.milkyWayOrientationDegrees != null
+                        ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(1)}° relative to horizon'
+                        : 'Unavailable near zenith or nadir',
+                  ),
+                ('Visibility cycle', _cycle(output.visibilityCycle)),
+                (
+                  '${_value(_trailDegrees).toStringAsFixed(0)}° star trail',
+                  _duration(output.trailDurationSeconds),
+                ),
+                (
+                  'Trail rotation',
+                  '${output.trailRotationDegreesPerHour.toStringAsFixed(1)}°/hour',
+                ),
+                (
+                  'Selected rule',
+                  '${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'} · ${_sharpnessTolerance.name}',
+                ),
+                for (final sample in output.path)
+                  (
+                    'Sky path ${DateFormat('HH:mm').format(sample.instantUtc)} UTC',
+                    '${sample.altitudeDegrees.toStringAsFixed(0)}° / ${sample.azimuthDegrees.toStringAsFixed(0)}° true north',
+                  ),
               ],
-              selected: {_sharpnessTolerance},
-              onSelectionChanged: (values) => setState(() {
-                _sharpnessTolerance = values.first;
-                _result = null;
-              }),
+              inputs: [
+                ('Target', _target.label),
+                (
+                  'Observer',
+                  '${_latitude.text.trim()}°, ${_longitude.text.trim()}° · ${_elevation.text.trim()} m',
+                ),
+                ('Planning time', _planningTimeSummary()),
+                (
+                  'Optics',
+                  '${_focalLength.text.trim()} mm · ${_cropFactor.text.trim()}× crop · f/${_aperture.text.trim()} · ${_pixelPitch.text.trim()} µm pixels',
+                ),
+                (
+                  'Sharp-star rule',
+                  '${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'} · ${_sharpnessTolerance.name}',
+                ),
+                ('Star-trail arc', '${_trailDegrees.text.trim()}°'),
+              ],
+              assumptions: [
+                switch (_target) {
+                  CelestialTarget.sun =>
+                    'USNO-style analytic solar ephemeris; geocentric, mean equinox of date',
+                  CelestialTarget.moon =>
+                    'USNO-style analytic lunar ephemeris; geocentric, mean equinox of date',
+                  _ when _target.isMoving =>
+                    'JPL 1800–2050 approximate Keplerian model; moving-target events are solved against updated coordinates and remain planning-grade',
+                  _ => 'Fixed ICRS/J2000 target coordinates',
+                },
+                'Airless geometric horizon; terrain and refraction excluded',
+                'Approximate mean sidereal time and planning-grade exposure rules',
+                if (_target == CelestialTarget.milkyWayCore) ...[
+                  AstronomyCalculator.milkyWayOrientationConvention,
+                  AstronomyCalculator.milkyWayOrientationLimitations,
+                  if (!output.isAboveHorizon)
+                    'The core is below the geometric horizon; its orientation is mathematical, not a visible composition.',
+                ],
+              ],
+              warnings: _warningMessages(_result!.warnings),
+              guidance:
+                  'The 500 and NPF values are estimates: inspect stars at your intended output size. Event instants are stored in UTC and displayed in the selected timezone. Terrain, refraction, precession, and proper motion are excluded.',
+              onSave: () => _save(output),
+              onReset: _reset,
             ),
-            Text(
-              'Default: ${_starSharpness(preferences?.defaultStarSharpness ?? DefaultStarSharpness.balanced).name} from Settings',
+            const SizedBox(height: AppGap.md),
+            _planningContext(),
+            PlanningSectionHeader(
+              icon: Icons.visibility_outlined,
+              title: 'View the plan',
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<PlanningView>(
+                segments: const [
+                  ButtonSegment(
+                    value: PlanningView.numeric,
+                    label: Text('Numeric'),
+                  ),
+                  ButtonSegment(
+                    value: PlanningView.timeline,
+                    label: Text('Timeline'),
+                  ),
+                  ButtonSegment(
+                    value: PlanningView.compass,
+                    label: Text('Compass'),
+                  ),
+                  ButtonSegment(value: PlanningView.map, label: Text('Map')),
+                  ButtonSegment(
+                    value: PlanningView.augmentedReality,
+                    label: Text('AR'),
+                  ),
+                ],
+                selected: {_view},
+                onSelectionChanged: (values) =>
+                    setState(() => _view = values.first),
+              ),
+            ),
+            const SizedBox(height: AppGap.sm),
+            _planningView(output),
+            const SizedBox(height: AppGap.md),
+            Text('Next events', style: theme.textTheme.titleSmall),
+            const SizedBox(height: AppGap.sm),
+            _EventsTimeline(
+              events: output.events,
+              timeZone: PlanningTimeContext.parse(_timeZoneId),
+              onDark: false,
+            ),
+            const SizedBox(height: AppGap.md),
+            FieldChecklist(
+              items: _checklist,
+              onChanged: (items) => setState(() => _checklist = items),
             ),
           ],
-        ),
-        FilledButton(
-          onPressed: _calculate,
-          child: const Text('Plan night sky'),
-        ),
-        const SizedBox(height: 16),
-        if (_result?.output case final output?) ...[
-          CalculationResultView(
-            title: '${_target.label} plan',
-            highlight: (
-              'Target altitude',
-              '${output.altitudeDegrees.toStringAsFixed(0)}° '
-                  '${output.isAboveHorizon ? 'above the horizon' : 'below the horizon'}',
-            ),
-            highlightCaption:
-                'Azimuth ${output.azimuthDegrees.toStringAsFixed(0)}° true · '
-                '${output.isAboveHorizon ? 'up now' : 'not visible now'}',
-            tiles: <(String, String)>[
-              (
-                'Recommended',
-                '${output.recommendedShutterSeconds.toStringAsFixed(1)} s',
-              ),
-              ('500 rule', '${output.rule500Seconds.toStringAsFixed(1)} s'),
-              ('NPF rule', '${output.npfSeconds.toStringAsFixed(1)} s'),
-              if (_target == CelestialTarget.milkyWayCore)
-                (
-                  'Milky Way',
-                  output.milkyWayOrientationDegrees != null
-                      ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(0)}° to horizon'
-                      : 'Unavailable near zenith',
-                ),
-            ],
-            details: <(String, String)>[
-              (
-                'Right ascension',
-                '${output.rightAscensionDegrees.toStringAsFixed(2)}°',
-              ),
-              (
-                'Declination',
-                '${output.declinationDegrees.toStringAsFixed(2)}°',
-              ),
-              (
-                'Altitude (exact)',
-                '${output.altitudeDegrees.toStringAsFixed(1)}°',
-              ),
-              (
-                'Azimuth (exact)',
-                '${output.azimuthDegrees.toStringAsFixed(1)}° true',
-              ),
-              if (_target == CelestialTarget.milkyWayCore)
-                (
-                  'Milky Way orientation',
-                  output.milkyWayOrientationDegrees != null
-                      ? '${output.milkyWayOrientationDegrees!.toStringAsFixed(1)}° relative to horizon'
-                      : 'Unavailable near zenith or nadir',
-                ),
-              ('Visibility cycle', _cycle(output.visibilityCycle)),
-              (
-                '${_value(_trailDegrees).toStringAsFixed(0)}° star trail',
-                _duration(output.trailDurationSeconds),
-              ),
-              (
-                'Trail rotation',
-                '${output.trailRotationDegreesPerHour.toStringAsFixed(1)}°/hour',
-              ),
-              (
-                'Selected rule',
-                '${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'} · ${_sharpnessTolerance.name}',
-              ),
-              for (final sample in output.path)
-                (
-                  'Sky path ${DateFormat('HH:mm').format(sample.instantUtc)} UTC',
-                  '${sample.altitudeDegrees.toStringAsFixed(0)}° / ${sample.azimuthDegrees.toStringAsFixed(0)}° true north',
-                ),
-            ],
-            inputs: [
-              ('Target', _target.label),
-              (
-                'Observer',
-                '${_latitude.text.trim()}°, ${_longitude.text.trim()}° · ${_elevation.text.trim()} m',
-              ),
-              ('Planning time', _planningTimeSummary()),
-              (
-                'Optics',
-                '${_focalLength.text.trim()} mm · ${_cropFactor.text.trim()}× crop · f/${_aperture.text.trim()} · ${_pixelPitch.text.trim()} µm pixels',
-              ),
-              (
-                'Sharp-star rule',
-                '${_shutterRule == StarShutterRule.npf ? 'NPF' : '500'} · ${_sharpnessTolerance.name}',
-              ),
-              ('Star-trail arc', '${_trailDegrees.text.trim()}°'),
-            ],
-            assumptions: [
-              switch (_target) {
-                CelestialTarget.sun =>
-                  'USNO-style analytic solar ephemeris; geocentric, mean equinox of date',
-                CelestialTarget.moon =>
-                  'USNO-style analytic lunar ephemeris; geocentric, mean equinox of date',
-                _ when _target.isMoving =>
-                  'JPL 1800–2050 approximate Keplerian model; moving-target events are solved against updated coordinates and remain planning-grade',
-                _ => 'Fixed ICRS/J2000 target coordinates',
-              },
-              'Airless geometric horizon; terrain and refraction excluded',
-              'Approximate mean sidereal time and planning-grade exposure rules',
-              if (_target == CelestialTarget.milkyWayCore) ...[
-                AstronomyCalculator.milkyWayOrientationConvention,
-                AstronomyCalculator.milkyWayOrientationLimitations,
-                if (!output.isAboveHorizon)
-                  'The core is below the geometric horizon; its orientation is mathematical, not a visible composition.',
-              ],
-            ],
-            warnings: _warningMessages(_result!.warnings),
-            guidance:
-                'The 500 and NPF values are estimates: inspect stars at your intended output size. Event instants are stored in UTC and displayed in the selected timezone. Terrain, refraction, precession, and proper motion are excluded.',
-            onSave: () => _save(output),
-            onReset: _reset,
-          ),
-          const SizedBox(height: 12),
-          _planningContext(),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SegmentedButton<PlanningView>(
-              segments: const [
-                ButtonSegment(
-                  value: PlanningView.numeric,
-                  label: Text('Numeric'),
-                ),
-                ButtonSegment(
-                  value: PlanningView.timeline,
-                  label: Text('Timeline'),
-                ),
-                ButtonSegment(
-                  value: PlanningView.compass,
-                  label: Text('Compass'),
-                ),
-                ButtonSegment(value: PlanningView.map, label: Text('Map')),
-                ButtonSegment(
-                  value: PlanningView.augmentedReality,
-                  label: Text('AR'),
-                ),
-              ],
-              selected: {_view},
-              onSelectionChanged: (values) =>
-                  setState(() => _view = values.first),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _planningView(output),
-          const SizedBox(height: 12),
-          Text('Next events', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
-          _EventsTimeline(
-            events: output.events,
-            timeZone: PlanningTimeContext.parse(_timeZoneId),
-            onDark: false,
-          ),
-          FieldChecklist(
-            items: _checklist,
-            onChanged: (items) => setState(() => _checklist = items),
-          ),
         ],
-      ],
+      ),
     );
+  }
+
+  /// Clears a result that no longer matches the inputs, remembering that it is
+  /// the reason the result is missing rather than a search that found nothing.
+  void _discardResult() {
+    if (_result != null) _stale = true;
+    _result = null;
+    _errors = const {};
+  }
+
+  /// The site's identity while scrolling: the saved name (or manual entry) and
+  /// the coordinates. The elevation is stated once, by the Site details row that
+  /// holds its field, rather than repeated here.
+  String _siteSummary() {
+    final name = _selectedLocation?.name ?? 'Manual coordinates';
+    return '$name · ${_latitude.text.trim()}°, ${_longitude.text.trim()}°';
+  }
+
+  /// What the collapsed Site details row states: the value it holds and the
+  /// horizon limitation behind it.
+  String _elevationSummary() =>
+      'Elevation ${_elevation.text.trim()} m · terrain is not modeled';
+
+  /// What the collapsed camera group currently holds, so the conventions behind
+  /// "More settings" are stated without opening it.
+  String _cameraSummary() {
+    final rule = _shutterRule == StarShutterRule.npf ? 'NPF' : '500';
+    return '${_focalLength.text.trim()} mm · crop ${_cropFactor.text.trim()}× · '
+        'f/${_aperture.text.trim()} · ${_pixelPitch.text.trim()} µm · '
+        '$rule ${_sharpnessTolerance.name} · '
+        '${_trailDegrees.text.trim()}° trail';
+  }
+
+  void _selectTarget(CelestialTarget target) {
+    if (_target == target) return;
+    setState(() {
+      _target = target;
+      _discardResult();
+    });
   }
 
   double _value(TextEditingController controller) =>
@@ -534,6 +718,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     );
     setState(() {
       _result = result;
+      _stale = false;
       _errors = {
         for (final error in result.errors)
           error.field: 'Enter a finite value within the supported range.',
@@ -543,8 +728,47 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
 
   void _shiftTime(int hours) => setState(() {
     _instantUtc = _instantUtc.add(Duration(hours: hours));
-    _result = null;
+    _discardResult();
   });
+
+  /// The current instant, floored to the minute, so a shortcut never claims
+  /// more precision than a clock reading has.
+  DateTime get _nowMinute {
+    final now = DateTime.now().toUtc();
+    return DateTime.utc(now.year, now.month, now.day, now.hour, now.minute);
+  }
+
+  /// The next occurrence of a local wall-clock time in the planning zone. A
+  /// time already past today belongs to the coming night, not to yesterday.
+  DateTime _nextLocalTime(int hour, int minute) {
+    final time = PlanningTimeContext.parse(_timeZoneId);
+    final localNow = time.localCivilTime(DateTime.now().toUtc());
+    final today = DateTime.utc(
+      localNow.year,
+      localNow.month,
+      localNow.day,
+      hour,
+      minute,
+    );
+    final candidate = today.isAfter(localNow)
+        ? today
+        : DateTime.utc(
+            localNow.year,
+            localNow.month,
+            localNow.day + 1,
+            hour,
+            minute,
+          );
+    return time.toUtc(candidate);
+  }
+
+  void _setInstant(DateTime instant) {
+    if (_instantUtc == instant) return;
+    setState(() {
+      _instantUtc = instant;
+      _discardResult();
+    });
+  }
 
   /// The instant with its zone for the result's input summary. The formatted
   /// value already ends in the zone it was rendered in, so the requested
@@ -572,6 +796,10 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
 
   Widget _planningTimeControl() {
     final time = PlanningTimeContext.parse(_timeZoneId);
+    final now = _nowMinute;
+    final tonight = _nextLocalTime(22, 0);
+    final midnight = _nextLocalTime(0, 0);
+    final deepNight = _nextLocalTime(2, 0);
     return InputDecorator(
       decoration: InputDecoration(
         labelText: 'Planning time (${time.timeZoneId})',
@@ -585,7 +813,36 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           Text(_planningTimeProvenance(time), textAlign: TextAlign.center),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppGap.sm),
+          PlanningChipRow(
+            chips: <Widget>[
+              PlanningShortcutChip(
+                label: 'Now',
+                tooltip: 'The current minute',
+                selected: _instantUtc == now,
+                onPressed: () => _setInstant(now),
+              ),
+              PlanningShortcutChip(
+                label: 'Tonight 22:00',
+                tooltip: 'The next 22:00 in ${time.timeZoneId}',
+                selected: _instantUtc == tonight,
+                onPressed: () => _setInstant(tonight),
+              ),
+              PlanningShortcutChip(
+                label: 'Midnight',
+                tooltip: 'The next 00:00 in ${time.timeZoneId}',
+                selected: _instantUtc == midnight,
+                onPressed: () => _setInstant(midnight),
+              ),
+              PlanningShortcutChip(
+                label: '02:00',
+                tooltip: 'The next 02:00 in ${time.timeZoneId}',
+                selected: _instantUtc == deepNight,
+                onPressed: () => _setInstant(deepNight),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppGap.sm),
           OutlinedButton.icon(
             onPressed: _pickLocalDateTime,
             icon: const Icon(Icons.event_outlined),
@@ -642,14 +899,14 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
     );
     setState(() {
       _instantUtc = time.toUtc(localCivilTime);
-      _result = null;
+      _discardResult();
     });
   }
 
   void _applyLens(Lens? lens) => setState(() {
     _lens = lens;
     if (lens != null) _focalLength.text = lens.minimumFocalLengthMm.toString();
-    _result = null;
+    _discardResult();
   });
 
   Future<void> _save(AstronomyOutput output) => saveCalculationSnapshot(
@@ -810,6 +1067,7 @@ class _AstronomyScreenState extends ConsumerState<AstronomyScreen> {
       _selectedLocation = null;
       _timeZoneId = 'UTC';
       _result = null;
+      _stale = false;
       _errors = const {};
     });
   }

@@ -38,25 +38,39 @@ void main() {
     ),
   );
 
-  for (final (name, screen, primaryAction) in <(String, Widget, String)>[
-    ('saved locations', const SavedLocationsScreen(), 'Add location'),
-    ('depth of field', const DepthOfFieldScreen(), 'Calculate'),
-    (
-      'exposure comparison',
-      const ExposureComparisonScreen(),
-      'Compare exposures',
-    ),
-    ('long exposure / ND', const LongExposureScreen(), 'Calculate exposure'),
-    ('field of view', const FieldOfViewScreen(), 'Calculate'),
-    ('diffraction guidance', const DiffractionScreen(), 'Calculate'),
-    ('focus stack planner', const FocusStackScreen(), 'Calculate'),
-    ('flash exposure', const FlashExposureScreen(), 'Calculate flash exposure'),
-    ('timelapse planner', const TimelapseScreen(), 'Plan timelapse'),
-    ('macro planner', const MacroScreen(), 'Calculate macro setup'),
-    ('panorama planner', const PanoramaScreen(), 'Plan panorama'),
-    ('night-sky planner', const AstronomyScreen(), 'Plan night sky'),
-    ('Sun & Moon alignment', const AlignmentScreen(), 'Search alignments'),
-  ]) {
+  /// The explicit action a heavy planner still requires, or `null` for the cheap
+  /// calculators that seed a live answer and expose `Save result` directly.
+  const liveResult = 'Save result';
+
+  // `action` is the explicit action a heavy planner still requires, `null` for
+  // a cheap calculator whose live answer exposes `Save result`, and `produce`
+  // says whether pressing the action is what makes the result appear.
+  for (final (name, screen, primaryAction, produce)
+      in <(String, Widget, String?, bool)>[
+        (
+          'saved locations',
+          const SavedLocationsScreen(),
+          'Add location',
+          false,
+        ),
+        ('depth of field', const DepthOfFieldScreen(), null, false),
+        ('exposure comparison', const ExposureComparisonScreen(), null, false),
+        ('long exposure / ND', const LongExposureScreen(), null, false),
+        ('field of view', const FieldOfViewScreen(), null, false),
+        ('diffraction guidance', const DiffractionScreen(), null, false),
+        ('focus stack planner', const FocusStackScreen(), null, false),
+        ('flash exposure', const FlashExposureScreen(), null, false),
+        ('timelapse planner', const TimelapseScreen(), null, false),
+        ('macro planner', const MacroScreen(), null, false),
+        ('panorama planner', const PanoramaScreen(), null, false),
+        ('night-sky planner', const AstronomyScreen(), 'Plan night sky', true),
+        (
+          'Sun & Moon alignment',
+          const AlignmentScreen(),
+          'Find alignment',
+          true,
+        ),
+      ]) {
     testWidgets('$name stays usable at 200 percent text scale', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1;
@@ -77,18 +91,40 @@ void main() {
       // The screen's real primary action must still be reachable at 2x text;
       // "some scrollable and some labelled node exist" would accept a control
       // that 200% text pushed out of the scroll extent.
-      final action = find.widgetWithText(FilledButton, primaryAction);
+      final primary = find.widgetWithText(
+        FilledButton,
+        primaryAction ?? liveResult,
+      );
       await tester.scrollUntilVisible(
-        action,
+        primary,
         300,
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
       expect(
-        action,
+        primary,
         findsOneWidget,
-        reason: '$primaryAction is unreachable at 200 percent text',
+        reason:
+            '${primaryAction ?? liveResult} is unreachable at 200 percent text',
       );
+      // A heavy search runs only when it is asked for and is what produces the
+      // answer; a cheap calculator already shows its live one.
+      if (produce) {
+        await tester.ensureVisible(primary);
+        await tester.pumpAndSettle();
+        await tester.tap(primary);
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(
+          find.text(liveResult),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(
+          find.text(liveResult),
+          findsOneWidget,
+          reason: '$name produced no result at 200 percent text',
+        );
+      }
       expect(tester.takeException(), isNull);
 
       // The longest content stays reachable by scrolling to the end.
@@ -109,36 +145,21 @@ void main() {
   // reads in the field. Every result view offers the same pair of trailing
   // actions, so they double as the proof that an answer rendered at all.
   for (final (name, screen, action, prefill)
-      in <(String, Widget, String, Future<void> Function(WidgetTester)?)>[
-        ('timelapse plan', const TimelapseScreen(), 'Plan timelapse', null),
-        ('macro setup', const MacroScreen(), 'Calculate macro setup', null),
-        ('panorama grid', const PanoramaScreen(), 'Plan panorama', null),
-        (
-          'exposure comparison',
-          const ExposureComparisonScreen(),
-          'Compare exposures',
-          null,
-        ),
-        ('field of view', const FieldOfViewScreen(), 'Calculate', null),
-        ('diffraction guidance', const DiffractionScreen(), 'Calculate', null),
-        ('focus stack plan', const FocusStackScreen(), 'Calculate', null),
-        (
-          'flash exposure',
-          const FlashExposureScreen(),
-          'Calculate flash exposure',
-          null,
-        ),
+      in <(String, Widget, String?, Future<void> Function(WidgetTester)?)>[
+        ('timelapse plan', const TimelapseScreen(), null, null),
+        ('macro setup', const MacroScreen(), null, null),
+        ('panorama grid', const PanoramaScreen(), null, null),
+        ('exposure comparison', const ExposureComparisonScreen(), null, null),
+        ('field of view', const FieldOfViewScreen(), null, null),
+        ('diffraction guidance', const DiffractionScreen(), null, null),
+        ('focus stack plan', const FocusStackScreen(), null, null),
+        ('flash exposure', const FlashExposureScreen(), null, null),
         ('night-sky plan', const AstronomyScreen(), 'Plan night sky', null),
-        (
-          'alignment search',
-          const AlignmentScreen(),
-          'Search alignments',
-          null,
-        ),
+        ('alignment search', const AlignmentScreen(), 'Find alignment', null),
         (
           'depth of field',
           const DepthOfFieldScreen(),
-          'Calculate',
+          null,
           (tester) async {
             await tester.enterText(find.byKey(const Key('dof-focal')), '50');
           },
@@ -146,7 +167,7 @@ void main() {
         (
           'long exposure stack',
           const LongExposureScreen(),
-          'Calculate exposure',
+          null,
           (tester) async {
             await tester.enterText(find.byKey(const Key('long-base')), '1/30');
           },
@@ -168,19 +189,26 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      final compute = find.text(action);
-      await tester.scrollUntilVisible(
-        compute,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(compute);
-      await tester.pumpAndSettle();
+      if (action != null) {
+        final compute = find.text(action);
+        await tester.scrollUntilVisible(
+          compute,
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(compute);
+        await tester.pumpAndSettle();
+      }
 
       // The answer leads at 2x text too, and every stored section below it is
       // reachable rather than clipped away.
       expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.text('Save result'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(
         find.text('Save result'),
         findsOneWidget,
@@ -207,14 +235,14 @@ void main() {
   // content in the app: an ordered capture table, a long planner-context list,
   // an event table with provenance, and the optics tiles.
   for (final (name, screen, action, prefill)
-      in <(String, Widget, String, Future<void> Function(WidgetTester)?)>[
-        ('panorama grid', const PanoramaScreen(), 'Plan panorama', null),
+      in <(String, Widget, String?, Future<void> Function(WidgetTester)?)>[
+        ('panorama grid', const PanoramaScreen(), null, null),
         ('night-sky plan', const AstronomyScreen(), 'Plan night sky', null),
-        ('timelapse plan', const TimelapseScreen(), 'Plan timelapse', null),
+        ('timelapse plan', const TimelapseScreen(), null, null),
         (
           'depth of field',
           const DepthOfFieldScreen(),
-          'Calculate',
+          null,
           (tester) async {
             await tester.enterText(find.byKey(const Key('dof-focal')), '50');
           },
@@ -236,17 +264,24 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      final compute = find.text(action);
+      if (action != null) {
+        final compute = find.text(action);
+        await tester.scrollUntilVisible(
+          compute,
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(compute);
+        await tester.pumpAndSettle();
+      }
+
+      expect(tester.takeException(), isNull);
       await tester.scrollUntilVisible(
-        compute,
+        find.text('Save result'),
         300,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.pumpAndSettle();
-      await tester.tap(compute);
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
       expect(
         find.text('Save result'),
         findsOneWidget,
@@ -285,18 +320,28 @@ void main() {
     (widget) => widget is TextField && widget.decoration?.labelText == label,
   );
 
-  Future<void> calculate(WidgetTester tester) async {
-    final button = find.text('Calculate');
-    await tester.scrollUntilVisible(
-      button,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    // scrollUntilVisible stops as soon as any part of the button is inside the
-    // viewport, which on a short screen can still leave its centre outside it.
-    await tester.ensureVisible(button);
-    await tester.pumpAndSettle();
-    await tester.tap(button);
+  /// Scrolls a field into the built range and leaves it addressable.
+  ///
+  /// The result card materialises above a kept-alive group (the framework
+  /// retains an open disclosure across viewport eviction), and for the frame
+  /// that follows, the parked group keeps the layout offset it had before the
+  /// card took its space. `Finder`s that skip offstage widgets trust that
+  /// offset, so a field can read as on-screen while the element is no longer
+  /// addressable. Settling first and scrolling again re-lays the list out, so
+  /// the field under test is really the field that gets written through.
+  Future<void> scrollFieldIntoRange(WidgetTester tester, Finder field) async {
+    final scrollable = find.byType(Scrollable).first;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (field.evaluate().isNotEmpty) return;
+      await tester.scrollUntilVisible(field, 200, scrollable: scrollable);
+      await tester.pumpAndSettle();
+    }
+    expect(field, findsOneWidget);
+  }
+
+  /// The cheap calculators answer live: an edit is the whole interaction, and
+  /// the validation message has to be laid out without any button press.
+  Future<void> confirmFrame(WidgetTester tester) async {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   }
@@ -369,16 +414,19 @@ void main() {
       await tester.pumpWidget(appAt(const DepthOfFieldScreen(), scale));
       await tester.pumpAndSettle();
 
-      // The shortest of the two messages: a focus inside the focal length.
+      // The shortest of the two messages: a focus inside the focal length. The
+      // live answer revalidates as the field changes, with no button to press.
       await tester.enterText(find.byKey(const Key('dof-focal')), '20000');
-      await calculate(tester);
+      await confirmFrame(tester);
       await expectFullyLaidOut(
         tester,
         'Focus distance must be greater than focal length.',
       );
 
-      // The longest one, which needs the advanced section open and a focus
-      // still beyond the focal length so validation passes first.
+      // The longest one. The advanced group holds both the raw millimetre focus
+      // field and the circle-of-confusion convention, so the extreme values are
+      // written through the canonical millimetre input while that group - where
+      // the message lands - is the one on screen.
       final advanced = find.text('More settings');
       await tester.scrollUntilVisible(
         advanced,
@@ -387,9 +435,20 @@ void main() {
       );
       await tester.tap(advanced);
       await tester.pumpAndSettle();
-      await tester.enterText(fieldLabelled('Focal length (mm)'), '1e200');
-      await tester.enterText(fieldLabelled('Focus distance (mm)'), '1e201');
-      await calculate(tester);
+      // A focus beyond the focal length clears the first error and leaves the
+      // calculation valid, so the second message is the one under test.
+      await tester.enterText(fieldLabelled('Focus distance (raw mm)'), '1e201');
+      await tester.pumpAndSettle();
+      // A valid focus brings the result card back above this group, which
+      // scrolls the pair further down the lazy list; the convention field is
+      // scrolled back into the built range before it is written through, since
+      // a field that is not built cannot hold a message.
+      final circleOfConfusion = fieldLabelled('Circle of confusion (mm)');
+      await scrollFieldIntoRange(tester, circleOfConfusion);
+      // A value this small overflows the hyperfocal distance without failing
+      // the positive-finite check, which is exactly the reported condition.
+      await tester.enterText(circleOfConfusion, '1e-320');
+      await confirmFrame(tester);
       await expectFullyLaidOut(
         tester,
         'Increase the aperture or circle of confusion.',

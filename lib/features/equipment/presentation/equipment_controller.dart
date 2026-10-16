@@ -21,20 +21,49 @@ final class EquipmentState {
   const EquipmentState({
     this.status = EquipmentLoadStatus.loading,
     this.items = const <EquipmentListEntry>[],
+    this.allItems = const <EquipmentListEntry>[],
     this.selectedKind,
     this.includeArchived = false,
     this.error,
   });
 
   final EquipmentLoadStatus status;
+
+  /// The entries matching [selectedKind] (every entry when no kind is chosen).
   final List<EquipmentListEntry> items;
+
+  /// Every loaded entry before the kind filter is applied, so the inventory can
+  /// label each category with a truthful count. Additive: existing readers keep
+  /// using [items] and see exactly the same list as before.
+  final List<EquipmentListEntry> allItems;
+
   final EquipmentKind? selectedKind;
   final bool includeArchived;
   final Object? error;
 
+  /// Every loaded entry that can currently be chosen: [allItems] with the
+  /// archived ones removed.
+  ///
+  /// Pickers read this, never [items]. [items] answers the inventory's own
+  /// "show me one category" question, so it carries the Kit kind filter — and
+  /// once that filter is persisted by the kept-alive shell, a calculator that
+  /// read [items] would lose the saved lenses or ND filters it needs the moment
+  /// the photographer parks the inventory on another category. It is also
+  /// independent of [includeArchived]: toggling archived items on is a
+  /// housekeeping view, and an archived item is never a valid choice for a new
+  /// calculation.
+  ///
+  /// The list is unfiltered by kind, so callers still narrow it themselves
+  /// ([EquipmentKind.lens] here, [EquipmentKind.filter] there); only the two
+  /// axes that must not leak into a calculation — category and archived state —
+  /// are settled once, here.
+  List<EquipmentListEntry> get activeItems =>
+      allItems.where((entry) => !entry.item.isArchived).toList(growable: false);
+
   EquipmentState copyWith({
     EquipmentLoadStatus? status,
     List<EquipmentListEntry>? items,
+    List<EquipmentListEntry>? allItems,
     EquipmentKind? selectedKind,
     bool clearSelectedKind = false,
     bool? includeArchived,
@@ -43,6 +72,7 @@ final class EquipmentState {
   }) => EquipmentState(
     status: status ?? this.status,
     items: items ?? this.items,
+    allItems: allItems ?? this.allItems,
     selectedKind: clearSelectedKind ? null : selectedKind ?? this.selectedKind,
     includeArchived: includeArchived ?? this.includeArchived,
     error: clearError ? null : error ?? this.error,
@@ -120,17 +150,19 @@ final class EquipmentController extends StateNotifier<EquipmentState> {
                   .toList(),
             ),
       ]);
-      final items =
-          results.expand((group) => group).where((entry) {
-            return state.selectedKind == null ||
-                entry.kind == state.selectedKind;
-          }).toList()..sort(
-            (left, right) =>
-                left.item.normalizedName.compareTo(right.item.normalizedName),
-          );
+      final all = results.expand((group) => group).toList()
+        ..sort(
+          (left, right) =>
+              left.item.normalizedName.compareTo(right.item.normalizedName),
+        );
+      final selectedKind = state.selectedKind;
+      final items = selectedKind == null
+          ? all
+          : all.where((entry) => entry.kind == selectedKind).toList();
       state = state.copyWith(
         status: EquipmentLoadStatus.ready,
         items: List.unmodifiable(items),
+        allItems: List.unmodifiable(all),
         clearError: true,
       );
     } on Object catch (error) {

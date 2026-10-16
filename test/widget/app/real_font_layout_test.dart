@@ -112,24 +112,25 @@ void main() {
   // stand-in font is wider, so these cases mostly re-confirm the gates that
   // already run - except where a long unbreakable token (,`1/8000`, `ISO
   // 102400`, a lens name) breaks lines differently in a real font.
-  const cases = <(String, Widget, String, Key?)>[
-    ('depth of field', DepthOfFieldScreen(), 'Calculate', Key('dof-focal')),
-    (
-      'exposure comparison',
-      ExposureComparisonScreen(),
-      'Compare exposures',
-      null,
-    ),
-    ('long exposure / ND', LongExposureScreen(), 'Calculate exposure', null),
-    ('field of view', FieldOfViewScreen(), 'Calculate', null),
-    ('diffraction guidance', DiffractionScreen(), 'Calculate', null),
-    ('focus stack planner', FocusStackScreen(), 'Calculate', null),
-    ('flash exposure', FlashExposureScreen(), 'Calculate flash exposure', null),
-    ('timelapse planner', TimelapseScreen(), 'Plan timelapse', null),
-    ('macro planner', MacroScreen(), 'Calculate macro setup', null),
-    ('panorama planner', PanoramaScreen(), 'Plan panorama', null),
+  //
+  // The action column is the interaction the screen needs before it shows its
+  // densest frame: `null` for a cheap calculator that seeds a live answer (the
+  // result is revealed instead of requested), an empty string for a screen with
+  // nothing to compute, and the label of the explicit action a heavy planner
+  // still requires.
+  const cases = <(String, Widget, String?, Key?)>[
+    ('depth of field', DepthOfFieldScreen(), null, Key('dof-focal')),
+    ('exposure comparison', ExposureComparisonScreen(), null, null),
+    ('long exposure / ND', LongExposureScreen(), null, null),
+    ('field of view', FieldOfViewScreen(), null, null),
+    ('diffraction guidance', DiffractionScreen(), null, null),
+    ('focus stack planner', FocusStackScreen(), null, null),
+    ('flash exposure', FlashExposureScreen(), null, null),
+    ('timelapse planner', TimelapseScreen(), null, null),
+    ('macro planner', MacroScreen(), null, null),
+    ('panorama planner', PanoramaScreen(), null, null),
     ('night-sky planner', AstronomyScreen(), 'Plan night sky', null),
-    ('Sun & Moon alignment', AlignmentScreen(), 'Search alignments', null),
+    ('Sun & Moon alignment', AlignmentScreen(), 'Find alignment', null),
     ('saved locations', SavedLocationsScreen(), 'Add location', null),
     ('saved results', SavedCalculationsScreen(), '', null),
     ('settings', SettingsScreen(), '', null),
@@ -178,7 +179,7 @@ void main() {
           await tester.enterText(find.byKey(prefillKey), '50');
           await tester.pumpAndSettle();
         }
-        if (action.isNotEmpty) {
+        if (action != null && action.isNotEmpty) {
           final primary = find.text(action);
           await tester.scrollUntilVisible(
             primary,
@@ -188,6 +189,27 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(primary);
           await tester.pumpAndSettle();
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '$name overflowed once it produced a result',
+          );
+        } else if (action == null) {
+          // A cheap calculator has no action to press: its result is already
+          // live and its Save row is the proof that the densest frame - the
+          // hero, tiles and action row - was laid out at this size.
+          final save = find.text('Save result');
+          await tester.scrollUntilVisible(
+            save,
+            300,
+            scrollable: listScrollable(),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            save,
+            findsOneWidget,
+            reason: '$name produced no live result at this size',
+          );
           expect(
             tester.takeException(),
             isNull,

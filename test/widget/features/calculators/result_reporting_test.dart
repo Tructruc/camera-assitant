@@ -45,16 +45,26 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Reveals [finder] wherever it sits in the screen.
+  ///
+  /// A target can be either side of the current position - a provenance notice
+  /// is above the advanced section that was just opened, a result card is above
+  /// the field that was just edited - and `scrollUntilVisible` only walks one
+  /// way, so a target that is not built yet is reached from the top, downwards.
   Future<void> reveal(
     WidgetTester tester,
     Finder finder, {
     double delta = 300,
   }) async {
-    await tester.scrollUntilVisible(
-      finder,
-      delta,
-      scrollable: find.byType(Scrollable).first,
-    );
+    if (finder.evaluate().isEmpty) {
+      await tester.drag(find.byType(ListView).first, const Offset(0, 10000));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        finder,
+        delta.abs(),
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
     await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
   }
@@ -107,16 +117,14 @@ void main() {
 
   /// The collapsed input group, where conventions and equipment pickers live.
   Future<void> openAdvancedInputs(WidgetTester tester) async {
-    for (final title in const <String>['More settings', 'Candidate settings']) {
-      if (await scrollToExpander(tester, title)) {
-        await tester.tap(
-          find.ancestor(
-            of: find.text(title),
-            matching: find.byType(ExpansionTile),
-          ),
-        );
-        await tester.pumpAndSettle();
-      }
+    if (await scrollToExpander(tester, 'More settings')) {
+      await tester.tap(
+        find.ancestor(
+          of: find.text('More settings'),
+          matching: find.byType(ExpansionTile),
+        ),
+      );
+      await tester.pumpAndSettle();
     }
   }
 
@@ -149,10 +157,7 @@ void main() {
   ) async {
     await tester.pumpWidget(app(const DepthOfFieldScreen()));
     await tester.pumpAndSettle();
-    final calculate = find.widgetWithText(FilledButton, 'Calculate');
-    await reveal(tester, calculate);
-    await tester.tap(calculate);
-    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Hyperfocal distance'));
 
     // The hero carries the answer; the derived rows stay available, one tap
     // away, instead of competing with it.
@@ -168,15 +173,12 @@ void main() {
   ) async {
     await tester.pumpWidget(app(const ExposureComparisonScreen()));
     await tester.pumpAndSettle();
-    final calculate = find.widgetWithText(FilledButton, 'Compare exposures');
-    await reveal(tester, calculate);
-    await tester.tap(calculate);
-    await tester.pumpAndSettle();
-
-    expect(
-      find.textContaining('Limitation: this comparison ignores'),
-      findsOneWidget,
+    // The comparison is live, so the stated limitation arrives with it.
+    final limitation = find.textContaining(
+      'Limitation: this comparison ignores',
     );
+    await reveal(tester, limitation);
+    expect(limitation, findsOneWidget);
     await unmount(tester);
   });
 
@@ -220,7 +222,8 @@ void main() {
     await repository.createCamera(savedCamera());
     await tester.pumpWidget(app(const AstronomyScreen()));
     await tester.pumpAndSettle();
-    await openAdvancedInputs(tester);
+    // The camera picker sits with the camera-and-exposure section: applying it
+    // fills the crop factor the sharp-star rules read.
     final cameraPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, cameraPicker);
     await tester.tap(cameraPicker);
@@ -228,6 +231,13 @@ void main() {
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
 
+    // The provenance notice sits with the picker it came from.
+    final notice = find.textContaining('1.00× crop factor');
+    await reveal(tester, notice);
+    expect(notice, findsOneWidget);
+    expect(find.textContaining('(user override)'), findsWidgets);
+
+    await openAdvancedInputs(tester);
     final cropFactorField = find.widgetWithText(TextField, 'Crop factor');
     await reveal(tester, cropFactorField);
     final cropFactor = tester
@@ -235,12 +245,6 @@ void main() {
         .controller!
         .text;
     expect(cropFactor, '1.00');
-
-    // The provenance notice sits with the picker it came from.
-    final notice = find.textContaining('1.00× crop factor');
-    await reveal(tester, notice, delta: -300);
-    expect(notice, findsOneWidget);
-    expect(find.textContaining('(user override)'), findsWidgets);
     await unmount(tester);
   });
 
@@ -251,7 +255,6 @@ void main() {
     await repository.createLens(savedLens());
     await tester.pumpWidget(app(const MacroScreen()));
     await tester.pumpAndSettle();
-    await openAdvancedInputs(tester);
     final cameraPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, cameraPicker);
     await tester.tap(cameraPicker);
@@ -259,13 +262,17 @@ void main() {
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
 
+    expect(find.textContaining('36.0 mm sensor width'), findsOneWidget);
+
+    // The sensor width itself is a camera specification, so it stays behind the
+    // advanced group; the applied notice above is the visible provenance.
+    await openAdvancedInputs(tester);
     final sensorWidthField = find.widgetWithText(
       TextField,
       'Sensor width (mm)',
     );
     await reveal(tester, sensorWidthField);
     expect(tester.widget<TextField>(sensorWidthField).controller!.text, '36.0');
-    expect(find.textContaining('36.0 mm sensor width'), findsOneWidget);
     await unmount(tester);
   });
 
@@ -276,12 +283,8 @@ void main() {
     await tester.pumpAndSettle();
     await openAdvancedInputs(tester);
     final cocField = find.byKey(const Key('focusStack-circleOfConfusionMm'));
-    await reveal(tester, cocField, delta: 200);
+    await reveal(tester, cocField);
     await tester.enterText(cocField, '0.0001');
-    await tester.pumpAndSettle();
-    final calculate = find.widgetWithText(FilledButton, 'Calculate');
-    await reveal(tester, calculate);
-    await tester.tap(calculate);
     await tester.pumpAndSettle();
 
     // The limitation is visible with the answer, not hidden behind "Details",
@@ -379,7 +382,6 @@ void main() {
 
     await tester.pumpWidget(app(const AstronomyScreen()));
     await tester.pumpAndSettle();
-    await openAdvancedInputs(tester);
     final cameraPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, cameraPicker);
     await tester.tap(cameraPicker);
@@ -411,20 +413,14 @@ void main() {
 
     await tester.pumpWidget(app(const MacroScreen()));
     await tester.pumpAndSettle();
-    await openAdvancedInputs(tester);
     final macroPicker = equipmentPicker('Saved camera (optional)');
     await reveal(tester, macroPicker);
     await tester.tap(macroPicker);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
-    final calculateMacro = find.widgetWithText(
-      FilledButton,
-      'Calculate macro setup',
-    );
-    await reveal(tester, calculateMacro);
-    await tester.tap(calculateMacro);
-    await tester.pumpAndSettle();
+    // The macro estimate is live, so there is no action between the applied
+    // camera and its snapshot.
     final macroSave = find.widgetWithText(FilledButton, 'Save result');
     await reveal(tester, macroSave);
     await tester.tap(macroSave);

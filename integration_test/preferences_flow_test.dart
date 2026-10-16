@@ -38,9 +38,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Both planners and calculators are reachable before any preference change.
-    await tapVisible(tester, find.text('Depth of field'), delta: 300);
-    await tester.tap(find.text('Calculate'));
-    await tester.pumpAndSettle();
+    await tapVisibleFromTop(tester, find.text('Depth of field'), delta: 300);
+    // The depth-of-field answer is live, so the save follows immediately.
     await scrollToResultActions(tester, extra: 300);
     expect(find.textContaining('mm'), findsWidgets);
     await tester.tap(find.text('Save result'));
@@ -48,8 +47,8 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    // Switch to imperial presentation and a conventional shutter notation.
-    await tester.tap(find.text('Settings'));
+    // Settings is an app-bar action, not a primary destination.
+    await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Imperial (ft and in)'));
     await tester.pumpAndSettle();
@@ -59,12 +58,13 @@ void main() {
     expect(preferences.lengthDisplay, LengthDisplay.imperial);
     expect(preferences.shutterDisplay, ShutterDisplay.conventional);
 
-    // The same calculation now presents imperial units.
-    await tester.tap(find.text('Calculators'));
+    // Back to the shell, then open the same calculation from Tools: it now
+    // presents imperial units.
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tools'));
     await tester.pumpAndSettle();
     await tapVisible(tester, find.text('Depth of field'), delta: 300);
-    await tester.tap(find.text('Calculate'));
-    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Save result'),
       300,

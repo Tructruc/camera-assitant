@@ -10,8 +10,8 @@ import 'package:photography_assistant/features/equipment/data/drift_equipment_re
 import 'support/journey.dart';
 
 /// Quickstart scenarios 8 and 26 end to end: the whole journey — navigate,
-/// calculate, read the labelled hero answer and its collapsed values, and save —
-/// must complete at 200% system text scale on a phone-sized viewport.
+/// read the labelled hero answer and its collapsed values, and save — must
+/// complete at 200% system text scale on a phone-sized viewport.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -43,6 +43,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The searchable catalog lives on the Tools destination; Plan is the
+    // launchpad. On a phone-sized viewport the destination labels are on the
+    // bottom navigation bar, so they are always on screen.
+    await tester.tap(find.text('Tools'));
+    await tester.pumpAndSettle();
+
     // Filter the catalog with its own search instead of scrolling a 200%-text
     // list down to the tile: on a phone-sized emulator viewport the tile is
     // several screens down and `scrollUntilVisible` could not reach it.
@@ -50,8 +56,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ListTile, 'Depth of field'));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Calculate'), delta: 300);
+
+    // The depth-of-field answer is live: no Calculate action is pressed, and
     // 200% text must not overflow or clip any frame.
+    expect(find.widgetWithText(FilledButton, 'Calculate'), findsNothing);
+    await reveal(tester, find.text('Hyperfocal distance'));
     expect(tester.takeException(), isNull);
 
     // The hero answer is the first thing assistive tech receives, without

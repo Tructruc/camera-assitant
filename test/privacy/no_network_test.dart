@@ -52,6 +52,28 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Opens a destination or a hub shortcut, walking the list downwards.
+  ///
+  /// The shell is reached without the network, and the Plan hub groups tools by
+  /// job rather than catalogue order, so a target that is not built yet is
+  /// reached from the top of the list.
+  Future<void> openFromHub(WidgetTester tester, String label) async {
+    final target = find.text(label);
+    if (target.evaluate().isEmpty) {
+      await tester.drag(find.byType(ListView).first, const Offset(0, 10000));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        target,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await tester.ensureVisible(target);
+    await tester.pumpAndSettle();
+    await tester.tap(target);
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('primary journey never creates a Dart network client', (
     tester,
   ) async {
@@ -61,20 +83,14 @@ void main() {
 
     await tester.pumpWidget(app(database));
     await tester.pumpAndSettle();
+    await openFromHub(tester, 'Depth of field');
+    // The live answer arrives without a Calculate action, and rendering it must
+    // not reach for the network either.
     await tester.scrollUntilVisible(
-      find.text('Depth of field'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Depth of field'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Calculate'),
+      find.text('Near limit'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Calculate'));
-    await tester.pumpAndSettle();
 
     expect(find.text('Near limit'), findsOneWidget);
     expect(find.textContaining('network request attempted'), findsNothing);
@@ -105,7 +121,7 @@ void main() {
     await tester.pumpWidget(app(database));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Equipment').last);
+    await tester.tap(find.text('Kit').last);
     await tester.pumpAndSettle();
     expect(find.text('Full Frame Camera'), findsOneWidget);
 
@@ -137,13 +153,7 @@ void main() {
     await tester.pumpWidget(app(database));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(
-      find.text('Sun & Moon alignment'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Sun & Moon alignment'));
-    await tester.pumpAndSettle();
+    await openFromHub(tester, 'Sun & Moon alignment');
     final search = find.byKey(const Key('alignment-search'));
     await tester.scrollUntilVisible(
       search,
@@ -170,13 +180,7 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Night-sky planner'),
-      -250,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Night-sky planner'));
-    await tester.pumpAndSettle();
+    await openFromHub(tester, 'Night-sky planner');
     await tester.scrollUntilVisible(
       find.text('Plan night sky'),
       300,

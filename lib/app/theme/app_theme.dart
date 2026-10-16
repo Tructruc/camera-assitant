@@ -528,6 +528,33 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: scheme.surfaceContainerLow,
+        indicatorColor: scheme.primaryContainer,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.control),
+        ),
+        useIndicator: true,
+        selectedIconTheme: IconThemeData(color: scheme.onPrimaryContainer),
+        unselectedIconTheme: IconThemeData(color: scheme.onSurfaceVariant),
+        selectedLabelTextStyle: text.labelSmall?.copyWith(
+          color: scheme.onSurface,
+        ),
+        unselectedLabelTextStyle: text.labelSmall?.copyWith(
+          color: scheme.onSurfaceVariant,
+        ),
+      ),
+      sliderTheme: SliderThemeData(
+        trackHeight: 4,
+        activeTrackColor: scheme.primary,
+        inactiveTrackColor: scheme.surfaceContainerHighest,
+        thumbColor: scheme.primary,
+        overlayColor: scheme.primary.withValues(alpha: 0.12),
+        valueIndicatorColor: scheme.inverseSurface,
+        valueIndicatorTextStyle: text.bodySmall?.copyWith(
+          color: scheme.onInverseSurface,
+        ),
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: scheme.inverseSurface,

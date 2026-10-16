@@ -176,14 +176,23 @@ void main() {
       await tester.pumpAndSettle();
 
       // Scroll to the end, which is where the button sits over the content.
+      // A drag is trimmed by the touch slop, so the loop runs until the list
+      // itself reports it has reached its end rather than counting drags.
       final vertical = find.byWidgetPredicate(
         (widget) =>
             widget is Scrollable && widget.axisDirection == AxisDirection.down,
       );
-      for (var step = 0; step < 12; step++) {
+      final position = tester.state<ScrollableState>(vertical).position;
+      for (var step = 0; step < 40; step++) {
+        if (position.pixels >= position.maxScrollExtent) break;
         await tester.drag(vertical, const Offset(0, -200));
         await tester.pumpAndSettle();
       }
+      expect(
+        position.pixels,
+        position.maxScrollExtent,
+        reason: 'the inventory list never reached its last row',
+      );
 
       final lastRow = tester.getRect(find.byType(Card).last);
       final addButton = tester.getRect(find.byType(FilledButton));
@@ -256,7 +265,6 @@ void main() {
       findsOneWidget,
     );
     expect(find.widgetWithText(TextFormField, 'Source note'), findsOneWidget);
-    expect(find.widgetWithText(TextFormField, 'Notes'), findsOneWidget);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Camera name'),
@@ -270,6 +278,18 @@ void main() {
       find.widgetWithText(TextFormField, 'Sensor height (mm)'),
       '24',
     );
+
+    // Notes is the last input in a lazy list, so it is scrolled to before it is
+    // asserted: a field that is not built cannot be checked.
+    final notes = find.widgetWithText(TextFormField, 'Notes');
+    await tester.scrollUntilVisible(
+      notes,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(notes, findsOneWidget);
+
     await tester.scrollUntilVisible(
       find.text('Save camera'),
       300,

@@ -26,6 +26,34 @@ Future<void> tapVisible(
   await tester.pumpAndSettle();
 }
 
+/// Scrolls [finder] into view and taps it, walking the list downwards.
+///
+/// The Plan hub groups tools by the job they answer rather than by catalogue
+/// order, so a journey can move backwards through it. A target that is not built
+/// yet is unreachable by a single-direction scroll, so the list is first
+/// returned to its top and only then walked down; a target that is already built
+/// (or above the fold) goes straight to [WidgetTester.ensureVisible].
+Future<void> tapVisibleFromTop(
+  WidgetTester tester,
+  Finder finder, {
+  double delta = 300,
+  Finder? scrollable,
+}) async {
+  if (finder.evaluate().isEmpty) {
+    await tester.drag(find.byType(ListView).first, const Offset(0, 10000));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      finder,
+      delta,
+      scrollable: scrollable ?? find.byType(Scrollable).first,
+    );
+  }
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
+  await tester.pumpAndSettle();
+}
+
 /// Scrolls [finder] into view and settles, without tapping it.
 Future<void> reveal(
   WidgetTester tester,

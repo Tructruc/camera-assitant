@@ -15,22 +15,22 @@ import 'support/journey.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<void> openTool(WidgetTester tester, String label) async {
-    await tapVisible(tester, find.text(label), delta: 300);
-  }
-
-  Future<void> calculateAndExpect(
+  /// Opens a tool from the Plan hub, checks its answer, and goes back.
+  ///
+  /// These tools seed their answer and keep it live, so no Calculate action is
+  /// pressed; a heavy planner would pass its own [action] instead.
+  Future<void> openToolAndCheck(
     WidgetTester tester, {
-    required String action,
+    required String tool,
+    String? action,
     required String expected,
     bool save = false,
   }) async {
-    await tapVisible(tester, find.text(action), delta: 300);
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tapVisibleFromTop(tester, find.text(tool), delta: 300);
+    if (action != null) {
+      await tapVisible(tester, find.text(action), delta: 300);
+    }
+    await reveal(tester, find.text('Save result'));
     expect(find.byType(CalculationResultView), findsOneWidget);
     expect(find.textContaining(expected), findsWidgets);
     if (save) {
@@ -70,26 +70,25 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await openTool(tester, 'Field of view');
-    await calculateAndExpect(tester, action: 'Calculate', expected: '39.6°');
+    await openToolAndCheck(tester, tool: 'Field of view', expected: '39.6°');
 
-    await openTool(tester, 'Diffraction guidance');
-    await calculateAndExpect(tester, action: 'Calculate', expected: '10.74');
-
-    await openTool(tester, 'Focus stack planner');
-    await calculateAndExpect(tester, action: 'Calculate', expected: '500.0 mm');
-
-    await openTool(tester, 'Macro planner');
-    await calculateAndExpect(
+    await openToolAndCheck(
       tester,
-      action: 'Calculate macro setup',
-      expected: '0.70×',
+      tool: 'Diffraction guidance',
+      expected: '10.74',
     );
 
-    await openTool(tester, 'Panorama planner');
-    await calculateAndExpect(
+    await openToolAndCheck(
       tester,
-      action: 'Plan panorama',
+      tool: 'Focus stack planner',
+      expected: '500.0 mm',
+    );
+
+    await openToolAndCheck(tester, tool: 'Macro planner', expected: '0.70×');
+
+    await openToolAndCheck(
+      tester,
+      tool: 'Panorama planner',
       expected: '3 columns × 2 rows',
       save: true,
     );
