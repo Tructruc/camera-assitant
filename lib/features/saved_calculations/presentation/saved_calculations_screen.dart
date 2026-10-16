@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
@@ -9,6 +10,7 @@ import '../../../core/domain/repositories/snapshot_repository.dart';
 import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../planning/domain/planning_time_context.dart';
+import 'saved_calculation_export.dart';
 
 /// The saved workspace: everything already calculated, searchable by title,
 /// tool or note, with the tool filter and the dates it was saved on visible.
@@ -97,8 +99,9 @@ class _SavedCalculationsScreenState
     };
     final sortedTools = tools.toList()
       ..sort(
-        (left, right) =>
-            _calculatorLabel(left).compareTo(_calculatorLabel(right)),
+        (left, right) => savedCalculationToolLabel(
+          left,
+        ).compareTo(savedCalculationToolLabel(right)),
       );
     // A filter left pointing at a tool that no longer has saved rows is
     // dropped, so a deleted result can never leave the workspace stuck.
@@ -178,7 +181,9 @@ class _SavedCalculationsScreenState
     final query = _search.text.trim().toLowerCase();
     if (query.isEmpty) return true;
     return snapshot.title.toLowerCase().contains(query) ||
-        _calculatorLabel(snapshot.calculatorId).toLowerCase().contains(query) ||
+        savedCalculationToolLabel(
+          snapshot.calculatorId,
+        ).toLowerCase().contains(query) ||
         (snapshot.notes ?? '').toLowerCase().contains(query);
   }
 
@@ -231,29 +236,43 @@ class _LibraryHeader extends StatelessWidget {
         ),
         if (tools.isNotEmpty) ...<Widget>[
           const SizedBox(height: AppGap.md),
-          Wrap(
-            spacing: AppGap.sm,
-            runSpacing: AppGap.xs,
-            children: <Widget>[
-              ChoiceChip(
-                label: const Text('All tools'),
-                selected: selected == null,
-                onSelected: (_) => onSelected(null),
-              ),
-              for (final tool in tools)
-                ChoiceChip(
-                  label: Text(
-                    '${_calculatorLabel(tool)} (${counts[tool] ?? 0})',
-                  ),
-                  selected: selected == tool,
-                  onSelected: (_) => onSelected(tool),
-                ),
-            ],
-          ),
+          _toolFilter(),
         ],
         const SizedBox(height: AppGap.sm),
       ],
     );
+  }
+
+  /// The visible tool filter, with its counts, above the rows it narrows.
+  ///
+  /// A library holding a few tools wraps, so every choice is visible without a
+  /// gesture. Once many tools are stored - a full catalog is a dozen and more -
+  /// wrapping becomes a wall of chips that pushes the results off screen, so the
+  /// same choices move to the app's standard sideways rail. Nothing is dropped
+  /// either way: every chip keeps its label, its count and its 48dp target.
+  Widget _toolFilter() {
+    final chips = <Widget>[
+      ChoiceChip(
+        label: const Text('All tools'),
+        selected: selected == null,
+        onSelected: (_) => onSelected(null),
+      ),
+      for (final tool in tools)
+        ChoiceChip(
+          label: Text(
+            '${savedCalculationToolLabel(tool)} (${counts[tool] ?? 0})',
+          ),
+          selected: selected == tool,
+          onSelected: (_) => onSelected(tool),
+        ),
+    ];
+    if (tools.length > _wrappedToolLimit) {
+      return CalculatorChipRail(
+        semanticsLabel: 'Filter saved results by tool',
+        children: chips,
+      );
+    }
+    return Wrap(spacing: AppGap.sm, runSpacing: AppGap.xs, children: chips);
   }
 }
 
@@ -312,7 +331,7 @@ class _SavedResultCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              '${_calculatorLabel(snapshot.calculatorId)} · '
+              '${savedCalculationToolLabel(snapshot.calculatorId)} · '
               '${_date(snapshot.createdAt)}',
             ),
             if (summary != null) Text(summary),
@@ -443,8 +462,21 @@ class _NoMatches extends StatelessWidget {
 }
 
 class SavedCalculationDetailScreen extends ConsumerStatefulWidget {
-  const SavedCalculationDetailScreen({required this.snapshot, super.key});
+  const SavedCalculationDetailScreen({
+    required this.snapshot,
+    this.copyText,
+    super.key,
+  });
+
   final CalculationSnapshot snapshot;
+
+  /// Writes [text] to the platform clipboard.
+  ///
+  /// Production leaves this null and the widget uses `Clipboard.setData`, which
+  /// needs no permission and no package. Widget tests inject a recorder here so
+  /// no test ever writes the machine's real clipboard, and can make the write
+  /// fail to prove the failure is reported honestly.
+  final Future<void> Function(String text)? copyText;
 
   @override
   ConsumerState<SavedCalculationDetailScreen> createState() =>
@@ -453,6 +485,27 @@ class SavedCalculationDetailScreen extends ConsumerStatefulWidget {
 
 class _SavedCalculationDetailScreenState
     extends ConsumerState<SavedCalculationDetailScreen> {
+  /// Shown beside both copy actions and as their tooltip: a brief and a JSON
+  /// copy are text, and a saved plan can carry a photographer's own words and a
+  /// site's coordinates.
+  static const String _copyPrivacy =
+      'Saved plans can include site coordinates and your notes.';
+
+  /// Input keys the observation block below already prints, so the brief does
+  /// not repeat a site or an instant twice.
+  static const Set<String> _observationInputKeys = <String>{
+    'latitudeDegrees',
+    'longitudeDegrees',
+    'observerLatitudeDegrees',
+    'observerLongitudeDegrees',
+    'observerElevationMetres',
+    'instantUtc',
+    'startUtc',
+    'endUtc',
+    'startLocalDate',
+    'endLocalDate',
+  };
+
   late CalculationSnapshot _snapshot = widget.snapshot;
   late final Map<String, bool> _fieldChecklist = _readChecklist();
 
@@ -503,6 +556,7 @@ class _SavedCalculationDetailScreenState
             title: 'Exact values',
             entries: Map<String, Object?>.of(_snapshot.canonicalOutputs)
               ..remove('fieldChecklist'),
+            action: _exactJsonCopy(context),
           ),
           if (_snapshot.displayContext.isNotEmpty)
             _ExpansionSection(
@@ -545,7 +599,7 @@ class _SavedCalculationDetailScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
-              '${_calculatorLabel(_snapshot.calculatorId)} · saved ${_date(_snapshot.createdAt)}',
+              '${savedCalculationToolLabel(_snapshot.calculatorId)} · saved ${_date(_snapshot.createdAt)}',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -571,10 +625,198 @@ class _SavedCalculationDetailScreenState
               const SizedBox(height: AppGap.xs),
               Text(text, style: theme.textTheme.bodySmall),
             ],
+            const SizedBox(height: AppGap.md),
+            // The shareable form of this plan sits with the answer it carries,
+            // not behind the exact-value disclosure: a photographer passing a
+            // setup on should not have to open the raw payload first.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Tooltip(
+                message: 'Copies a plain-text field brief. $_copyPrivacy',
+                child: FilledButton.tonalIcon(
+                  onPressed: _copyBrief,
+                  icon: const Icon(Icons.copy_all_outlined, size: 18),
+                  label: const Text('Copy field brief'),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppGap.xs),
+            Text(
+              _copyPrivacy,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// The secondary copy action: the whole stored record, offered inside the
+  /// exact-value disclosure it duplicates.
+  Widget _exactJsonCopy(BuildContext context) {
+    final theme = Theme.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Tooltip(
+            message:
+                'Copies the whole stored record as JSON text. $_copyPrivacy',
+            child: OutlinedButton.icon(
+              onPressed: _copyExactJson,
+              icon: const Icon(Icons.data_object, size: 18),
+              label: const Text('Copy exact JSON'),
+            ),
+          ),
+          const SizedBox(height: AppGap.xs),
+          Text(
+            'Every stored value, id and version, exactly as saved.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Copies the readable brief.
+  ///
+  /// No confirmation is asked for a user-initiated copy: nothing is destroyed
+  /// and the clipboard is replaced on the next copy.
+  Future<void> _copyBrief() => _copyText(
+    buildSavedCalculationBrief(_briefInput()),
+    success: 'Field brief copied to the clipboard.',
+    failure:
+        'The field brief could not be copied. Nothing was written to the clipboard.',
+  );
+
+  /// Copies the record exactly as stored, so no canonical value is lost.
+  ///
+  /// The snapshot's own [CalculationSnapshot.toJson] is the source: the ticks a
+  /// photographer makes on the on-screen checklist while reading are session
+  /// state and are never part of it.
+  Future<void> _copyExactJson() => _copyText(
+    buildSavedCalculationExactJson(_snapshot),
+    success: 'Exact JSON copied to the clipboard.',
+    failure:
+        'The exact JSON could not be copied. Nothing was written to the clipboard.',
+  );
+
+  /// Writes [text] and reports the outcome only after the platform answered.
+  Future<void> _copyText(
+    String text, {
+    required String success,
+    required String failure,
+  }) async {
+    try {
+      await _writeClipboard(text);
+    } on Object {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(failure)));
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(success)));
+  }
+
+  Future<void> _writeClipboard(String text) async {
+    final write = widget.copyText;
+    if (write != null) {
+      await write(text);
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: text));
+  }
+
+  /// The presentation strings the pure brief builder prints.
+  ///
+  /// The hero answer, the warning sentences and the zone wording are the ones
+  /// the saved screen already shows, so a brief never restates the physics
+  /// differently; the equipment is the record's own applied snapshot, not
+  /// whatever the kit holds now.
+  SavedCalculationBriefInput _briefInput() {
+    final (label, value, caption) = _heroFor(_snapshot);
+    return SavedCalculationBriefInput(
+      title: _snapshot.title,
+      toolLabel: savedCalculationToolLabel(_snapshot.calculatorId),
+      savedDate: _date(_snapshot.createdAt),
+      primaryLabel: label,
+      primaryValue: value,
+      primaryCaption: caption,
+      notes: _snapshot.notes,
+      recordedInputs: savedCalculationRecordedValues(
+        _snapshot.canonicalInputs,
+        skip: _isObservationPlan ? _observationInputKeys : const <String>{},
+      ),
+      warnings: <String>[
+        for (final warning in _snapshot.warnings)
+          calculationWarningText(warning.code),
+      ],
+      assumptions: <String>[
+        for (final item in _snapshot.assumptions) '${item.key}: ${item.value}',
+      ],
+      observation: _isObservationPlan ? _observationBrief() : null,
+      equipment: <String>[
+        for (final item in _snapshot.equipment) _equipmentBrief(item),
+      ],
+    );
+  }
+
+  SavedCalculationObservationBrief _observationBrief() {
+    final display = _snapshot.displayContext;
+    final zone = display['timeZone'];
+    final reference = display['northReference'] ?? display['azimuthReference'];
+    return SavedCalculationObservationBrief(
+      site: _observationSite(),
+      time: _plannedTimeLabel(_snapshot.canonicalInputs),
+      // The plan's own zone, and `UTC` when it recorded none: the brief never
+      // borrows today's global preference for a plan saved in another place.
+      zone: zone is String && zone.trim().isNotEmpty ? zone : 'UTC',
+      reference: reference is String && reference.trim().isNotEmpty
+          ? reference
+          : null,
+    );
+  }
+
+  String _observationSite() {
+    final inputs = _snapshot.canonicalInputs;
+    final display = _snapshot.displayContext;
+    final latitude =
+        inputs['observerLatitudeDegrees'] ?? inputs['latitudeDegrees'];
+    final longitude =
+        inputs['observerLongitudeDegrees'] ?? inputs['longitudeDegrees'];
+    final elevation = inputs['observerElevationMetres'];
+    final coordinates = latitude == null || longitude == null
+        ? null
+        : '$latitude, $longitude';
+    final label = display['locationLabel'];
+    final source = display['locationSource'];
+    final parts = <String>[
+      ?coordinates,
+      if (elevation is num)
+        'elevation ${savedCalculationValueText(elevation)} m',
+      // A manual location's label is the coordinates again; naming them twice
+      // would bury the provenance that is the useful part.
+      if (label is String && label.trim().isNotEmpty && label != coordinates)
+        label,
+      if (source is String && source.trim().isNotEmpty) source,
+    ];
+    return parts.isEmpty ? 'Not recorded' : parts.join(' · ');
+  }
+
+  String _equipmentBrief(AppliedEquipmentSnapshot item) {
+    final values = savedCalculationRecordedValues(item.values);
+    final identity = '${item.name} (${item.type.name}) · ${item.source}';
+    if (values.isEmpty) return identity;
+    return '$identity\n  ${values.join(', ')}';
   }
 
   Widget _warningsBanner(BuildContext context) {
@@ -987,7 +1229,11 @@ class _SavedCalculationDetailScreenState
         return ('Target altitude', '${altitude.toStringAsFixed(0)}°', null);
       }
   }
-  return ('Saved result', _calculatorLabel(snapshot.calculatorId), null);
+  return (
+    'Saved result',
+    savedCalculationToolLabel(snapshot.calculatorId),
+    null,
+  );
 }
 
 IconData _calculatorIcon(String id) => switch (id) {
@@ -1006,21 +1252,11 @@ IconData _calculatorIcon(String id) => switch (id) {
   _ => Icons.bookmark_outline,
 };
 
-String _calculatorLabel(String id) => switch (id) {
-  'depth_of_field' => 'Depth of field',
-  'exposure_comparison' => 'Exposure comparison',
-  'long_exposure_nd' => 'Long exposure / ND',
-  'field_of_view' => 'Field of view',
-  'diffraction' => 'Diffraction guidance',
-  'focus_stacking' => 'Focus stack planner',
-  'flash_exposure' => 'Flash exposure',
-  'timelapse' => 'Timelapse planner',
-  'macro' => 'Macro planner',
-  'panorama' => 'Panorama planner',
-  'astronomy' => 'Night-sky planner',
-  'sun_moon_alignment' => 'Sun & Moon alignment',
-  _ => id,
-};
+/// How many stored tools may wrap onto several rows before the tool filter
+/// moves to the app's standard sideways chip rail.
+const int _wrappedToolLimit = 4;
+
+/// The saved date a card and a brief both print.
 String _date(DateTime value) =>
     '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
 
@@ -1078,15 +1314,24 @@ String _humanDuration(double seconds) {
 }
 
 /// One collapsed block of stored provenance.
+///
+/// [action] is an optional control that belongs to this block - the exact-value
+/// block offers its JSON copy here - and is placed inside the disclosure, above
+/// the rows it duplicates, so the raw payload still leads.
 class _ExpansionSection extends StatelessWidget {
-  const _ExpansionSection({required this.title, required this.entries});
+  const _ExpansionSection({
+    required this.title,
+    required this.entries,
+    this.action,
+  });
 
   final String title;
   final Map<String, Object?> entries;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
-    if (entries.isEmpty) return const SizedBox.shrink();
+    if (entries.isEmpty && action == null) return const SizedBox.shrink();
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
@@ -1096,6 +1341,10 @@ class _ExpansionSection extends StatelessWidget {
         collapsedShape: const Border(),
         title: Text(title),
         children: <Widget>[
+          if (action case final widget?) ...<Widget>[
+            widget,
+            const SizedBox(height: AppGap.sm),
+          ],
           for (final entry in entries.entries)
             Align(
               alignment: Alignment.centerLeft,

@@ -17,6 +17,7 @@ import '../../equipment/presentation/equipment_picker.dart';
 import '../../equipment/presentation/equipment_specs.dart';
 import '../../exposure_comparison/presentation/capture_field_controls.dart';
 import '../domain/long_exposure_calculator.dart';
+import 'exposure_timer_panel.dart';
 
 /// Long exposure / ND: the two controls a photographer actually works with -
 /// the metered shutter and the filter stack - with the resulting exposure time
@@ -196,6 +197,13 @@ class _LongExposureScreenState extends ConsumerState<LongExposureScreen> {
           ],
         ),
         const CaptureLiveHint(),
+        // The timer is offered with the answer it would time: above the full
+        // result details, with the filter stack that produced it. It is absent
+        // whenever the calculation is invalid, so nothing ever offers to time a
+        // number that does not exist, and the canonical filtered seconds - not
+        // the rounded display - are what the panel is handed.
+        if (_result?.output case final output?)
+          ExposureTimerAction(seconds: output.filteredTime.seconds),
         if (_result?.output case final output?)
           CalculationResultView(
             title: 'Long exposure result',

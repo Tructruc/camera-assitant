@@ -52,6 +52,19 @@ for the exact gates, rendered evidence, work division and mobile/SDK limitations
 Use current command evidence and Git status rather than treating the historical
 counts below as validation of the new workbench.
 
+## Offline field functions after the UI push
+
+After pushing UI commit `500eaac`, two additions were implemented: a foreground ND
+exposure countdown (one second through 24 hours, no camera control/background alarm),
+and saved-plan copying as a readable field brief or exact snapshot JSON. Saved
+records remain immutable, with privacy hints for coordinates/notes. Many-tool Saved
+filters now stay compact in a horizontal rail.
+
+The final tree passed **643 unit/widget tests**, all eight Linux integration journeys,
+analysis, formatting, the Linux release build and eight real-font feature captures.
+See [Offline field functions](<docs/offline-functions.md>) for the executed checks,
+limitations and preview images. Android/iOS builds and hardware remain unverified.
+
 ## Historical baseline before the field workbench
 
 The tree is clean and `origin/v2` carries the post-redesign convergence fixes, the release-hardening
