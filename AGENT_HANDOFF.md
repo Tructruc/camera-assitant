@@ -39,7 +39,20 @@ Two traps found the hard way:
 No Android emulator is possible: there is no `/dev/kvm`, no writable Gradle cache, and no macOS. T058,
 T059, T061, and T062 are therefore blocked here; everything else can be verified.
 
-## Current state
+## Field-workbench UI redesign
+
+The new interaction architecture is described in [UX redesign](<docs/ux-redesign.md>).
+It supersedes the older UI contracts below: Plan / Tools / Kit / Saved navigation,
+lightweight live calculators with a pinned answer, exact unit-adapted controls,
+retained disclosures, and explicit pinned actions for the heavier sky planners.
+The database schema, repositories and physical calculation models are unchanged.
+The workbench passed 581 unit/widget tests, all eight Linux integration journeys,
+analysis, formatting and the Linux release build. See [UI validation](<docs/ui-validation.md>)
+for the exact gates, rendered evidence, work division and mobile/SDK limitations.
+Use current command evidence and Git status rather than treating the historical
+counts below as validation of the new workbench.
+
+## Historical baseline before the field workbench
 
 The tree is clean and `origin/v2` carries the post-redesign convergence fixes, the release-hardening
 round, the Flutter 3.47.5 toolchain move, and the saved-plan time-formatting fix (check

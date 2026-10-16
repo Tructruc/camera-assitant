@@ -36,23 +36,25 @@ class SavedLocationsScreen extends ConsumerWidget {
         ...locations.when(
           data: (items) => items.isEmpty
               ? [
-                  const Padding(
-                    padding: EdgeInsets.only(top: 24),
-                    child: Text(
-                      'No saved locations yet. Add coordinates manually or request the current position.',
-                    ),
+                  const EmptyState(
+                    icon: Icons.place_outlined,
+                    title: 'No saved locations',
+                    description:
+                        'No saved locations yet. Add coordinates manually or request the current position.',
                   ),
                 ]
               : [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16, bottom: 4),
+                    child: Text(
+                      '${items.length} saved location${items.length == 1 ? '' : 's'} · tap a row to edit',
+                    ),
+                  ),
                   for (final location in items)
                     Card(
                       child: ListTile(
                         title: Text(location.name),
-                        subtitle: Text(
-                          '${_coordinate(location.latitudeDegrees, 'N', 'S')}, '
-                          '${_coordinate(location.longitudeDegrees, 'E', 'W')} · '
-                          '${location.timeZoneId}',
-                        ),
+                        subtitle: Text(_subtitle(location)),
                         // Destructive actions stay one deliberate step away
                         // from a row that is also tapped to edit.
                         trailing: PopupMenuButton<_LocationAction>(
@@ -72,11 +74,23 @@ class SavedLocationsScreen extends ConsumerWidget {
                           itemBuilder: (context) => const [
                             PopupMenuItem(
                               value: _LocationAction.edit,
-                              child: Text('Edit'),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Edit'),
+                                ],
+                              ),
                             ),
                             PopupMenuItem(
                               value: _LocationAction.delete,
-                              child: Text('Delete'),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete_outline, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Delete'),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -91,6 +105,26 @@ class SavedLocationsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  /// The facts a row has to carry to be worth opening: where it is, which
+  /// clock it plans in, and what is already known about its height.
+  String _subtitle(SavedLocation location) {
+    final buffer = StringBuffer(
+      '${_coordinate(location.latitudeDegrees, 'N', 'S')}, '
+      '${_coordinate(location.longitudeDegrees, 'E', 'W')} · '
+      '${location.timeZoneId}',
+    );
+    if (location.elevationMetres case final elevation?) {
+      buffer.write(' · ${elevation.toStringAsFixed(0)} m');
+    }
+    if (location.accuracyMetres case final accuracy?) {
+      buffer.write(' · ±${accuracy.toStringAsFixed(0)} m');
+    }
+    buffer.write(
+      location.source == LocationSource.device ? ' · from device' : ' · manual',
+    );
+    return buffer.toString();
   }
 
   Future<void> _delete(

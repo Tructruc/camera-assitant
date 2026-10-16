@@ -52,10 +52,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     launch.stop();
-    expect(find.text('Choose a calculator'), findsOneWidget);
+    // The shell opens on the Plan hub; the catalog is one destination away.
+    expect(find.text('Plan a shot'), findsOneWidget);
     expect(launch.elapsedMilliseconds, lessThan(2000));
 
-    await tester.tap(find.text('Equipment'));
+    await tester.tap(find.text('Kit'));
     await tester.pumpAndSettle();
     expect(find.text('Camera 0000'), findsOneWidget);
     final samples = <int>[];

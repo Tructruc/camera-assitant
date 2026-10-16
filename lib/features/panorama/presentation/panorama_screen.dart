@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/theme/design_tokens.dart';
 import '../../../core/domain/calculation_result.dart';
 import '../../../core/domain/calculation_snapshot.dart';
 import '../../../core/presentation/calculator/calculation_result_view.dart';
@@ -9,8 +10,16 @@ import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../equipment/domain/equipment.dart';
 import '../../equipment/presentation/equipment_controller.dart';
 import '../../equipment/presentation/equipment_picker.dart';
+import '../../equipment/presentation/equipment_specs.dart';
+import '../../exposure_comparison/presentation/capture_field_controls.dart';
 import '../domain/panorama_calculator.dart';
 
+/// Panorama planner: orientation, focal length, how much of the scene to cover
+/// and how far the frames overlap - the shooting decisions - with the frame
+/// grid and coverage answered as they change.
+///
+/// A saved camera fills the sensor size from the primary controls; the raw
+/// sensor dimensions stay behind the advanced disclosure for manual entry.
 class PanoramaScreen extends ConsumerStatefulWidget {
   const PanoramaScreen({super.key});
 
@@ -19,6 +28,16 @@ class PanoramaScreen extends ConsumerStatefulWidget {
 }
 
 class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
+  /// Focal lengths a panorama is usually stitched from.
+  static const _focalPresets = <double>[14, 16, 20, 24, 28, 35, 50, 85];
+
+  /// Scene sweeps a panorama is usually planned around, in degrees.
+  static const _horizontalPresets = <double>[45, 90, 180, 270, 360];
+  static const _verticalPresets = <double>[30, 45, 90, 180];
+
+  /// Stitch overlaps: the range a hand-held or geared head actually delivers.
+  static const _overlapPresets = <double>[0, 25, 30, 50, 70];
+
   final _sensorWidth = TextEditingController(text: '36');
   final _sensorHeight = TextEditingController(text: '24');
   final _focalLength = TextEditingController(text: '50');
@@ -31,6 +50,13 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
   Lens? _selectedLens;
   CalculationResult<PanoramaOutput>? _result;
   Map<String, String> _errors = const {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed the answer for the default sweep so the screen opens on a grid.
+    _calculate();
+  }
 
   @override
   void dispose() {
@@ -50,7 +76,9 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final equipment = ref.watch(equipmentControllerProvider).items;
+    // activeItems, not items: the inventory's Kit kind filter must not hide the
+    // saved cameras and lenses from this calculator.
+    final equipment = ref.watch(equipmentControllerProvider).activeItems;
     final cameras = equipment
         .where((entry) => entry.kind == EquipmentKind.camera)
         .map((entry) => entry.item)
@@ -71,6 +99,13 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
         _horizontalOverlap,
         _verticalOverlap,
       ],
+      // Orientation and the applied kit change the answer without touching any
+      // controller text, so they carry the recalculation signature.
+      calculationKey: <String>[
+        _orientation.name,
+        _selectedCamera?.id ?? '',
+        _selectedLens?.id ?? '',
+      ].join('|'),
       onInputsChanged: () {
         if (_result != null || _errors.isNotEmpty) {
           setState(() {
@@ -78,18 +113,23 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
             _errors = const {};
           });
         }
+        _calculate();
       },
+      onCalculate: _calculate,
       children: <Widget>[
         const CalculatorHeader(
           icon: Icons.panorama_horizontal_outlined,
           description:
               'Build a gap-free horizontal, vertical, or multi-row capture grid with a serpentine shooting order.',
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppGap.lg),
+        // The pickers hide themselves when the kit is empty: an optional
+        // control with nothing to pick must not take a row.
         EquipmentPicker<Lens>(
           label: 'Saved lens (optional)',
           items: lenses,
           itemLabel: (item) => item.name,
+          itemDetail: lensSpecSummary,
           value: _selectedLens,
           onSelected: _applyLens,
         ),
@@ -99,91 +139,102 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
             sourceLabel: lens.provenance.source.label,
             appliedValues: '${_focalLength.text} mm focal length',
           ),
+        // A saved camera supplies the sensor size the grid is built from, so it
+        // sits with the shot parameters rather than behind the advanced
+        // disclosure. Its picker hides itself when the kit holds no camera.
+        if (cameras.isNotEmpty)
+          EquipmentPicker<CameraBody>(
+            label: 'Saved camera (optional)',
+            items: cameras,
+            itemLabel: (item) => item.name,
+            itemDetail: cameraSpecSummary,
+            value: _selectedCamera,
+            onSelected: _applyCamera,
+          ),
+        if (_selectedCamera case final camera?)
+          AppliedEquipmentNotice(
+            equipmentName: camera.name,
+            sourceLabel: camera.provenance.source.label,
+            appliedValues:
+                '${_sensorWidth.text} × ${_sensorHeight.text} mm sensor',
+          ),
         CalculatorNumberField(
           label: 'Focal length (mm)',
           controller: _focalLength,
           errorText: _errors['focalLengthMm'],
+          presets: _focalPresets,
+          // Wider than any rectilinear lens, wider than any panorama uses:
+          // exact entry outside the slider range is still accepted.
+          min: 4,
+          max: 1200,
+          logarithmic: true,
+          helperText: 'Longer lenses need more frames for the same sweep',
         ),
-        DropdownButtonFormField<CameraOrientation>(
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Camera orientation'),
-          initialValue: _orientation,
-          items: const [
-            DropdownMenuItem(
-              value: CameraOrientation.landscape,
-              child: Text('Landscape'),
-            ),
-            DropdownMenuItem(
-              value: CameraOrientation.portrait,
-              child: Text('Portrait'),
-            ),
+        CaptureChipRow(
+          caption: 'Camera orientation',
+          chips: <Widget>[
+            for (final orientation in CameraOrientation.values)
+              CaptureChoiceChip<CameraOrientation>(
+                label: _orientationLabel(orientation),
+                value: orientation,
+                selected: _orientation == orientation,
+                tooltip:
+                    'Set the camera to '
+                    '${_orientationLabel(orientation).toLowerCase()} '
+                    'orientation',
+                onSelected: _setOrientation,
+              ),
           ],
-          onChanged: (value) => setState(() {
-            _orientation = value ?? _orientation;
-            _result = null;
-          }),
         ),
-        const SizedBox(height: 12),
         CalculatorFieldPair(
           first: CalculatorNumberField(
             label: 'Horizontal scene bounds (degrees)',
             controller: _horizontalBounds,
             errorText: _errors['horizontalBoundsDegrees'],
+            presets: _horizontalPresets,
+            // A full turn is the widest meaningful sweep; beyond it the plan
+            // would wrap onto itself.
+            min: 1,
+            max: 360,
+            step: 5,
+            helperText: 'How far the panorama sweeps left to right',
           ),
           second: CalculatorNumberField(
             label: 'Vertical scene bounds (degrees)',
             controller: _verticalBounds,
             errorText: _errors['verticalBoundsDegrees'],
+            presets: _verticalPresets,
+            min: 1,
+            max: 180,
+            step: 5,
+            helperText: 'How far it sweeps top to bottom',
           ),
         ),
-        CalculatorAdvancedSection(
-          // Stable identity: applying equipment above must not collapse
-          // the section the user is working in.
-          key: const ValueKey('advanced'),
-          children: <Widget>[
-            EquipmentPicker<CameraBody>(
-              label: 'Saved camera (optional)',
-              items: cameras,
-              itemLabel: (item) => item.name,
-              value: _selectedCamera,
-              onSelected: _applyCamera,
-            ),
-            if (_selectedCamera case final camera?)
-              AppliedEquipmentNotice(
-                equipmentName: camera.name,
-                sourceLabel: camera.provenance.source.label,
-                appliedValues:
-                    '${_sensorWidth.text} × ${_sensorHeight.text} mm sensor',
-              ),
-            const SizedBox(height: 12),
-            CalculatorFieldPair(
-              first: CalculatorNumberField(
-                label: 'Sensor width (mm)',
-                controller: _sensorWidth,
-                errorText: _errors['sensorWidthMm'],
-              ),
-              second: CalculatorNumberField(
-                label: 'Sensor height (mm)',
-                controller: _sensorHeight,
-                errorText: _errors['sensorHeightMm'],
-              ),
-            ),
-            CalculatorFieldPair(
-              first: CalculatorNumberField(
-                label: 'Horizontal overlap (%)',
-                controller: _horizontalOverlap,
-                errorText: _errors['horizontalOverlapPercent'],
-              ),
-              second: CalculatorNumberField(
-                label: 'Vertical overlap (%)',
-                controller: _verticalOverlap,
-                errorText: _errors['verticalOverlapPercent'],
-              ),
-            ),
-          ],
+        CalculatorFieldPair(
+          first: CalculatorNumberField(
+            label: 'Horizontal overlap (%)',
+            controller: _horizontalOverlap,
+            errorText: _errors['horizontalOverlapPercent'],
+            presets: _overlapPresets,
+            // The stitcher needs something to match on, so 100% is refused by
+            // the calculator and the slider stops short of it.
+            min: 0,
+            max: 90,
+            step: 5,
+            helperText: 'What neighbouring columns share',
+          ),
+          second: CalculatorNumberField(
+            label: 'Vertical overlap (%)',
+            controller: _verticalOverlap,
+            errorText: _errors['verticalOverlapPercent'],
+            presets: _overlapPresets,
+            min: 0,
+            max: 90,
+            step: 5,
+            helperText: 'What neighbouring rows share',
+          ),
         ),
-        FilledButton(onPressed: _calculate, child: const Text('Plan panorama')),
-        const SizedBox(height: 16),
+        const CaptureLiveHint(),
         if (_result?.output case final output?)
           CalculationResultView(
             title: 'Panorama capture plan',
@@ -198,6 +249,12 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
                 'Coverage',
                 '${_degrees(output.horizontalCoverageDegrees)} × ${_degrees(output.verticalCoverageDegrees)}',
               ),
+              (
+                'Frame field of view',
+                '${_degrees(output.frameHorizontalDegrees)} × ${_degrees(output.frameVerticalDegrees)}',
+              ),
+              ('Column step', _degrees(output.horizontalIncrementDegrees)),
+              ('Row step', _degrees(output.verticalIncrementDegrees)),
             ],
             details: <(String, String)>[
               (
@@ -251,12 +308,54 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
             onSave: () => _save(output),
             onReset: _reset,
           ),
+        CalculatorAdvancedSection(
+          // Stable identity: applying equipment above must not collapse
+          // the section the user is working in.
+          key: const ValueKey('advanced'),
+          subtitle: 'Active image area used for the frame grid',
+          children: <Widget>[
+            CalculatorFieldPair(
+              first: CalculatorNumberField(
+                label: 'Sensor width (mm)',
+                controller: _sensorWidth,
+                errorText: _errors['sensorWidthMm'],
+                step: 0.1,
+                min: 1,
+                max: 100,
+              ),
+              second: CalculatorNumberField(
+                label: 'Sensor height (mm)',
+                controller: _sensorHeight,
+                errorText: _errors['sensorHeightMm'],
+                step: 0.1,
+                min: 1,
+                max: 100,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 
+  String _orientationLabel(CameraOrientation orientation) =>
+      switch (orientation) {
+        CameraOrientation.landscape => 'Landscape',
+        CameraOrientation.portrait => 'Portrait',
+      };
+
   double _value(TextEditingController controller) =>
       double.tryParse(controller.text.trim()) ?? double.nan;
+
+  void _setOrientation(CameraOrientation orientation) {
+    if (_orientation == orientation) return;
+    setState(() {
+      _orientation = orientation;
+    });
+    // Orientation changes the frame the grid is built from, and no controller
+    // text moves, so the answer is recomputed here.
+    _calculate();
+  }
 
   void _calculate() {
     final result = const PanoramaCalculator().calculate(
@@ -271,12 +370,18 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
         verticalOverlapPercent: _value(_verticalOverlap),
       ),
     );
-    setState(() {
+    final errors = <String, String>{
+      for (final error in result.errors) error.field: _message(error.code),
+    };
+    if (mounted) {
+      setState(() {
+        _result = result;
+        _errors = errors;
+      });
+    } else {
       _result = result;
-      _errors = {
-        for (final error in result.errors) error.field: _message(error.code),
-      };
-    });
+      _errors = errors;
+    }
   }
 
   String _message(String code) => code == 'positive'
@@ -287,20 +392,28 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
       ? 'Too many frames: reduce the coverage or use a wider lens.'
       : 'Enter an angle within the supported range.';
 
-  void _applyCamera(CameraBody? camera) => setState(() {
-    _selectedCamera = camera;
-    if (camera != null) {
-      _sensorWidth.text = camera.sensorWidthMm.toString();
-      _sensorHeight.text = camera.sensorHeightMm.toString();
-    }
-    _result = null;
-  });
+  void _applyCamera(CameraBody? camera) {
+    setState(() {
+      _selectedCamera = camera;
+      if (camera != null) {
+        _sensorWidth.text = camera.sensorWidthMm.toString();
+        _sensorHeight.text = camera.sensorHeightMm.toString();
+      }
+    });
+    // Applying a saved camera is an input change: the answer must be the one
+    // for the sensor that is now in the fields.
+    _calculate();
+  }
 
-  void _applyLens(Lens? lens) => setState(() {
-    _selectedLens = lens;
-    if (lens != null) _focalLength.text = lens.minimumFocalLengthMm.toString();
-    _result = null;
-  });
+  void _applyLens(Lens? lens) {
+    setState(() {
+      _selectedLens = lens;
+      if (lens != null) {
+        _focalLength.text = lens.minimumFocalLengthMm.toString();
+      }
+    });
+    _calculate();
+  }
 
   Future<void> _save(PanoramaOutput output) => saveCalculationSnapshot(
     context,
@@ -389,9 +502,10 @@ class _PanoramaScreenState extends ConsumerState<PanoramaScreen> {
       _orientation = CameraOrientation.landscape;
       _selectedCamera = null;
       _selectedLens = null;
-      _result = null;
-      _errors = const {};
     });
+    // Reset is an input change too: without this the shown grid would still
+    // describe the values the user just discarded.
+    _calculate();
   }
 
   String _degrees(double value) => '${value.toStringAsFixed(1)}°';

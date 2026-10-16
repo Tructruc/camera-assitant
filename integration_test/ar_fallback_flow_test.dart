@@ -35,7 +35,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapVisible(tester, find.text('Night-sky planner'), delta: 300);
+    await tapVisibleFromTop(tester, find.text('Night-sky planner'), delta: 300);
     await tapVisible(tester, find.text('Plan night sky'), delta: 300);
     await tapVisible(tester, find.text('AR'), delta: 300);
 

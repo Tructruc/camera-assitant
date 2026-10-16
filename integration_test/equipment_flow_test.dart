@@ -37,7 +37,7 @@ void main() {
 
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Equipment'));
+    await tester.tap(find.text('Kit'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Add equipment'));
     await tester.pumpAndSettle();
@@ -103,7 +103,7 @@ void main() {
     await tester.pump();
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Equipment'));
+    await tester.tap(find.text('Kit'));
     await tester.pumpAndSettle();
     expect(find.text('Integration Camera'), findsOneWidget);
 

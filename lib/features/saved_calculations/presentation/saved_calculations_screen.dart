@@ -10,100 +10,435 @@ import '../../../core/presentation/calculator/calculation_warning_text.dart';
 import '../../../core/presentation/calculator/calculator_components.dart';
 import '../../planning/domain/planning_time_context.dart';
 
-class SavedCalculationsScreen extends ConsumerWidget {
+/// The saved workspace: everything already calculated, searchable by title,
+/// tool or note, with the tool filter and the dates it was saved on visible.
+class SavedCalculationsScreen extends ConsumerStatefulWidget {
   const SavedCalculationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SavedCalculationsScreen> createState() =>
+      _SavedCalculationsScreenState();
+}
+
+class _SavedCalculationsScreenState
+    extends ConsumerState<SavedCalculationsScreen> {
+  final _search = TextEditingController();
+
+  /// The chosen calculator id, or null for every tool.
+  String? _calculator;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return ref
         .watch(savedSnapshotsProvider)
         .when(
+          // Directly laid out, not through _scrollable: the skeleton measures
+          // itself against the space it is given, and a sliver would ask it for
+          // an intrinsic height that a builder cannot answer.
           loading: () => const LoadingSkeleton(
             label: 'Loading saved calculations',
             rowHeight: 84,
             rows: 4,
           ),
-          error: (_, _) => const Center(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'Saved calculations could not be loaded. Your data remains on this device.',
+          error: (_, _) => _scrollable(
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppGap.xl),
+                child: Text(
+                  'Saved calculations could not be loaded. Your data remains on this device.',
+                ),
               ),
             ),
           ),
           data: (items) {
             if (items.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Icon(Icons.bookmark_border, size: 48),
-                      SizedBox(height: 12),
-                      Text('No saved calculations yet'),
-                      SizedBox(height: 8),
-                      Text('Calculate a photograph, then choose Save result.'),
-                    ],
-                  ),
+              return _scrollable(
+                const EmptyState(
+                  icon: Icons.bookmark_border,
+                  title: 'No saved calculations yet',
+                  description:
+                      'Calculate a photograph, then choose Save result.',
                 ),
               );
             }
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length,
-              itemBuilder: (context, index) => switch (items[index]) {
-                SupportedSnapshot(snapshot: final snapshot) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainer,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        _calculatorIcon(snapshot.calculatorId),
-                        size: 20,
-                      ),
-                    ),
-                    title: Text(snapshot.title),
-                    subtitle: Text(
-                      '${_calculatorLabel(snapshot.calculatorId)} · ${_date(snapshot.createdAt)}',
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () => Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) =>
-                            SavedCalculationDetailScreen(snapshot: snapshot),
-                      ),
-                    ),
-                  ),
-                ),
-                UnreadableSnapshot(reason: final reason) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  color: Theme.of(context).colorScheme.errorContainer,
-                  child: ListTile(
-                    leading: const Icon(Icons.warning_amber),
-                    title: const Text('Saved calculation needs recovery'),
-                    subtitle: Text(
-                      '$reason\nThe original stored data was preserved.',
-                    ),
-                  ),
-                ),
-              },
-            );
+            return _library(context, items);
           },
         );
+  }
+
+  /// A message or empty state that scrolls rather than overflowing when the
+  /// system text scale is at its largest.
+  Widget _scrollable(Widget child) => CustomScrollView(
+    slivers: <Widget>[SliverFillRemaining(hasScrollBody: false, child: child)],
+  );
+
+  Widget _library(
+    BuildContext context,
+    List<SnapshotReadResult<CalculationSnapshot>> items,
+  ) {
+    final supported = <CalculationSnapshot>[
+      for (final item in items)
+        if (item is SupportedSnapshot<CalculationSnapshot>) item.snapshot,
+    ];
+    // A record whose payload cannot be read is preserved, not filtered away:
+    // recovery has to stay reachable whatever the search says.
+    final unreadable = <UnreadableSnapshot<CalculationSnapshot>>[
+      for (final item in items)
+        if (item is UnreadableSnapshot<CalculationSnapshot>) item,
+    ];
+    final tools = <String>{
+      for (final snapshot in supported) snapshot.calculatorId,
+    };
+    final sortedTools = tools.toList()
+      ..sort(
+        (left, right) =>
+            _calculatorLabel(left).compareTo(_calculatorLabel(right)),
+      );
+    // A filter left pointing at a tool that no longer has saved rows is
+    // dropped, so a deleted result can never leave the workspace stuck.
+    final activeTool = tools.contains(_calculator) ? _calculator : null;
+    final matches = <CalculationSnapshot>[
+      for (final snapshot in supported)
+        if (_matches(snapshot, activeTool)) snapshot,
+    ];
+
+    final rows = <Widget>[
+      _LibraryHeader(
+        search: _search,
+        // A filter with a single option is noise; it appears once the library
+        // actually holds more than one kind of result.
+        tools: sortedTools.length > 1 ? sortedTools : const <String>[],
+        counts: <String, int>{
+          for (final tool in tools)
+            tool: supported.where((s) => s.calculatorId == tool).length,
+        },
+        selected: activeTool,
+        onSelected: (tool) => setState(() => _calculator = tool),
+        onQueryChanged: () => setState(() {}),
+        onClear: _clearFilters,
+      ),
+    ];
+
+    if (matches.isEmpty && unreadable.isEmpty) {
+      rows.add(_NoMatches(onClear: _clearFilters));
+    } else {
+      DateTime? group;
+      for (final snapshot in matches) {
+        final day = DateTime.utc(
+          snapshot.createdAt.year,
+          snapshot.createdAt.month,
+          snapshot.createdAt.day,
+        );
+        if (group != day) {
+          group = day;
+          rows.add(_DateHeader(label: _dateGroupLabel(day)));
+        }
+        rows.add(
+          _SavedResultCard(
+            snapshot: snapshot,
+            onOpen: () => Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) =>
+                    SavedCalculationDetailScreen(snapshot: snapshot),
+              ),
+            ),
+          ),
+        );
+      }
+      if (unreadable.isNotEmpty) {
+        rows.add(const _DateHeader(label: 'Needs recovery'));
+        for (final item in unreadable) {
+          rows.add(_RecoveryCard(item: item));
+        }
+      }
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(
+        AppGap.lg,
+        AppGap.md,
+        AppGap.lg,
+        AppGap.xl,
+      ),
+      itemCount: rows.length,
+      itemBuilder: (context, index) => rows[index],
+    );
+  }
+
+  bool _matches(CalculationSnapshot snapshot, String? tool) {
+    if (tool != null && snapshot.calculatorId != tool) {
+      return false;
+    }
+    final query = _search.text.trim().toLowerCase();
+    if (query.isEmpty) return true;
+    return snapshot.title.toLowerCase().contains(query) ||
+        _calculatorLabel(snapshot.calculatorId).toLowerCase().contains(query) ||
+        (snapshot.notes ?? '').toLowerCase().contains(query);
+  }
+
+  void _clearFilters() {
+    _search.clear();
+    setState(() => _calculator = null);
+  }
+}
+
+/// Search and the visible tool filter, above the rows they narrow.
+class _LibraryHeader extends StatelessWidget {
+  const _LibraryHeader({
+    required this.search,
+    required this.tools,
+    required this.counts,
+    required this.selected,
+    required this.onSelected,
+    required this.onQueryChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController search;
+  final List<String> tools;
+  final Map<String, int> counts;
+  final String? selected;
+  final ValueChanged<String?> onSelected;
+  final VoidCallback onQueryChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        TextField(
+          controller: search,
+          onChanged: (_) => onQueryChanged(),
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            labelText: 'Search saved results',
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: search.text.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: onClear,
+                    icon: const Icon(Icons.close, size: 20),
+                  ),
+          ),
+        ),
+        if (tools.isNotEmpty) ...<Widget>[
+          const SizedBox(height: AppGap.md),
+          Wrap(
+            spacing: AppGap.sm,
+            runSpacing: AppGap.xs,
+            children: <Widget>[
+              ChoiceChip(
+                label: const Text('All tools'),
+                selected: selected == null,
+                onSelected: (_) => onSelected(null),
+              ),
+              for (final tool in tools)
+                ChoiceChip(
+                  label: Text(
+                    '${_calculatorLabel(tool)} (${counts[tool] ?? 0})',
+                  ),
+                  selected: selected == tool,
+                  onSelected: (_) => onSelected(tool),
+                ),
+            ],
+          ),
+        ],
+        const SizedBox(height: AppGap.sm),
+      ],
+    );
+  }
+}
+
+/// A date, so a long library reads as a timeline instead of a wall of rows.
+class _DateHeader extends StatelessWidget {
+  const _DateHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: AppGap.md, bottom: AppGap.xs),
+      child: Text(
+        label,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+}
+
+class _SavedResultCard extends StatelessWidget {
+  const _SavedResultCard({required this.snapshot, required this.onOpen});
+
+  final CalculationSnapshot snapshot;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final (label, value, _) = _heroFor(snapshot);
+    final summary = label == 'Saved result' ? null : '$label: $value';
+    final notes = snapshot.notes;
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppGap.sm),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppGap.md,
+          vertical: AppGap.xs,
+        ),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainer,
+            borderRadius: AppRadius.controlAll,
+          ),
+          child: Icon(_calculatorIcon(snapshot.calculatorId), size: 20),
+        ),
+        title: Text(snapshot.title),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              '${_calculatorLabel(snapshot.calculatorId)} · '
+              '${_date(snapshot.createdAt)}',
+            ),
+            if (summary != null) Text(summary),
+            if (notes != null && notes.trim().isNotEmpty)
+              Text(notes, maxLines: 2, overflow: TextOverflow.ellipsis),
+          ],
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          size: 20,
+          color: theme.colorScheme.outline,
+        ),
+        onTap: onOpen,
+      ),
+    );
+  }
+}
+
+/// A preserved payload that needs recovery, never hidden by a filter.
+///
+/// The only action offered is an explicit delete, after a confirmation that
+/// names the raw preserved payload. Nothing here fabricates a recovery or an
+/// export, and the reason and preservation notice stay on the card until the
+/// deletion is confirmed.
+class _RecoveryCard extends ConsumerWidget {
+  const _RecoveryCard({required this.item});
+
+  final UnreadableSnapshot<CalculationSnapshot> item;
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final id = item.id;
+    // A record with no stored id cannot be deleted; the card stays informative
+    // instead of offering a control that would do nothing.
+    if (id == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete unreadable saved record?'),
+        content: Text(
+          '${item.reason}\n\n'
+          'The raw preserved record will be deleted. It cannot be recovered '
+          'or exported afterwards.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(snapshotRepositoryProvider).delete(id);
+    } on Object {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'The unreadable record could not be deleted. It is still stored; try again.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => Card(
+    margin: const EdgeInsets.only(bottom: AppGap.sm),
+    color: Theme.of(context).colorScheme.errorContainer,
+    child: ListTile(
+      leading: const Icon(Icons.warning_amber),
+      title: const Text('Saved calculation needs recovery'),
+      subtitle: Text('${item.reason}\nThe original stored data was preserved.'),
+      trailing: item.id == null
+          ? null
+          : IconButton(
+              tooltip: 'Delete this unreadable record',
+              onPressed: () => _confirmDelete(context, ref),
+              icon: const Icon(Icons.delete_outline),
+            ),
+    ),
+  );
+}
+
+class _NoMatches extends StatelessWidget {
+  const _NoMatches({required this.onClear});
+
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppGap.xl),
+      child: Column(
+        children: <Widget>[
+          Icon(
+            Icons.search_off,
+            size: 40,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: AppGap.md),
+          Text(
+            'No saved results match this search',
+            style: theme.textTheme.titleSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppGap.xs),
+          Text(
+            'Titles, tool names and notes are searched.',
+            style: theme.textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppGap.md),
+          OutlinedButton(
+            onPressed: onClear,
+            child: const Text('Clear search and filters'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -144,17 +479,17 @@ class _SavedCalculationDetailScreenState
     ),
     body: AppContentFrame(
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppGap.lg),
         children: <Widget>[
           Text(
             _snapshot.title,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           if (_snapshot.notes case final notes?) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppGap.sm),
             Text(notes),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: AppGap.lg),
           _summaryCard(context),
           if (_isObservationPlan) _planSummary(context),
           if (_fieldChecklist.isNotEmpty) _actionableChecklist(context),
@@ -189,7 +524,7 @@ class _SavedCalculationDetailScreenState
                 for (final item in _snapshot.assumptions) item.key: item.value,
               },
             ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppGap.lg),
           const Text(
             'This saved result is immutable and is not recalculated when equipment or settings change.',
           ),
@@ -205,7 +540,7 @@ class _SavedCalculationDetailScreenState
     final (label, value, caption) = _heroFor(_snapshot);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppGap.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -233,7 +568,7 @@ class _SavedCalculationDetailScreenState
               ),
             ),
             if (caption case final text?) ...<Widget>[
-              const SizedBox(height: 4),
+              const SizedBox(height: AppGap.xs),
               Text(text, style: theme.textTheme.bodySmall),
             ],
           ],
@@ -251,10 +586,10 @@ class _SavedCalculationDetailScreenState
       container: true,
       label: 'Warnings: ${warnings.join('; ')}',
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppGap.md),
         decoration: BoxDecoration(
           color: theme.colorScheme.tertiaryContainer,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: AppRadius.controlAll,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,7 +599,7 @@ class _SavedCalculationDetailScreenState
               size: 20,
               color: theme.colorScheme.onTertiaryContainer,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppGap.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,7 +678,7 @@ class _SavedCalculationDetailScreenState
 
   Widget _actionableChecklist(BuildContext context) => Card(
     child: Padding(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppGap.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -378,160 +713,6 @@ class _SavedCalculationDetailScreenState
     };
   }
 
-  /// The saved plan's headline value, using the same wording as the live
-  /// result card, or a plain fallback when a payload predates that key.
-  (String, String, String?) _heroFor(CalculationSnapshot snapshot) {
-    final outputs = snapshot.canonicalOutputs;
-    final inputs = snapshot.canonicalInputs;
-    final display = _storedLengthDisplay(snapshot);
-    String length(Object? value) =>
-        value is num ? formatDisplayLength(value.toDouble(), display) : '—';
-
-    switch (snapshot.calculatorId) {
-      case 'depth_of_field':
-        if (outputs['hyperfocalDistanceMm'] is num) {
-          final near = outputs['nearLimitMm'];
-          final far = outputs['farLimitMm'];
-          return (
-            'Hyperfocal distance',
-            length(outputs['hyperfocalDistanceMm']),
-            near is num && far is num
-                ? 'Sharp from ${length(near)} to ${length(far)}.'
-                : null,
-          );
-        }
-        if (outputs['nearLimitMm'] is num) {
-          return ('Near limit', length(outputs['nearLimitMm']), null);
-        }
-      case 'long_exposure_nd':
-        final seconds = outputs['filteredTimeSeconds'];
-        if (seconds is num) {
-          final base = inputs['baseTimeSeconds'];
-          return (
-            'Filtered exposure time',
-            _humanDuration(seconds.toDouble()),
-            base is num ? 'Base ${_humanDuration(base.toDouble())}' : null,
-          );
-        }
-      case 'flash_exposure':
-        final aperture = outputs['recommendedAperture'];
-        if (aperture is num) {
-          final distance = inputs['subjectDistanceMetres'];
-          return (
-            'Recommended aperture',
-            'f/${aperture.toStringAsFixed(1)}',
-            distance is num ? 'At ${length(distance * 1000)}' : null,
-          );
-        }
-      case 'field_of_view':
-        final width = outputs['sceneWidthMm'];
-        if (width is num) {
-          final height = outputs['sceneHeightMm'];
-          return (
-            'Scene width at this distance',
-            length(width),
-            height is num ? 'Scene height ${length(height)}.' : null,
-          );
-        }
-      case 'diffraction':
-        final pixels = outputs['airyDiskPixels'];
-        if (pixels is num) {
-          final micrometres = outputs['airyDiskMicrometres'];
-          return (
-            'Airy disk on the sensor',
-            '${pixels.toStringAsFixed(2)} pixels',
-            micrometres is num
-                ? '${micrometres.toStringAsFixed(2)} µm across'
-                : null,
-          );
-        }
-      case 'macro':
-        final subject = outputs['subjectWidthMm'];
-        if (subject is num) {
-          final magnification = outputs['magnification'];
-          return (
-            'Subject width across frame',
-            length(subject),
-            magnification is num
-                ? 'At ${magnification.toStringAsFixed(2)}× magnification.'
-                : null,
-          );
-        }
-      case 'timelapse':
-      case 'focus_stacking':
-      case 'panorama':
-        final frames = outputs['frameCount'];
-        if (frames is num) {
-          final playback = outputs['playbackDurationSeconds'];
-          final columns = outputs['columns'];
-          final rows = outputs['rows'];
-          return (
-            snapshot.calculatorId == 'timelapse' ? 'Frames' : 'Frames to shoot',
-            '${frames.round()}',
-            playback is num
-                ? 'Playback ${_humanDuration(playback.toDouble())}'
-                : columns is num && rows is num
-                ? '${columns.round()} columns × ${rows.round()} rows'
-                : null,
-          );
-        }
-      case 'exposure_comparison':
-        final stops = outputs['totalDifferenceStops'];
-        if (stops is num) {
-          final value = stops.toDouble();
-          final direction = outputs['direction'];
-          return (
-            'Total difference',
-            '${value >= 0 ? '+' : ''}${value.toStringAsFixed(1)} stops',
-            direction is String ? 'Candidate is $direction' : null,
-          );
-        }
-      case 'astronomy':
-        final altitude = outputs['altitudeDegrees'];
-        if (altitude is num) {
-          final azimuth = outputs['azimuthDegrees'];
-          return (
-            'Target altitude',
-            '${altitude.toStringAsFixed(0)}° '
-                '${outputs['aboveHorizon'] == true ? 'above' : 'below'} the horizon',
-            azimuth is num
-                ? 'Azimuth ${azimuth.toStringAsFixed(0)}° true'
-                : null,
-          );
-        }
-      case 'sun_moon_alignment':
-        final candidates = outputs['candidates'];
-        if (candidates is List && candidates.isNotEmpty) {
-          final first = candidates.first;
-          final instant = first is Map ? first['instantUtc'] : null;
-          final formatted = instant is String
-              ? _formatInstant(snapshot, instant)
-              : null;
-          if (formatted != null) {
-            // The hero is the clock time; date, zone and the match count read
-            // better as one caption line than as a wrapped headline.
-            final parts = formatted.split(' ');
-            final zone = snapshot.displayContext['timeZone'];
-            return (
-              'Best window',
-              parts.length > 1 ? parts[1] : formatted,
-              <String>[
-                if (parts.isNotEmpty) parts.first,
-                if (zone is String && zone.isNotEmpty) zone,
-                '${candidates.length} matching '
-                    'window${candidates.length == 1 ? '' : 's'}',
-              ].join(' · '),
-            );
-          }
-        }
-        final altitude = outputs['desiredAltitudeDegrees'];
-        if (altitude is num) {
-          return ('Target altitude', '${altitude.toStringAsFixed(0)}°', null);
-        }
-    }
-    return ('Saved result', _calculatorLabel(snapshot.calculatorId), null);
-  }
-
   Future<void> _edit() async {
     final title = TextEditingController(text: _snapshot.title);
     final notes = TextEditingController(text: _snapshot.notes);
@@ -558,7 +739,7 @@ class _SavedCalculationDetailScreenState
                 decoration: const InputDecoration(labelText: 'Notes'),
               ),
               if (saveError.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppGap.md),
                 Text(
                   saveError,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -657,6 +838,158 @@ class _SavedCalculationDetailScreenState
   }
 }
 
+/// The saved plan's headline value, using the same wording as the live result
+/// card, or a plain fallback when a payload predates that key.
+(String, String, String?) _heroFor(CalculationSnapshot snapshot) {
+  final outputs = snapshot.canonicalOutputs;
+  final inputs = snapshot.canonicalInputs;
+  final display = _storedLengthDisplay(snapshot);
+  String length(Object? value) =>
+      value is num ? formatDisplayLength(value.toDouble(), display) : '—';
+
+  switch (snapshot.calculatorId) {
+    case 'depth_of_field':
+      if (outputs['hyperfocalDistanceMm'] is num) {
+        final near = outputs['nearLimitMm'];
+        final far = outputs['farLimitMm'];
+        return (
+          'Hyperfocal distance',
+          length(outputs['hyperfocalDistanceMm']),
+          near is num && far is num
+              ? 'Sharp from ${length(near)} to ${length(far)}.'
+              : null,
+        );
+      }
+      if (outputs['nearLimitMm'] is num) {
+        return ('Near limit', length(outputs['nearLimitMm']), null);
+      }
+    case 'long_exposure_nd':
+      final seconds = outputs['filteredTimeSeconds'];
+      if (seconds is num) {
+        final base = inputs['baseTimeSeconds'];
+        return (
+          'Filtered exposure time',
+          _humanDuration(seconds.toDouble()),
+          base is num ? 'Base ${_humanDuration(base.toDouble())}' : null,
+        );
+      }
+    case 'flash_exposure':
+      final aperture = outputs['recommendedAperture'];
+      if (aperture is num) {
+        final distance = inputs['subjectDistanceMetres'];
+        return (
+          'Recommended aperture',
+          'f/${aperture.toStringAsFixed(1)}',
+          distance is num ? 'At ${length(distance * 1000)}' : null,
+        );
+      }
+    case 'field_of_view':
+      final width = outputs['sceneWidthMm'];
+      if (width is num) {
+        final height = outputs['sceneHeightMm'];
+        return (
+          'Scene width at this distance',
+          length(width),
+          height is num ? 'Scene height ${length(height)}.' : null,
+        );
+      }
+    case 'diffraction':
+      final pixels = outputs['airyDiskPixels'];
+      if (pixels is num) {
+        final micrometres = outputs['airyDiskMicrometres'];
+        return (
+          'Airy disk on the sensor',
+          '${pixels.toStringAsFixed(2)} pixels',
+          micrometres is num
+              ? '${micrometres.toStringAsFixed(2)} µm across'
+              : null,
+        );
+      }
+    case 'macro':
+      final subject = outputs['subjectWidthMm'];
+      if (subject is num) {
+        final magnification = outputs['magnification'];
+        return (
+          'Subject width across frame',
+          length(subject),
+          magnification is num
+              ? 'At ${magnification.toStringAsFixed(2)}× magnification.'
+              : null,
+        );
+      }
+    case 'timelapse':
+    case 'focus_stacking':
+    case 'panorama':
+      final frames = outputs['frameCount'];
+      if (frames is num) {
+        final playback = outputs['playbackDurationSeconds'];
+        final columns = outputs['columns'];
+        final rows = outputs['rows'];
+        return (
+          snapshot.calculatorId == 'timelapse' ? 'Frames' : 'Frames to shoot',
+          '${frames.round()}',
+          playback is num
+              ? 'Playback ${_humanDuration(playback.toDouble())}'
+              : columns is num && rows is num
+              ? '${columns.round()} columns × ${rows.round()} rows'
+              : null,
+        );
+      }
+    case 'exposure_comparison':
+      final stops = outputs['totalDifferenceStops'];
+      if (stops is num) {
+        final value = stops.toDouble();
+        final direction = outputs['direction'];
+        return (
+          'Total difference',
+          '${value >= 0 ? '+' : ''}${value.toStringAsFixed(1)} stops',
+          direction is String ? 'Candidate is $direction' : null,
+        );
+      }
+    case 'astronomy':
+      final altitude = outputs['altitudeDegrees'];
+      if (altitude is num) {
+        final azimuth = outputs['azimuthDegrees'];
+        return (
+          'Target altitude',
+          '${altitude.toStringAsFixed(0)}° '
+              '${outputs['aboveHorizon'] == true ? 'above' : 'below'} the horizon',
+          azimuth is num ? 'Azimuth ${azimuth.toStringAsFixed(0)}° true' : null,
+        );
+      }
+    case 'sun_moon_alignment':
+      final candidates = outputs['candidates'];
+      if (candidates is List && candidates.isNotEmpty) {
+        final first = candidates.first;
+        final instant = first is Map ? first['instantUtc'] : null;
+        final formatted = instant is String
+            ? _formatInstant(snapshot, instant)
+            : null;
+        if (formatted != null) {
+          // The hero is the clock time; date, zone and the match count read
+          // better as one caption line than as a wrapped headline.
+          final parts = formatted.split(' ');
+          final zone = snapshot.displayContext['timeZone'];
+          return (
+            'Best window',
+            parts.length > 1 ? parts[1] : formatted,
+            <String>[
+              if (parts.isNotEmpty) parts.first,
+              if (zone is String && zone.isNotEmpty) zone,
+              '${candidates.length} matching '
+                  'window${candidates.length == 1 ? '' : 's'}',
+            ].join(' · '),
+          );
+        }
+      }
+      final altitude = outputs['desiredAltitudeDegrees'];
+      if (altitude is num) {
+        return ('Target altitude', '${altitude.toStringAsFixed(0)}°', null);
+      }
+  }
+  return ('Saved result', _calculatorLabel(snapshot.calculatorId), null);
+}
+
 IconData _calculatorIcon(String id) => switch (id) {
   'depth_of_field' => Icons.center_focus_strong_outlined,
   'exposure_comparison' => Icons.exposure_outlined,
@@ -690,6 +1023,18 @@ String _calculatorLabel(String id) => switch (id) {
 };
 String _date(DateTime value) =>
     '${value.year}-${value.month.toString().padLeft(2, '0')}-${value.day.toString().padLeft(2, '0')}';
+
+/// A saved date reads as a heading: today and yesterday in words, and the
+/// stored calendar day otherwise.
+String _dateGroupLabel(DateTime day) {
+  final now = DateTime.now().toUtc();
+  final today = DateTime.utc(now.year, now.month, now.day);
+  final difference = today.difference(day).inDays;
+  if (difference == 0) return 'Today';
+  if (difference == 1) return 'Yesterday';
+  return _date(day);
+}
+
 String _mapText(Map<String, Object?> values) =>
     values.entries.map((entry) => '${entry.key}: ${entry.value}').join(', ');
 
@@ -746,7 +1091,7 @@ class _ExpansionSection extends StatelessWidget {
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
         tilePadding: EdgeInsets.zero,
-        childrenPadding: const EdgeInsets.only(bottom: 8),
+        childrenPadding: const EdgeInsets.only(bottom: AppGap.sm),
         shape: const Border(),
         collapsedShape: const Border(),
         title: Text(title),
@@ -755,7 +1100,7 @@ class _ExpansionSection extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.only(bottom: AppGap.xs),
                 child: Text('${entry.key}: ${entry.value}'),
               ),
             ),

@@ -19,6 +19,7 @@ import 'package:photography_assistant/features/equipment/domain/equipment.dart';
 import 'package:photography_assistant/features/exposure_comparison/presentation/exposure_comparison_screen.dart';
 import 'package:photography_assistant/features/flash_exposure/presentation/flash_exposure_screen.dart';
 import 'package:photography_assistant/features/long_exposure/presentation/long_exposure_screen.dart';
+import 'package:photography_assistant/features/macro/domain/macro_calculator.dart';
 import 'package:photography_assistant/features/macro/presentation/macro_screen.dart';
 import 'package:photography_assistant/features/optics/presentation/optics_screens.dart';
 import 'package:photography_assistant/features/panorama/presentation/panorama_screen.dart';
@@ -78,72 +79,173 @@ void main() {
     ),
   );
 
-  testWidgets('depth of field labels inputs, validates, and explains result', (
-    tester,
-  ) async {
-    await tester.pumpWidget(app(const DepthOfFieldScreen()));
-
-    expect(find.text('Focal length (mm)'), findsOneWidget);
-    // The circle of confusion is a convention, not a per-shot decision, so it
-    // starts collapsed and stays reachable one tap away.
-    expect(find.text('Circle of confusion (mm)'), findsNothing);
-    await openExpander(tester, 'More settings');
-    expect(find.text('Circle of confusion (mm)'), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('dof-focal')), '0');
-    await tester.scrollUntilVisible(
-      find.text('Calculate'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    final calculate = find.widgetWithText(FilledButton, 'Calculate');
-    await tester.ensureVisible(calculate);
+  /// Scrolls [finder] into view and settles.
+  ///
+  /// The cheap calculators seed their answer and keep it live, so there is no
+  /// Calculate button to press: a result is *revealed*, never requested.
+  ///
+  /// A target can sit either side of the current position - a result card is
+  /// above the advanced section that was just opened, a field below the result
+  /// card - and `scrollUntilVisible` only walks one way, so a target that is not
+  /// built yet is reached from the top of the list, downwards.
+  Future<void> reveal(
+    WidgetTester tester,
+    Finder finder, {
+    double delta = 300,
+  }) async {
+    if (finder.evaluate().isEmpty) {
+      await tester.drag(find.byType(ListView).first, const Offset(0, 10000));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        finder,
+        delta.abs(),
+        scrollable: find.byType(Scrollable).first,
+      );
+    }
+    await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
-    await tester.tap(calculate);
-    await tester.pump();
-    expect(find.text('Enter a positive finite value.'), findsWidgets);
+  }
 
-    await tester.enterText(find.byKey(const Key('dof-focal')), '50');
-    await tester.tap(find.text('Calculate'));
-    await tester.pump();
-    // The answer leads; the input echo and model assumptions stay collapsed.
-    expect(find.text('Hyperfocal distance'), findsOneWidget);
-    expect(find.text('Values used'), findsNothing);
-    await openExpander(tester, 'Details');
-    expect(find.text('Values used'), findsOneWidget);
-    expect(find.text('50 mm'), findsOneWidget);
-    expect(find.text('f/8'), findsOneWidget);
-    expect(find.text('Near limit'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+  /// Unmounts the screen, which also cancels the live-calculation timer the
+  /// seeded answer scheduled.
+  Future<void> unmount(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpAndSettle();
-    expect(find.text('Model assumptions'), findsOneWidget);
-    expect(find.textContaining('Thin-lens geometric model'), findsOneWidget);
-    expect(find.text('Save result'), findsOneWidget);
-    expect(find.text('Reset'), findsOneWidget);
-  });
+  }
 
-  testWidgets('exposure comparison reports component result and direction', (
+  /// Taps the result card's save action, revealing it first.
+  Future<void> saveResult(WidgetTester tester) async {
+    final save = find.widgetWithText(FilledButton, 'Save result');
+    await reveal(tester, save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+  }
+
+  /// Opens the collapsed "Site details" row that holds the observer elevation.
+  ///
+  /// The planners keep a rarely changed elevation behind that one disclosure so
+  /// it costs no viewport, which means its field is only built once the row is
+  /// opened.
+  Future<void> openSiteDetails(WidgetTester tester) async {
+    final title = find.text('Site details');
+    await reveal(tester, title);
+    await tester.tap(title);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+    'depth of field labels inputs, validates live, and explains result',
+    (tester) async {
+      await tester.pumpWidget(app(const DepthOfFieldScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Focal length (mm)'), findsOneWidget);
+      // The practical distance input is denominated in metres; the canonical raw
+      // millimetre value stays behind the advanced group.
+      expect(find.text('Focus distance (m)'), findsOneWidget);
+      // The circle of confusion is a convention, not a per-shot decision, so it
+      // starts collapsed and stays reachable one tap away.
+      expect(find.text('Circle of confusion (mm)'), findsNothing);
+
+      // A live calculator answers without a Calculate button: the validation
+      // message appears as soon as the input stops being usable.
+      expect(find.widgetWithText(FilledButton, 'Calculate'), findsNothing);
+      await tester.enterText(find.byKey(const Key('dof-focal')), '0');
+      await tester.pumpAndSettle();
+      expect(find.text('Enter a positive finite value.'), findsWidgets);
+      await tester.enterText(find.byKey(const Key('dof-focal')), '50');
+      await tester.pumpAndSettle();
+
+      // The convention and the raw millimetre adapter open one tap away. They
+      // are reached only after the focal field has been edited: walking back up
+      // to it later would dispose the expanded group.
+      await openExpander(tester, 'More settings');
+      expect(find.text('Circle of confusion (mm)'), findsOneWidget);
+      expect(find.text('Focus distance (raw mm)'), findsOneWidget);
+
+      await reveal(tester, find.text('Hyperfocal distance'));
+      // The answer leads; the input echo and model assumptions stay collapsed.
+      expect(find.text('Hyperfocal distance'), findsOneWidget);
+      expect(find.text('Values used'), findsNothing);
+      await openExpander(tester, 'Details');
+      expect(find.text('Values used'), findsOneWidget);
+      expect(find.text('50 mm'), findsOneWidget);
+      expect(find.text('f/8'), findsOneWidget);
+      // The practical field shows metres; the raw millimetre value is what the
+      // calculator read and it stays visible in the input echo.
+      expect(find.text('10.00 m'), findsWidgets);
+      expect(find.text('Near limit'), findsOneWidget);
+      await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+      await tester.pumpAndSettle();
+      expect(find.text('Model assumptions'), findsOneWidget);
+      expect(find.textContaining('Thin-lens geometric model'), findsOneWidget);
+      expect(find.text('Save result'), findsOneWidget);
+      expect(find.text('Reset'), findsOneWidget);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'the metre distance field keeps the raw millimetre value canonical',
+    (tester) async {
+      await tester.pumpWidget(app(const DepthOfFieldScreen()));
+      await tester.pumpAndSettle();
+
+      // Typing metres writes millimetres into the same controller the
+      // calculator reads, and the raw adapter echoes it without rounding.
+      await tester.enterText(find.byKey(const Key('dof-focal')), '50');
+      final metreField = find.widgetWithText(TextField, 'Focus distance (m)');
+      await reveal(tester, metreField);
+      await tester.enterText(metreField, '2.5');
+      await tester.pumpAndSettle();
+      await openExpander(tester, 'More settings');
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('dof-focus-distance-mm')))
+            .controller!
+            .text,
+        '2500',
+      );
+      await reveal(tester, find.text('Save result'));
+      await saveResult(tester);
+      final snapshot = (await DriftSnapshotRepository(
+        database,
+      ).listNewestFirst()).single;
+      expect(snapshot.canonicalInputs['focusDistanceMm'], 2500.0);
+      expect(snapshot.displayContext['distanceUnit'], 'metric');
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('exposure comparison reports its live component result', (
     tester,
   ) async {
     await tester.pumpWidget(app(const ExposureComparisonScreen()));
-    await tester.tap(find.text('Compare exposures'));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
+    // Two identical exposures read as equivalent without any action.
+    expect(
+      find.widgetWithText(FilledButton, 'Compare exposures'),
+      findsNothing,
+    );
+    await reveal(tester, find.text('Equivalent exposure'));
     expect(find.text('Equivalent exposure'), findsOneWidget);
     await openExpander(tester, 'Details');
     expect(find.text('Aperture contribution'), findsOneWidget);
     expect(find.text('Shutter contribution'), findsOneWidget);
     expect(find.text('ISO contribution'), findsOneWidget);
+    await unmount(tester);
   });
 
-  testWidgets('long exposure calculates stacked filters and bulb guidance', (
+  testWidgets('long exposure stacks filters live and gives bulb guidance', (
     tester,
   ) async {
     await tester.pumpWidget(app(const LongExposureScreen()));
     // A photographer's shutter fraction, not a repeating decimal.
     await tester.enterText(find.byKey(const Key('long-base')), '1/30');
     await tester.enterText(find.byKey(const Key('long-stops')), '3, 7');
-    await tester.tap(find.text('Calculate exposure'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Filtered exposure time'));
 
     expect(find.text('Filtered exposure time'), findsOneWidget);
     expect(find.text('34.1 s'), findsOneWidget);
@@ -163,95 +265,135 @@ void main() {
     expect(find.text('10.00 stops'), findsOneWidget);
     // The fraction and its exact seconds are both recorded.
     expect(find.text('1/30 · 0.033333 s'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('a decimal shutter time is still accepted', (tester) async {
     await tester.pumpWidget(app(const LongExposureScreen()));
     await tester.enterText(find.byKey(const Key('long-base')), '0.5');
-    await tester.tap(find.text('Calculate exposure'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Filtered exposure time'));
 
     expect(find.text('8 min 32 s'), findsOneWidget);
     expect(
       find.textContaining('From 0.50 s at 10 stops of ND.'),
       findsOneWidget,
     );
+    await unmount(tester);
   });
 
-  testWidgets('flash exposure calculates aperture and explains limitations', (
+  testWidgets('flash exposure seeds its aperture and explains limitations', (
     tester,
   ) async {
     await tester.pumpWidget(app(const FlashExposureScreen()));
-    await tester.tap(find.text('Calculate flash exposure'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Recommended aperture'));
     expect(find.text('f/8'), findsOneWidget);
     expect(find.text('Effective guide number'), findsOneWidget);
     await openExpander(tester, 'Details');
     expect(find.textContaining('bounce loss'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('timelapse plans frames, playback, storage, and ramp', (
     tester,
   ) async {
     await tester.pumpWidget(app(const TimelapseScreen()));
-    await tester.tap(find.text('Plan timelapse'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Frames'));
     expect(find.text('361'), findsOneWidget);
     await openExpander(tester, 'Details');
     expect(find.text('Playback duration'), findsOneWidget);
     expect(find.text('12.033 s'), findsOneWidget);
     expect(find.text('8.81 GB'), findsOneWidget);
     expect(find.text('+2.00 stops'), findsOneWidget);
+    await unmount(tester);
   });
 
-  testWidgets('macro planner calculates and explains its approximation', (
-    tester,
-  ) async {
+  testWidgets(
+    'the capture duration is entered in minutes and stored in seconds',
+    (tester) async {
+      await tester.pumpWidget(app(const TimelapseScreen()));
+      await tester.pumpAndSettle();
+
+      final duration = find.byKey(
+        const Key('timelapse-captureDurationSeconds'),
+      );
+      expect(duration, findsOneWidget);
+      // 90 minutes of capture, typed in the unit the planner shows; the field is
+      // a display adapter over the canonical seconds the calculator reads.
+      await tester.enterText(duration, '90');
+      await tester.pumpAndSettle();
+      await reveal(tester, find.text('Save result'));
+      await saveResult(tester);
+
+      final snapshot = (await DriftSnapshotRepository(
+        database,
+      ).listNewestFirst()).single;
+      // The snapshot carries canonical seconds, not the displayed minutes.
+      expect(snapshot.canonicalInputs['captureDurationSeconds'], 5400.0);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('macro planner seeds its configuration estimate', (tester) async {
     await tester.pumpWidget(app(const MacroScreen()));
-    await tester.scrollUntilVisible(
-      find.text('Calculate macro setup'),
-      300,
-      scrollable: find.byType(Scrollable).first,
+    await tester.pumpAndSettle();
+    // The three configurations are visible segments, not a dropdown.
+    expect(find.byType(SegmentedButton<MacroConfiguration>), findsOneWidget);
+    expect(
+      find.widgetWithText(FilledButton, 'Calculate macro setup'),
+      findsNothing,
     );
-    await tester.tap(find.text('Calculate macro setup'));
-    await tester.pump();
+    await reveal(tester, find.text('Subject width across frame'));
     expect(find.text('0.70×'), findsOneWidget);
     expect(find.text('f/13.6'), findsOneWidget);
     await openExpander(tester, 'Details');
     expect(find.textContaining('Working distance'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('macro and panorama expose their modes as chips and segments', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app(const PanoramaScreen()));
+    await tester.pumpAndSettle();
+    // Orientation is a visible chip row, not a dropdown, and it writes through
+    // the same controllers the result is built from.
+    expect(find.byType(ChoiceChip), findsWidgets);
+    await reveal(tester, find.text('Camera orientation'));
+    final portrait = find.widgetWithText(ChoiceChip, 'Portrait');
+    await reveal(tester, portrait);
+    await tester.tap(portrait);
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Frames to shoot'));
+    expect(find.textContaining('columns ×'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('panorama planner shows a complete ordered capture grid', (
     tester,
   ) async {
     await tester.pumpWidget(app(const PanoramaScreen()));
-    await tester.scrollUntilVisible(
-      find.text('Plan panorama'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Plan panorama'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Frames to shoot'));
     expect(find.textContaining('3 columns × 2 rows'), findsOneWidget);
     expect(find.text('6'), findsOneWidget);
     await openExpander(tester, 'Details');
     expect(find.textContaining('yaw'), findsWidgets);
     expect(find.textContaining('lens distortion'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets(
     'night-sky planner provides position, events, and exposure rules',
     (tester) async {
       await tester.pumpWidget(app(const AstronomyScreen()));
-      await tester.scrollUntilVisible(
-        find.text('Plan night sky'),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.drag(find.byType(ListView).first, const Offset(0, -150));
-      await tester.pumpAndSettle();
+      // The heavy search stays explicit: no result exists until it is asked for.
+      expect(find.byType(CalculationResultView), findsNothing);
+      await reveal(tester, find.text('Plan night sky'));
       await tester.tap(find.text('Plan night sky'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('500 rule'),
         300,
@@ -266,6 +408,7 @@ void main() {
       );
       expect(find.text('Next events'), findsOneWidget);
       expect(find.textContaining('true'), findsWidgets);
+      await unmount(tester);
     },
   );
 
@@ -328,6 +471,7 @@ void main() {
         snapshot.assumptions.map((item) => item.value).join(' '),
         contains('0.1°'),
       );
+      await unmount(tester);
     },
   );
 
@@ -354,16 +498,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Mountain site').last);
     await tester.pumpAndSettle();
-    await openExpander(tester, 'More settings');
-    expect(
-      tester
-          .widget<TextField>(
-            find.widgetWithText(TextField, 'Observer elevation (m)'),
-          )
-          .controller!
-          .text,
-      '3842.0',
+    // Elevation sits behind the one-line Site details row, so the row is opened
+    // before the field it holds can be read or written.
+    await openSiteDetails(tester);
+    final elevationField = find.widgetWithText(
+      TextField,
+      'Observer elevation (m)',
     );
+    await reveal(tester, elevationField);
+    expect(tester.widget<TextField>(elevationField).controller!.text, '3842.0');
 
     await tester.scrollUntilVisible(
       find.text('Plan night sky'),
@@ -380,7 +523,10 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Planning context'), findsOneWidget);
-    expect(find.text('Mountain site'), findsOneWidget);
+    // The name appears on the plan's context card and, while it is still built,
+    // on the site picker that supplied it; the elevation row below pins which
+    // card actually carries the applied site.
+    expect(find.text('Mountain site'), findsWidgets);
     expect(find.textContaining('±8 m reported accuracy'), findsOneWidget);
     // Elevation presentation follows the length preference, like every other
     // distance in the app; the canonical value stays in metres.
@@ -413,6 +559,7 @@ void main() {
     expect(snapshot.displayContext['catalogProvenance'], contains('SIMBAD'));
     expect(snapshot.displayContext['sourceFreshness'], contains('current'));
     expect(snapshot.displayContext['expectedAccuracy'], contains('±0.25°'));
+    await unmount(tester);
   });
 
   testWidgets('night-sky planner opens a direct local date and time picker', (
@@ -445,6 +592,7 @@ void main() {
     await tester.tap(chooseTime);
     await tester.pumpAndSettle();
     expect(find.byType(DatePickerDialog), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('alignment planner preserves fallbacks and solar safety', (
@@ -453,9 +601,16 @@ void main() {
     await tester.pumpWidget(
       app(const AlignmentScreen(capabilities: PlanningCapabilities.fallback())),
     );
-    expect(find.textContaining('never look at the Sun'), findsOneWidget);
+    // The solar warning is a standing card in the form - not something behind a
+    // disclosure - but the form is a lazy list, so it is scrolled to before it
+    // is read. A safety notice that is only reachable is still a notice.
+    final solarSafety = find.textContaining('never look at the Sun');
+    await reveal(tester, solarSafety);
+    expect(solarSafety, findsOneWidget);
+    // The heavy search is an explicit action, named for what it produces.
+    expect(find.byType(CalculationResultView), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('Search alignments'),
+      find.text('Find alignment'),
       300,
       scrollable: find.byType(Scrollable).first,
     );
@@ -481,6 +636,7 @@ void main() {
     await tester.pump();
     expect(find.text('AR unavailable'), findsOneWidget);
     expect(find.textContaining('remain fully usable'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('alignment planner selects an inclusive local date range', (
@@ -517,6 +673,7 @@ void main() {
     await tester.tap(chooseRange);
     await tester.pumpAndSettle();
     expect(find.byType(DateRangePickerDialog), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('alignment timeline groups readable candidates by local date', (
@@ -604,7 +761,9 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Planning context'), findsOneWidget);
-    expect(find.text('Device ridge'), findsOneWidget);
+    // The name also labels the site picker while that is still built, so the
+    // claim is that the context card carries it, not that it appears once.
+    expect(find.text('Device ridge'), findsWidgets);
     expect(find.textContaining('±8 m reported accuracy'), findsOneWidget);
 
     final save = find.widgetWithText(FilledButton, 'Save result');
@@ -637,6 +796,7 @@ void main() {
     expect(snapshot.displayContext['refraction'], 'not applied');
     expect(snapshot.displayContext['sourceFreshness'], contains('formula v2'));
     expect(snapshot.displayContext['expectedAccuracy'], contains('10 minutes'));
+    await unmount(tester);
   });
 
   testWidgets('an over-sized filter stack is refused, not crashed', (
@@ -649,16 +809,10 @@ void main() {
       '1000000000000',
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Calculate exposure'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Calculate exposure'));
-    await tester.pumpAndSettle();
 
     expect(find.textContaining('overflows the exposure time'), findsOneWidget);
     expect(find.byType(CalculationResultView), findsNothing);
+    await unmount(tester);
   });
 
   testWidgets('an unshootable panorama grid is refused, not crashed', (
@@ -671,19 +825,13 @@ void main() {
       '1000000000000',
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Plan panorama'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Plan panorama'));
-    await tester.pumpAndSettle();
 
     expect(
       find.textContaining('Too many frames: reduce the coverage'),
       findsOneWidget,
     );
     expect(find.byType(CalculationResultView), findsNothing);
+    await unmount(tester);
   });
 
   testWidgets('preferences change result presentation, not calculations', (
@@ -697,9 +845,10 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('Calculate'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Hyperfocal distance'));
     expect(find.textContaining('ft'), findsWidgets);
+    await unmount(tester);
 
     await tester.pumpWidget(
       app(
@@ -709,24 +858,16 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.text('Calculate exposure'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Filtered exposure time'));
     expect(find.textContaining('32 s'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    final save = find.widgetWithText(FilledButton, 'Save result');
-    await tester.ensureVisible(save);
-    await tester.pumpAndSettle();
-    await tester.tap(save);
-    await tester.pumpAndSettle();
+    await saveResult(tester);
     final snapshot = (await DriftSnapshotRepository(
       database,
     ).listNewestFirst()).single;
     expect(snapshot.displayContext['fractionStep'], 'third');
     expect(snapshot.displayContext['shutterLabel'], '32 s');
+    await unmount(tester);
   });
 
   testWidgets('planner defaults come from preferences and remain overridable', (
@@ -755,6 +896,7 @@ void main() {
           .selected,
       {StarSharpnessTolerance.strict},
     );
+    await unmount(tester);
 
     await tester.pumpWidget(
       app(const AlignmentScreen(), preferences: preferences),
@@ -775,6 +917,7 @@ void main() {
           .text,
       '5',
     );
+    await unmount(tester);
   });
 
   testWidgets('calculator screens remain scrollable at 200 percent text', (
@@ -791,7 +934,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byType(Scrollable), findsWidgets);
     await tester.scrollUntilVisible(
-      find.text('Compare exposures'),
+      find.text('Equivalent exposure'),
       300,
       scrollable: find
           .descendant(
@@ -800,7 +943,9 @@ void main() {
           )
           .first,
     );
-    expect(find.text('Compare exposures'), findsOneWidget);
+    // The live answer renders at 2x text without a Calculate action.
+    expect(find.text('Equivalent exposure'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('saved equipment applies values and identifies provenance', (
@@ -837,7 +982,53 @@ void main() {
       '85.0',
     );
     expect(find.textContaining('edit these values'), findsOneWidget);
+    await unmount(tester);
   });
+
+  testWidgets(
+    'an empty kit hides the optional pickers and a saved camera is primary',
+    (tester) async {
+      // Nothing to pick is not a row: manual entry is the primary path.
+      await tester.pumpWidget(app(const DepthOfFieldScreen()));
+      await tester.pumpAndSettle();
+      expect(find.text('Saved lens (optional)'), findsNothing);
+      expect(find.text('Saved camera (optional)'), findsNothing);
+      await unmount(tester);
+
+      // A saved camera supplies the circle of confusion, so its picker sits with
+      // the shot parameters - reachable without opening the advanced group - and
+      // applying it writes through the same controller the calculator reads.
+      final now = DateTime.utc(2026, 8, 26);
+      await DriftEquipmentRepository(database).createCamera(
+        CameraBody(
+          id: 'camera-primary',
+          name: 'Primary Camera',
+          sensorWidthMm: 23.5,
+          sensorHeightMm: 15.6,
+          defaultCircleOfConfusionMm: 0.019,
+          provenance: const EquipmentProvenance(source: EquipmentSource.user),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      await tester.pumpWidget(app(const DepthOfFieldScreen()));
+      await tester.pumpAndSettle();
+
+      // The advanced group stays closed: that the picker is reachable here is the
+      // point.
+      expect(find.text('Circle of confusion (mm)'), findsNothing);
+      await tester.tap(find.text('Saved camera (optional)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Primary Camera').last);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('From Primary Camera'), findsOneWidget);
+      expect(
+        find.textContaining('circle of confusion 0.019 mm'),
+        findsOneWidget,
+      );
+      await unmount(tester);
+    },
+  );
 
   testWidgets('optics applies equipment and saves exact provenance', (
     tester,
@@ -891,13 +1082,17 @@ void main() {
       '35.0',
     );
 
-    // The camera picker and the sensor dimensions live behind More settings.
-    await openExpander(tester, 'More settings');
+    // The camera picker is a primary control too: a saved camera supplies the
+    // sensor size the field of view is built from, so it is applied before the
+    // advanced group is opened.
     await tester.tap(find.text('Saved camera (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('APS-C Camera').last);
     await tester.pumpAndSettle();
+    expect(find.textContaining('From APS-C Camera'), findsOneWidget);
 
+    // The raw sensor dimensions stay behind More settings.
+    await openExpander(tester, 'More settings');
     expect(
       tester
           .widget<TextField>(find.byKey(const Key('fieldOfView-sensorWidthMm')))
@@ -905,28 +1100,11 @@ void main() {
           .text,
       '23.5',
     );
-    expect(find.textContaining('From APS-C Camera'), findsOneWidget);
 
-    await tester.scrollUntilVisible(
-      find.text('Calculate'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    final calculateOptics = find.widgetWithText(FilledButton, 'Calculate');
-    await tester.ensureVisible(calculateOptics);
-    await tester.pumpAndSettle();
-    await tester.tap(calculateOptics);
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Save result'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    final save = find.widgetWithText(FilledButton, 'Save result');
-    await tester.ensureVisible(save);
-    await tester.pumpAndSettle();
-    await tester.tap(save);
-    await tester.pumpAndSettle();
+    // The answer is live: no Calculate action stands between the equipment and
+    // the result, and saving records both applied items.
+    expect(find.widgetWithText(FilledButton, 'Calculate'), findsNothing);
+    await saveResult(tester);
     final snapshot = (await DriftSnapshotRepository(
       database,
     ).listNewestFirst()).single;
@@ -935,6 +1113,7 @@ void main() {
       'lens-optics',
     ]);
     expect(snapshot.equipment.first.values['sensorWidthMm'], 23.5);
+    await unmount(tester);
   });
 
   testWidgets('flash and planner elevations honor the imperial preference', (
@@ -946,31 +1125,17 @@ void main() {
       app(const FlashExposureScreen(), preferences: imperial),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Calculate flash exposure'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Calculate flash exposure'));
-    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Recommended aperture'));
     // Guide number 40 m is about 131 ft, and the snapshot records the unit.
     expect(find.textContaining('131.2'), findsWidgets);
     expect(find.textContaining('ft'), findsWidgets);
-    final flashSave = find.widgetWithText(FilledButton, 'Save result');
-    await tester.scrollUntilVisible(
-      flashSave,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(flashSave);
-    await tester.pumpAndSettle();
-    await tester.tap(flashSave);
-    await tester.pumpAndSettle();
+    await saveResult(tester);
 
     final flashSnapshot = (await DriftSnapshotRepository(
       database,
     ).listNewestFirst()).single;
     expect(flashSnapshot.displayContext['distanceUnit'], 'imperial');
+    await unmount(tester);
   });
 
   testWidgets('night-sky elevation follows the length preference', (
@@ -981,11 +1146,10 @@ void main() {
       app(const AstronomyScreen(), preferences: imperial),
     );
     await tester.pumpAndSettle();
-    await openExpander(tester, 'More settings');
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Observer elevation (m)'),
-      '1200',
-    );
+    await openSiteDetails(tester);
+    final elevation = find.widgetWithText(TextField, 'Observer elevation (m)');
+    await reveal(tester, elevation);
+    await tester.enterText(elevation, '1200');
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Plan night sky'),
@@ -1003,6 +1167,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.textContaining('3937.01 ft'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('expanded optics and macro honor imperial display preference', (
@@ -1013,16 +1178,7 @@ void main() {
       app(const FieldOfViewScreen(), preferences: imperial),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Calculate'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    final calculate = find.widgetWithText(FilledButton, 'Calculate');
-    await tester.ensureVisible(calculate);
-    await tester.pumpAndSettle();
-    await tester.tap(calculate);
-    await tester.pump();
+    await reveal(tester, find.text('Scene width at this distance'));
     expect(find.text('Scene width at this distance'), findsOneWidget);
     expect(
       tester
@@ -1032,64 +1188,52 @@ void main() {
           .map((widget) => widget.data ?? widget.textSpan?.toPlainText()),
       containsAll(<String>['23.62 ft', 'Scene height 15.75 ft.']),
     );
+    await unmount(tester);
 
     await tester.pumpWidget(app(const MacroScreen(), preferences: imperial));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('Calculate macro setup'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Calculate macro setup'));
-    await tester.pump();
+    await reveal(tester, find.text('Subject width across frame'));
     expect(find.text('2.02 in'), findsOneWidget);
+    await unmount(tester);
   });
 
   testWidgets('every calculator saves canonical results to the local store', (
     tester,
   ) async {
-    Future<void> calculateAndSave(Widget screen, String calculateLabel) async {
+    /// The cheap calculators update their answer live, so saving is a direct
+    /// action on the result that is already on screen.
+    Future<void> saveLiveResult(Widget screen) async {
       await tester.pumpWidget(app(screen));
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.text(calculateLabel),
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.drag(find.byType(ListView).first, const Offset(0, -150));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(calculateLabel));
-      await tester.pumpAndSettle();
-      final saveButton = find.widgetWithText(FilledButton, 'Save result');
-      await tester.scrollUntilVisible(
-        saveButton,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(saveButton);
-      await tester.pumpAndSettle();
+      await saveResult(tester);
       expect(find.text('Result saved on this device.'), findsOneWidget);
+      await unmount(tester);
     }
 
-    await calculateAndSave(const DepthOfFieldScreen(), 'Calculate');
-    await calculateAndSave(
-      const ExposureComparisonScreen(),
-      'Compare exposures',
-    );
-    await calculateAndSave(const LongExposureScreen(), 'Calculate exposure');
-    await calculateAndSave(
-      const FlashExposureScreen(),
-      'Calculate flash exposure',
-    );
-    await calculateAndSave(const TimelapseScreen(), 'Plan timelapse');
-    await calculateAndSave(const MacroScreen(), 'Calculate macro setup');
-    await calculateAndSave(const FieldOfViewScreen(), 'Calculate');
-    await calculateAndSave(const DiffractionScreen(), 'Calculate');
-    await calculateAndSave(const FocusStackScreen(), 'Calculate');
-    await calculateAndSave(const PanoramaScreen(), 'Plan panorama');
-    await calculateAndSave(const AstronomyScreen(), 'Plan night sky');
-    await calculateAndSave(const AlignmentScreen(), 'Search alignments');
+    /// The heavy planners keep their explicit search; the save follows it.
+    Future<void> planAndSave(Widget screen, String action) async {
+      await tester.pumpWidget(app(screen));
+      await tester.pumpAndSettle();
+      await reveal(tester, find.text(action));
+      await tester.tap(find.text(action));
+      await tester.pumpAndSettle();
+      await saveResult(tester);
+      expect(find.text('Result saved on this device.'), findsOneWidget);
+      await unmount(tester);
+    }
+
+    await saveLiveResult(const DepthOfFieldScreen());
+    await saveLiveResult(const ExposureComparisonScreen());
+    await saveLiveResult(const LongExposureScreen());
+    await saveLiveResult(const FlashExposureScreen());
+    await saveLiveResult(const TimelapseScreen());
+    await saveLiveResult(const MacroScreen());
+    await saveLiveResult(const FieldOfViewScreen());
+    await saveLiveResult(const DiffractionScreen());
+    await saveLiveResult(const FocusStackScreen());
+    await saveLiveResult(const PanoramaScreen());
+    await planAndSave(const AstronomyScreen(), 'Plan night sky');
+    await planAndSave(const AlignmentScreen(), 'Find alignment');
 
     final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
     expect(snapshots, hasLength(12));
@@ -1373,7 +1517,7 @@ void main() {
     }
 
     // One absolute anchor: the default depth-of-field payload must carry the
-    // on-screen values and their thin-lens hyperfocal result.
+    // canonical millimetre values and their thin-lens hyperfocal result.
     final depthOfField = byCalculator['depth_of_field']!;
     expect(depthOfField.canonicalInputs, <String, Object?>{
       'focalLengthMm': 50.0,

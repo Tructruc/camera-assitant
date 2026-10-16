@@ -44,18 +44,18 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(800, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(subject(const DepthOfFieldScreen()));
-    await tester.scrollUntilVisible(
-      find.text('Calculate'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Calculate'));
+    // The depth-of-field result is live: it is on screen from the first frame,
+    // with no Calculate action to press before the capture.
     await tester.pumpAndSettle();
 
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/depth_of_field_result.png'),
     );
+
+    // Unmounting cancels the live-calculation timer the seeded answer scheduled.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
   });
 
   testWidgets('populated equipment inventory remains visually stable', (

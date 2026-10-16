@@ -20,7 +20,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
       error: (_, _) => const Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: EdgeInsets.all(AppGap.xl),
           child: Text(
             'Settings could not be loaded. Existing choices remain on this device.',
           ),
@@ -28,7 +28,7 @@ class SettingsScreen extends ConsumerWidget {
       ),
       data: (value) => AppContentFrame(
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppGap.lg),
           children: <Widget>[
             const _SectionHeader(icon: Icons.straighten, label: 'Display'),
             _SettingCard<LengthDisplay>(
@@ -94,7 +94,7 @@ class SettingsScreen extends ConsumerWidget {
                 (current) => current.copyWith(northReference: choice),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppGap.lg),
             const _SectionHeader(
               icon: Icons.explore_outlined,
               label: 'Planner defaults',
@@ -136,7 +136,7 @@ class SettingsScreen extends ConsumerWidget {
                     current.copyWith(defaultAlignmentToleranceDegrees: choice),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppGap.lg),
             const _SectionHeader(
               icon: Icons.dark_mode_outlined,
               label: 'Appearance',
@@ -159,7 +159,7 @@ class SettingsScreen extends ConsumerWidget {
                 (current) => current.copyWith(themeMode: choice),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppGap.lg),
             Text(
               'Privacy: equipment, preferences, and saved calculations stay on '
               'this device. The app has no account, advertising, or telemetry.',
@@ -198,11 +198,11 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppGap.sm),
       child: Row(
         children: <Widget>[
           Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppGap.sm),
           // Expanded, so a long label wraps instead of overflowing the row at
           // large system text scales.
           Expanded(
@@ -241,9 +241,14 @@ class _SettingCard<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: AppGap.sm),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        padding: const EdgeInsets.fromLTRB(
+          AppGap.lg,
+          AppGap.md,
+          AppGap.lg,
+          AppGap.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -255,7 +260,7 @@ class _SettingCard<T> extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surfaceContainer,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: AppRadius.controlAll,
                   ),
                   child: Icon(
                     icon,
@@ -263,7 +268,7 @@ class _SettingCard<T> extends StatelessWidget {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppGap.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,23 +281,25 @@ class _SettingCard<T> extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            RadioGroup<T>(
-              groupValue: value,
-              onChanged: (choice) {
-                if (choice != null && choice != value) onChanged(choice);
-              },
-              child: Column(
-                children: <Widget>[
-                  for (final option in options)
-                    RadioListTile<T>(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      title: Text(option.$2),
-                      value: option.$1,
-                    ),
-                ],
-              ),
+            const SizedBox(height: AppGap.sm),
+            // Choices on one line each instead of a stack of full-width rows:
+            // the whole setting stays visible, and the current value is read
+            // from the selected chip as well as from its label.
+            Wrap(
+              spacing: AppGap.sm,
+              runSpacing: AppGap.xs,
+              children: <Widget>[
+                for (final option in options)
+                  ChoiceChip(
+                    label: Text(option.$2),
+                    selected: option.$1 == value,
+                    onSelected: (isSelected) {
+                      if (isSelected && option.$1 != value) {
+                        onChanged(option.$1);
+                      }
+                    },
+                  ),
+              ],
             ),
           ],
         ),

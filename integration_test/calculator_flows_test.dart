@@ -34,8 +34,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tapVisible(tester, find.text('Timelapse planner'), delta: 300);
-    await tapVisible(tester, find.text('Plan timelapse'), delta: 300);
+    await tapVisibleFromTop(tester, find.text('Timelapse planner'));
+    // The plan is live: there is no Plan timelapse button to press.
+    expect(find.widgetWithText(FilledButton, 'Plan timelapse'), findsNothing);
+    await reveal(tester, find.text('361'));
     expect(find.text('361'), findsOneWidget);
     await scrollToResultActions(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save result'));
@@ -43,9 +45,12 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Flash exposure'), delta: -300);
-    await tester.tap(find.text('Calculate flash exposure'));
-    await tester.pumpAndSettle();
+    await tapVisibleFromTop(tester, find.text('Flash exposure'));
+    expect(
+      find.widgetWithText(FilledButton, 'Calculate flash exposure'),
+      findsNothing,
+    );
+    await reveal(tester, find.text('Recommended aperture'));
     expect(find.text('f/8'), findsOneWidget);
     await scrollToResultActions(tester);
     await tester.tap(find.widgetWithText(FilledButton, 'Save result'));
@@ -88,23 +93,27 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
-    // Saved camera and lens values remain editable one-off inputs. The camera
-    // picker now lives behind the result-first "More settings" section.
-    await tapVisible(tester, find.text('Depth of field'), delta: 300);
+    // Saved camera and lens values remain editable one-off inputs, and both
+    // pickers sit with the shot parameters the answer is built from.
+    await tapVisibleFromTop(tester, find.text('Depth of field'));
     await tester.tap(find.text('Saved lens (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('24-70 mm f/2.8').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('More settings'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Saved camera (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Full Frame Camera').last);
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Calculate'), delta: 300);
-    expect(find.text('Near limit'), findsOneWidget);
+
+    // The applied provenance is visible before the answer is scrolled to.
     expect(find.textContaining('From 24-70 mm'), findsWidgets);
     expect(find.textContaining('connect'), findsNothing);
+
+    // The depth-of-field answer is live, so no action stands between the
+    // equipment and the result.
+    expect(find.widgetWithText(FilledButton, 'Calculate'), findsNothing);
+    await reveal(tester, find.text('Near limit'));
+    expect(find.text('Near limit'), findsOneWidget);
     await scrollToResultActions(tester, extra: 500);
     await tester.tap(find.text('Save result'));
     await tester.pumpAndSettle();
@@ -113,8 +122,8 @@ void main() {
     // Manual exposure comparison works without inventory or network access.
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Exposure comparison'), delta: 300);
-    await tapVisible(tester, find.text('Compare exposures'), delta: 300);
+    await tapVisibleFromTop(tester, find.text('Exposure comparison'));
+    await reveal(tester, find.text('Equivalent exposure'));
     expect(find.text('Equivalent exposure'), findsOneWidget);
     await scrollToResultActions(tester, extra: 500);
     await tester.tap(find.text('Save result'));
@@ -123,7 +132,7 @@ void main() {
     // A saved ND filter applies its canonical strength to the quickstart case.
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.text('Long exposure / ND'), delta: 300);
+    await tapVisibleFromTop(tester, find.text('Long exposure / ND'));
     await tester.tap(find.text('Saved ND filter (optional)'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('10-stop ND').last);
@@ -131,12 +140,13 @@ void main() {
       find.byKey(const Key('long-base')),
       '0.0333333333333333',
     );
-    await tapVisible(tester, find.text('Calculate exposure'), delta: 300);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('From 10-stop ND'), findsWidgets);
+    await reveal(tester, find.text('Filtered exposure time'));
     // The hero carries the human-readable time; the conventional label rounds
     // to the selected stop increment and the exact value lives in Details.
     expect(find.text('34.1 s'), findsOneWidget);
     expect(find.textContaining('32 s'), findsWidgets);
-    expect(find.textContaining('From 10-stop ND'), findsWidgets);
     await reveal(tester, find.text('Details'));
     await tester.tap(find.text('Details'));
     await tester.pumpAndSettle();
@@ -175,8 +185,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Saved'));
-    await tester.pumpAndSettle();
+    await tapVisible(tester, find.text('Saved'));
     expect(find.text('Depth of field result'), findsOneWidget);
     expect(find.text('Exposure comparison result'), findsOneWidget);
     expect(find.text('Long exposure result'), findsOneWidget);
@@ -201,58 +210,52 @@ void main() {
     expect(find.textContaining('immutable'), findsOneWidget);
   });
 
-  testWidgets(
-    'editing an input blocks saving until the result is recalculated',
-    (tester) async {
-      configureJourneyView(tester);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-      final database = AppDatabase.inMemory();
-      addTearDown(database.close);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: <Override>[
-            appDatabaseProvider.overrideWithValue(database),
-            equipmentRepositoryProvider.overrideWithValue(
-              DriftEquipmentRepository(database),
-            ),
-          ],
-          child: const PhotographyAssistantApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
+  testWidgets('editing an input keeps the live answer current and savable', (
+    tester,
+  ) async {
+    configureJourneyView(tester);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          equipmentRepositoryProvider.overrideWithValue(
+            DriftEquipmentRepository(database),
+          ),
+        ],
+        child: const PhotographyAssistantApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tapVisible(tester, find.text('Depth of field'), delta: 300);
-      await tester.tap(find.text('Calculate'));
-      await tester.pumpAndSettle();
-      expect(find.text('Save result'), findsOneWidget);
+    await tapVisibleFromTop(tester, find.text('Depth of field'));
+    // The cheap calculator has no Calculate action: its answer is live.
+    expect(find.widgetWithText(FilledButton, 'Calculate'), findsNothing);
+    await reveal(tester, find.text('Hyperfocal distance'));
+    expect(find.text('10.47 m'), findsOneWidget);
+    expect(find.text('Save result'), findsOneWidget);
 
-      // Editing an input invalidates the displayed result and its save action.
-      await tester.scrollUntilVisible(
-        find.text('Focal length (mm)'),
-        -300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Focal length (mm)'),
-        '85',
-      );
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView).first, const Offset(0, -10000));
-      await tester.pumpAndSettle();
-      expect(find.text('Save result'), findsNothing);
+    // Editing an input updates the answer in place; it must never leave a
+    // stale figure, and it must never stop being savable.
+    final focalField = find.widgetWithText(TextField, 'Focal length (mm)');
+    await tester.ensureVisible(focalField);
+    await tester.pumpAndSettle();
+    await tester.enterText(focalField, '85');
+    await tester.pumpAndSettle();
+    await reveal(tester, find.text('Hyperfocal distance'));
+    expect(find.text('30.19 m'), findsOneWidget);
+    expect(find.text('10.47 m'), findsNothing);
+    expect(find.text('Save result'), findsOneWidget);
 
-      // Recalculation restores a savable result and the journey completes.
-      await tapVisible(tester, find.text('Calculate'), delta: -300);
-      await scrollToResultActions(tester, extra: 500);
-      await tester.tap(find.text('Save result'));
-      await tester.pumpAndSettle();
+    await scrollToResultActions(tester, extra: 500);
+    await tester.tap(find.text('Save result'));
+    await tester.pumpAndSettle();
 
-      final snapshots = await DriftSnapshotRepository(
-        database,
-      ).listNewestFirst();
-      expect(snapshots, hasLength(1));
-      expect(snapshots.single.canonicalInputs['focalLengthMm'], 85);
-    },
-  );
+    final snapshots = await DriftSnapshotRepository(database).listNewestFirst();
+    expect(snapshots, hasLength(1));
+    expect(snapshots.single.canonicalInputs['focalLengthMm'], 85);
+  });
 }
